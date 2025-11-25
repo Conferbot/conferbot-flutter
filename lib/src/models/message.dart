@@ -1,8 +1,7 @@
-import 'agent.dart';
-
 /// Message types matching embed-server schema
 enum MessageType {
   userMessage('user-message'),
+  userInputResponse('user-input-response'), // User input response from chatbot flow
   botMessage('bot-message'),
   agentMessage('agent-message'),
   agentMessageFile('agent-message-file'),
@@ -42,6 +41,8 @@ abstract class RecordItem {
     switch (type) {
       case MessageType.userMessage:
         return UserMessageRecord.fromJson(json);
+      case MessageType.userInputResponse:
+        return UserInputResponseRecord.fromJson(json);
       case MessageType.botMessage:
         return BotMessageRecord.fromJson(json);
       case MessageType.agentMessage:
@@ -52,9 +53,9 @@ abstract class RecordItem {
         return AgentMessageAudioRecord.fromJson(json);
       case MessageType.agentJoinedMessage:
         return AgentJoinedMessageRecord.fromJson(json);
+      case MessageType.visitorDisconnectedMessage:
+      case MessageType.visitorReconnectedMessage:
       case MessageType.systemMessage:
-        return SystemMessageRecord.fromJson(json);
-      default:
         return SystemMessageRecord.fromJson(json);
     }
   }
@@ -77,7 +78,7 @@ class UserMessageRecord extends RecordItem {
   factory UserMessageRecord.fromJson(Map<String, dynamic> json) {
     return UserMessageRecord(
       id: json['_id'].toString(),
-      time: DateTime.parse(json['time'] as String),
+      time: _parseTime(json['time']),
       text: json['text'] as String,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
@@ -93,6 +94,49 @@ class UserMessageRecord extends RecordItem {
       if (metadata != null) 'metadata': metadata,
     };
   }
+}
+
+/// User input response record (from chatbot flow)
+class UserInputResponseRecord extends RecordItem {
+  final String text;
+  final Map<String, dynamic>? metadata;
+
+  const UserInputResponseRecord({
+    required super.id,
+    required super.time,
+    required this.text,
+    this.metadata,
+  }) : super(type: MessageType.userInputResponse);
+
+  factory UserInputResponseRecord.fromJson(Map<String, dynamic> json) {
+    return UserInputResponseRecord(
+      id: json['_id'].toString(),
+      time: _parseTime(json['time']),
+      text: json['text'] as String,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'type': type.value,
+      'time': time.toIso8601String(),
+      'text': text,
+      if (metadata != null) 'metadata': metadata,
+    };
+  }
+}
+
+/// Helper to parse time from various formats
+DateTime _parseTime(dynamic time) {
+  if (time is String) {
+    return DateTime.parse(time);
+  } else if (time is DateTime) {
+    return time;
+  }
+  return DateTime.now();
 }
 
 /// Bot message record

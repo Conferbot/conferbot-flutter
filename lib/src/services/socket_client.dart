@@ -49,46 +49,42 @@ class SocketClient {
   void _setupConnectionHandlers() {
     _socket?.on(SocketEvents.connect, (_) {
       _isConnected = true;
-      debugPrint('[ConferBot Socket] Connected');
+      _logDebug('[ConferBot Socket] Connected');
     });
 
     _socket?.on(SocketEvents.disconnect, (_) {
       _isConnected = false;
-      debugPrint('[ConferBot Socket] Disconnected');
+      _logDebug('[ConferBot Socket] Disconnected');
     });
 
     _socket?.on(SocketEvents.connectError, (error) {
       _isConnected = false;
-      debugPrint('[ConferBot Socket] Connection error: $error');
+      _logDebug('[ConferBot Socket] Connection error: $error');
     });
 
     _socket?.on(SocketEvents.reconnect, (_) {
       _isConnected = true;
-      debugPrint('[ConferBot Socket] Reconnected');
+      _logDebug('[ConferBot Socket] Reconnected');
     });
   }
 
-  /// Initialize mobile session
-  void mobileInit({
-    required String chatSessionId,
-    String? visitorId,
-    Map<String, dynamic>? deviceInfo,
-  }) {
-    emit(SocketEvents.mobileInit, {
+  /// Get chatbot data (call after connection)
+  void getChatbotData() {
+    emit(SocketEvents.getChatbotData, {
       'botId': botId,
-      'chatSessionId': chatSessionId,
-      if (visitorId != null) 'visitorId': visitorId,
-      'platform': ConferBotConstants.platformIdentifier,
-      if (deviceInfo != null) 'deviceInfo': deviceInfo,
     });
   }
 
   /// Join chat room as visitor
-  void joinChatRoom(String chatSessionId) {
-    emit(SocketEvents.joinChatRoom, {
+  void joinChatRoomVisitor(String chatSessionId) {
+    emit(SocketEvents.joinChatRoomVisitor, {
       'chatSessionId': chatSessionId,
     });
   }
+
+  /// Deprecated: Use joinChatRoomVisitor instead
+  @Deprecated('Use joinChatRoomVisitor instead')
+  void joinChatRoom(String chatSessionId) => joinChatRoomVisitor(chatSessionId);
 
   /// Leave chat room
   void leaveChatRoom(String chatSessionId) {
@@ -97,20 +93,37 @@ class SocketClient {
     });
   }
 
-  /// Send visitor message
+  /// Send response record (visitor message)
+  /// Matches embed-server socket.js 'response-record' event
+  void sendResponseRecord({
+    required String chatSessionId,
+    required dynamic record, // Can be a single record Map or list of records
+    List<dynamic>? answerVariables,
+    Map<String, dynamic>? visitorMeta,
+  }) {
+    emit(SocketEvents.responseRecord, {
+      'chatSessionId': chatSessionId,
+      'record': record,
+      'answerVariables': answerVariables ?? [],
+      'botId': botId,
+      if (visitorMeta != null) 'visitorMeta': visitorMeta,
+    });
+  }
+
+  /// Deprecated: Use sendResponseRecord instead
+  @Deprecated('Use sendResponseRecord instead')
   void sendVisitorMessage({
     required String chatSessionId,
     required Map<String, dynamic> record,
     required List<dynamic> answerVariables,
     Map<String, dynamic>? visitorMeta,
   }) {
-    emit(SocketEvents.sendVisitorMessage, {
-      'chatSessionId': chatSessionId,
-      'record': record,
-      'answerVariables': answerVariables,
-      'botId': botId,
-      if (visitorMeta != null) 'visitorMeta': visitorMeta,
-    });
+    sendResponseRecord(
+      chatSessionId: chatSessionId,
+      record: record,
+      answerVariables: answerVariables,
+      visitorMeta: visitorMeta,
+    );
   }
 
   /// Send visitor typing status
@@ -145,7 +158,7 @@ class SocketClient {
   /// Emit event
   void emit(String event, dynamic data) {
     if (_socket == null || !_socket!.connected) {
-      debugPrint('[ConferBot Socket] Cannot emit - not connected');
+      _logDebug('[ConferBot Socket] Cannot emit - not connected');
       return;
     }
     _socket!.emit(event, data);
@@ -180,9 +193,10 @@ class SocketClient {
   }
 }
 
-void debugPrint(String message) {
+void _logDebug(String message) {
   if (Platform.environment.containsKey('FLUTTER_TEST')) {
     return;
   }
+  // ignore: avoid_print
   print(message);
 }

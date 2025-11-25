@@ -27,7 +27,9 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveTheme = theme ?? defaultTheme;
-    final isUser = message.type == MessageType.userMessage;
+    // Include both user-message and user-input-response as user messages
+    final isUser = message.type == MessageType.userMessage ||
+        message.type == MessageType.userInputResponse;
     final isAgent = message.type == MessageType.agentMessage;
     final isSystem = message.type == MessageType.systemMessage;
 
@@ -103,17 +105,16 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildAvatar(ConferBotTheme theme) {
-    String? avatarUrl;
     String? name;
 
     if (message is AgentMessageRecord) {
       final agentMessage = message as AgentMessageRecord;
-      avatarUrl = agentMessage.agentDetails.avatar;
+      // AgentDetails from embed-server doesn't include avatar
       name = agentMessage.agentDetails.name;
     }
 
     return ConferBotAvatar(
-      imageUrl: avatarUrl,
+      imageUrl: null, // Avatar not available from agentDetails
       name: name ?? 'Bot',
       size: theme.layout.avatarSize,
       theme: theme,
@@ -125,6 +126,8 @@ class MessageBubble extends StatelessWidget {
 
     if (message is UserMessageRecord) {
       text = (message as UserMessageRecord).text;
+    } else if (message is UserInputResponseRecord) {
+      text = (message as UserInputResponseRecord).text;
     } else if (message is BotMessageRecord) {
       text = (message as BotMessageRecord).text;
     } else if (message is AgentMessageRecord) {
@@ -150,6 +153,7 @@ class MessageBubble extends StatelessWidget {
   Color _getBubbleColor(ConferBotTheme theme) {
     switch (message.type) {
       case MessageType.userMessage:
+      case MessageType.userInputResponse:
         return theme.colors.userBubble;
       case MessageType.agentMessage:
       case MessageType.agentMessageFile:
@@ -165,6 +169,7 @@ class MessageBubble extends StatelessWidget {
   Color _getTextColor(ConferBotTheme theme) {
     switch (message.type) {
       case MessageType.userMessage:
+      case MessageType.userInputResponse:
         return theme.colors.userBubbleText;
       case MessageType.agentMessage:
       case MessageType.agentMessageFile:

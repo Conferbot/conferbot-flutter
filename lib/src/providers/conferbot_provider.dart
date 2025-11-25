@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../models/agent.dart';
-import '../models/chat_session.dart';
 import '../models/message.dart';
 import '../models/socket_events.dart';
 import '../models/user.dart';
@@ -97,12 +95,25 @@ class ConferBotProvider with ChangeNotifier {
     // Connection events
     _socketClient.on(SocketEvents.connect, (_) {
       _isConnected = true;
+      // Request chatbot data on connection
+      _socketClient.getChatbotData();
       notifyListeners();
     });
 
     _socketClient.on(SocketEvents.disconnect, (_) {
       _isConnected = false;
       notifyListeners();
+    });
+
+    // Chatbot data fetched
+    _socketClient.on(SocketEvents.fetchedChatbotData, (data) {
+      if (data != null && data is Map<String, dynamic>) {
+        if (kDebugMode) {
+          print('[ConferBot] Chatbot data received');
+        }
+        // Store chatbot config if needed
+        // _chatbotConfig = data['chatbotData'];
+      }
     });
 
     // Bot response
@@ -129,12 +140,17 @@ class ConferBotProvider with ChangeNotifier {
       }
     });
 
-    // Agent accepted handover
+    // Agent accepted handover (embed-server sends agentDetails)
     _socketClient.on(SocketEvents.agentAccepted, (data) {
       if (data != null && data is Map<String, dynamic>) {
-        final agentData = data['agent'] as Map<String, dynamic>?;
-        if (agentData != null) {
-          _currentAgent = Agent.fromJson(agentData);
+        final agentDetails = data['agentDetails'] as Map<String, dynamic>?;
+        if (agentDetails != null) {
+          // Map agentDetails to Agent
+          _currentAgent = Agent(
+            id: agentDetails['_id'] as String,
+            name: agentDetails['name'] as String,
+            email: agentDetails['email'] as String?,
+          );
           notifyListeners();
         }
       }
@@ -156,24 +172,24 @@ class ConferBotProvider with ChangeNotifier {
   /// Open chat
   Future<void> openChat() async {
     if (_chatSessionId == null) {
-      // Initialize new session
-      final response = await _apiClient.initSession(userId: user?.id ?? _visitorId);
-      if (response.success && response.data != null) {
-        _chatSessionId = response.data!.chatSessionId;
-        _record = response.data!.record;
+      // Try to initialize session via REST API (if available)
+      try {
+        final response = await _apiClient.initSession(userId: user?.id ?? _visitorId);
+        if (response.success && response.data != null) {
+          _chatSessionId = response.data!.chatSessionId;
+          _record = response.data!.record;
+        }
+      } catch (e) {
+        // REST API not available yet, generate local session ID
+        _chatSessionId = 'mobile_${DateTime.now().millisecondsSinceEpoch}';
+        if (kDebugMode) {
+          print('[ConferBot] Using local session ID: $_chatSessionId');
+        }
+      }
 
-        // Join chat room via socket
-        _socketClient.joinChatRoom(_chatSessionId!);
-
-        // Initialize mobile session
-        _socketClient.mobileInit(
-          chatSessionId: _chatSessionId!,
-          visitorId: user?.id ?? _visitorId,
-          deviceInfo: {
-            'platform': Platform.operatingSystem,
-            'version': Platform.operatingSystemVersion,
-          },
-        );
+      // Join chat room via socket
+      if (_chatSessionId != null) {
+        _socketClient.joinChatRoomVisitor(_chatSessionId!);
       }
     }
 
@@ -194,8 +210,8 @@ class ConferBotProvider with ChangeNotifier {
       return;
     }
 
-    // Create user message
-    final userMessage = UserMessageRecord(
+    // Create user message (use user-input-response type for chatbot flow)
+    final userMessage = UserInputResponseRecord(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       time: DateTime.now(),
       text: text,
@@ -205,10 +221,10 @@ class ConferBotProvider with ChangeNotifier {
     _record.add(userMessage);
     notifyListeners();
 
-    // Send via socket
-    _socketClient.sendVisitorMessage(
+    // Send via socket (send full record array as embed-server expects)
+    _socketClient.sendResponseRecord(
       chatSessionId: _chatSessionId!,
-      record: userMessage.toJson(),
+      record: _record.map((r) => r.toJson()).toList(),
       answerVariables: [],
     );
   }
