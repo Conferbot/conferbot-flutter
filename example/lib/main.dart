@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:conferbot_flutter/conferbot_flutter.dart';
 
-void main() {
+/// Main entry point with proper Hive initialization for session persistence
+void main() async {
+  // Ensure Flutter bindings are initialized before Hive
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize StorageService (Hive) before running the app
+  // This is REQUIRED for session persistence to work
+  await StorageService.init();
+
   runApp(const MyApp());
 }
 
@@ -18,6 +27,9 @@ class MyApp extends StatelessWidget {
         config: const ConferBotConfig(
           enableNotifications: true,
           enableOfflineMode: true,
+          // Session persistence configuration
+          enablePersistence: true, // Enable session persistence (default: true)
+          sessionTimeout: Duration(minutes: 30), // Session timeout like web widget
         ),
       ),
       child: MaterialApp(
@@ -41,6 +53,26 @@ class ExampleHomePage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Conferbot SDK Example'),
+        actions: [
+          // Debug button to show storage stats
+          PopupMenuButton<String>(
+            onSelected: (value) => _handleMenuAction(context, value),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'stats',
+                child: Text('View Storage Stats'),
+              ),
+              const PopupMenuItem(
+                value: 'clear_session',
+                child: Text('Clear Current Session'),
+              ),
+              const PopupMenuItem(
+                value: 'clear_all',
+                child: Text('Clear All Data'),
+              ),
+            ],
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -65,7 +97,39 @@ class ExampleHomePage extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+
+              // Session Restored Indicator
+              Consumer<ConferBotProvider>(
+                builder: (context, provider, child) {
+                  if (provider.sessionRestored) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green[300]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.restore, color: Colors.green[700]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Previous session restored! Your conversation will continue where you left off.',
+                              style: TextStyle(color: Colors.green[700]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+
+              const SizedBox(height: 16),
 
               // Option 1: Drop-in Widget
               _buildOptionCard(
@@ -140,7 +204,7 @@ class ExampleHomePage extends StatelessWidget {
               const SizedBox(height: 32),
 
               Text(
-                '📚 Check the docs/ folder for complete documentation',
+                'Session persistence is enabled by default.\nConversations will resume after app restart (within 30 min).',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[600],
@@ -152,6 +216,49 @@ class ExampleHomePage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _handleMenuAction(BuildContext context, String action) async {
+    final provider = context.read<ConferBotProvider>();
+
+    switch (action) {
+      case 'stats':
+        final stats = provider.getStorageStats();
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Storage Stats'),
+            content: SingleChildScrollView(
+              child: Text(
+                stats.entries
+                    .map((e) => '${e.key}: ${e.value}')
+                    .join('\n'),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+        break;
+
+      case 'clear_session':
+        await provider.clearCurrentSession();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Current session cleared')),
+        );
+        break;
+
+      case 'clear_all':
+        await provider.clearAllPersistedData();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All persisted data cleared')),
+        );
+        break;
+    }
   }
 
   Widget _buildOptionCard(
@@ -223,9 +330,41 @@ class ExampleHomePage extends StatelessWidget {
   }
 }
 
-// Headless Example placeholder
-class HeadlessExample extends StatelessWidget {
+// Headless Example with session restoration awareness
+class HeadlessExample extends StatefulWidget {
   const HeadlessExample({super.key});
+
+  @override
+  State<HeadlessExample> createState() => _HeadlessExampleState();
+}
+
+class _HeadlessExampleState extends State<HeadlessExample> with WidgetsBindingObserver {
+  final _textController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _textController.dispose();
+    super.dispose();
+  }
+
+  /// Handle app lifecycle for session persistence
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final provider = context.read<ConferBotProvider>();
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      // Persist state when app goes to background
+      provider.persistState();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -234,6 +373,17 @@ class HeadlessExample extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Headless Example'),
+        actions: [
+          if (provider.sessionRestored)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Chip(
+                label: const Text('Restored', style: TextStyle(fontSize: 12)),
+                backgroundColor: Colors.green[100],
+                avatar: Icon(Icons.restore, size: 16, color: Colors.green[700]),
+              ),
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -250,13 +400,26 @@ class HeadlessExample extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: provider.isConnected ? Colors.green : Colors.grey,
-                    shape: BoxShape.circle,
-                  ),
+                Row(
+                  children: [
+                    if (provider.isPersistenceReady)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Icon(
+                          Icons.save,
+                          size: 18,
+                          color: Colors.green[600],
+                        ),
+                      ),
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: provider.isConnected ? Colors.green : Colors.grey,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -309,6 +472,7 @@ class HeadlessExample extends StatelessWidget {
               children: [
                 Expanded(
                   child: TextField(
+                    controller: _textController,
                     decoration: InputDecoration(
                       hintText: 'Type a message...',
                       border: OutlineInputBorder(
@@ -319,12 +483,14 @@ class HeadlessExample extends StatelessWidget {
                         vertical: 10,
                       ),
                     ),
-                    onSubmitted: (text) {
-                      if (text.trim().isNotEmpty) {
-                        provider.sendMessage(text);
-                      }
-                    },
+                    onSubmitted: _sendMessage,
                   ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  color: const Color(0xFF007AFF),
+                  onPressed: () => _sendMessage(_textController.text),
                 ),
               ],
             ),
@@ -333,11 +499,47 @@ class HeadlessExample extends StatelessWidget {
       ),
     );
   }
+
+  void _sendMessage(String text) {
+    if (text.trim().isNotEmpty) {
+      context.read<ConferBotProvider>().sendMessage(text);
+      _textController.clear();
+    }
+  }
 }
 
-// Custom Example placeholder
-class CustomExample extends StatelessWidget {
+// Custom Example with session persistence awareness
+class CustomExample extends StatefulWidget {
   const CustomExample({super.key});
+
+  @override
+  State<CustomExample> createState() => _CustomExampleState();
+}
+
+class _CustomExampleState extends State<CustomExample> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Handle app lifecycle for session persistence
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final provider = context.read<ConferBotProvider>();
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      // Persist state when app goes to background
+      provider.persistState();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -348,7 +550,9 @@ class CustomExample extends StatelessWidget {
         children: [
           ChatHeader(
             title: 'Support',
-            subtitle: 'We typically reply in minutes',
+            subtitle: provider.sessionRestored
+                ? 'Conversation restored'
+                : 'We typically reply in minutes',
             agent: provider.currentAgent,
             onClose: () => Navigator.pop(context),
             showConnectionStatus: true,
