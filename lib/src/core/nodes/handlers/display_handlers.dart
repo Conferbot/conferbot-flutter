@@ -1,3 +1,16 @@
+/// Display handlers for bot response nodes
+///
+/// This file contains handlers and UI states for display-only nodes:
+/// - MessageNodeHandler (text messages)
+/// - ImageNodeHandler (image display)
+/// - VideoNodeHandler (video playback)
+/// - AudioNodeHandler (audio playback)
+/// - FileNodeHandler (file download)
+/// - HtmlNodeHandler (HTML content)
+/// - UserRedirectNodeHandler (URL redirect)
+/// - NavigateNodeHandler (in-app navigation)
+library;
+
 import '../node_types.dart';
 import 'legacy_handlers.dart';
 
@@ -89,6 +102,24 @@ class RedirectState extends NodeUIState {
     required this.url,
     this.openInNewTab = true,
     required this.nodeId,
+  });
+}
+
+/// Calendar/date-time picker UI state
+/// Used by Google Calendar, Google Meet, and other booking integrations
+class CalendarState extends NodeUIState {
+  final String? questionText;
+  final bool showTimeSelection;
+  final String? timezone;
+  final String nodeId;
+  final String answerKey;
+
+  const CalendarState({
+    this.questionText,
+    this.showTimeSelection = false,
+    this.timezone,
+    required this.nodeId,
+    required this.answerKey,
   });
 }
 
