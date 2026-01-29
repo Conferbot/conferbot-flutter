@@ -1,0 +1,1885 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../core/nodes/node_ui_state.dart';
+import '../../theme/conferbot_theme.dart';
+import '../../theme/default_theme.dart';
+
+/// Main widget that routes to the correct node component based on UI state
+class NodeRenderer extends StatelessWidget {
+  final NodeUIState uiState;
+  final ValueChanged<dynamic> onResponse;
+  final Color? primaryColor;
+  final ConferBotTheme? theme;
+
+  const NodeRenderer({
+    super.key,
+    required this.uiState,
+    required this.onResponse,
+    this.primaryColor,
+    this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveTheme = theme ?? defaultTheme;
+    final effectivePrimaryColor = primaryColor ?? effectiveTheme.colors.primary;
+
+    return switch (uiState) {
+      MessageUIState state => MessageNodeWidget(state: state, theme: effectiveTheme),
+      ImageUIState state => ImageNodeWidget(state: state, theme: effectiveTheme),
+      VideoUIState state => VideoNodeWidget(state: state, theme: effectiveTheme),
+      AudioUIState state => AudioNodeWidget(state: state, theme: effectiveTheme),
+      FileUIState state => FileNodeWidget(state: state, theme: effectiveTheme),
+      TextInputUIState state => TextInputNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      FileUploadUIState state => FileUploadNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      SingleChoiceUIState state => SingleChoiceNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      MultipleChoiceUIState state => MultipleChoiceNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      RatingUIState state => RatingNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      DropdownUIState state => DropdownNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      RangeUIState state => RangeNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      CalendarUIState state => CalendarNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      ImageChoiceUIState state => ImageChoiceNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      QuizUIState state => QuizNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      MultipleQuestionsUIState state => MultipleQuestionsNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      HumanHandoverUIState state => HumanHandoverNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      HtmlUIState state => HtmlNodeWidget(state: state, theme: effectiveTheme),
+      PaymentUIState state => PaymentNodeWidget(
+          state: state,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      RedirectUIState state => RedirectNodeWidget(state: state, theme: effectiveTheme),
+    };
+  }
+}
+
+// ==================== MESSAGE NODES ====================
+
+/// Widget displaying a simple text message from the bot
+class MessageNodeWidget extends StatelessWidget {
+  final MessageUIState state;
+  final ConferBotTheme theme;
+
+  const MessageNodeWidget({
+    super.key,
+    required this.state,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BotMessageBubble(text: state.text, theme: theme);
+  }
+}
+
+/// Widget displaying an image with optional caption
+class ImageNodeWidget extends StatelessWidget {
+  final ImageUIState state;
+  final ConferBotTheme theme;
+
+  const ImageNodeWidget({
+    super.key,
+    required this.state,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(theme.borderRadius.lg),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 300),
+            child: Image.network(
+              state.url,
+              fit: BoxFit.contain,
+              width: double.infinity,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  height: 200,
+                  alignment: Alignment.center,
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                    color: theme.colors.primary,
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  height: 200,
+                  color: theme.colors.surface,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    size: 48,
+                    color: theme.colors.textSecondary,
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        if (state.caption != null && state.caption!.isNotEmpty) ...[
+          SizedBox(height: theme.spacing.xs),
+          Text(
+            state.caption!,
+            style: TextStyle(
+              fontSize: theme.typography.fontSizeSm,
+              color: theme.colors.textSecondary,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Widget displaying a video player placeholder
+class VideoNodeWidget extends StatelessWidget {
+  final VideoUIState state;
+  final ConferBotTheme theme;
+
+  const VideoNodeWidget({
+    super.key,
+    required this.state,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        width: double.infinity,
+        height: 200,
+        color: Colors.black,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              Icons.play_arrow,
+              size: 48,
+              color: Colors.white,
+            ),
+            if (state.caption != null && state.caption!.isNotEmpty)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: EdgeInsets.all(theme.spacing.sm),
+                  color: Colors.black54,
+                  child: Text(
+                    state.caption!,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: theme.typography.fontSizeSm,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Widget displaying an audio player
+class AudioNodeWidget extends StatelessWidget {
+  final AudioUIState state;
+  final ConferBotTheme theme;
+
+  const AudioNodeWidget({
+    super.key,
+    required this.state,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.md),
+        child: Row(
+          children: [
+            Icon(
+              Icons.play_arrow,
+              size: 32,
+              color: theme.colors.primary,
+            ),
+            SizedBox(width: theme.spacing.sm),
+            Expanded(
+              child: LinearProgressIndicator(
+                value: 0,
+                backgroundColor: theme.colors.border,
+                valueColor: AlwaysStoppedAnimation(theme.colors.primary),
+              ),
+            ),
+            SizedBox(width: theme.spacing.sm),
+            Text(
+              '0:00',
+              style: TextStyle(
+                fontSize: theme.typography.fontSizeSm,
+                color: theme.colors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Widget displaying a file download option
+class FileNodeWidget extends StatelessWidget {
+  final FileUIState state;
+  final ConferBotTheme theme;
+
+  const FileNodeWidget({
+    super.key,
+    required this.state,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.md),
+        child: Row(
+          children: [
+            Icon(
+              Icons.description,
+              size: 32,
+              color: theme.colors.primary,
+            ),
+            SizedBox(width: theme.spacing.sm),
+            Expanded(
+              child: Text(
+                state.fileName,
+                style: TextStyle(
+                  fontSize: theme.typography.fontSizeMd,
+                  color: theme.colors.text,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Icon(
+              Icons.download,
+              color: theme.colors.primary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== INPUT NODES ====================
+
+/// Widget for text input with keyboard type support
+class TextInputNodeWidget extends StatefulWidget {
+  final TextInputUIState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const TextInputNodeWidget({
+    super.key,
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  State<TextInputNodeWidget> createState() => _TextInputNodeWidgetState();
+}
+
+class _TextInputNodeWidgetState extends State<TextInputNodeWidget> {
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+  bool _hasError = false;
+  bool _submitted = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  TextInputType _getKeyboardType() {
+    return switch (widget.state.inputType) {
+      TextInputType.email => TextInputType.emailAddress,
+      TextInputType.phone => TextInputType.phone,
+      TextInputType.number => TextInputType.number,
+      TextInputType.url => TextInputType.url,
+      _ => TextInputType.text,
+    };
+  }
+
+  List<TextInputFormatter>? _getInputFormatters() {
+    return switch (widget.state.inputType) {
+      TextInputType.phone => [FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s()]'))],
+      TextInputType.number => [FilteringTextInputFormatter.digitsOnly],
+      _ => null,
+    };
+  }
+
+  bool _validate(String value) {
+    if (value.isEmpty) return false;
+
+    if (widget.state.validationRegex != null) {
+      final regex = RegExp(widget.state.validationRegex!);
+      return regex.hasMatch(value);
+    }
+
+    // Built-in validation based on type
+    return switch (widget.state.inputType) {
+      TextInputType.email => RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value),
+      TextInputType.phone => value.length >= 10,
+      TextInputType.url => Uri.tryParse(value)?.hasAbsolutePath ?? false,
+      _ => true,
+    };
+  }
+
+  void _submit() {
+    final value = _controller.text.trim();
+    if (!_validate(value)) {
+      setState(() => _hasError = true);
+      return;
+    }
+    setState(() {
+      _hasError = false;
+      _submitted = true;
+    });
+    widget.onResponse(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.state.questionText.isNotEmpty) ...[
+          BotMessageBubble(text: widget.state.questionText, theme: widget.theme),
+          SizedBox(height: widget.theme.spacing.sm),
+        ],
+        TextField(
+          controller: _controller,
+          focusNode: _focusNode,
+          enabled: !_submitted,
+          keyboardType: _getKeyboardType(),
+          inputFormatters: _getInputFormatters(),
+          textInputAction: TextInputAction.done,
+          onChanged: (_) {
+            if (_hasError) setState(() => _hasError = false);
+          },
+          onSubmitted: (_) => _submit(),
+          decoration: InputDecoration(
+            hintText: widget.state.placeholder ?? 'Type here...',
+            filled: true,
+            fillColor: widget.theme.colors.surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+              borderSide: BorderSide(color: widget.theme.colors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+              borderSide: BorderSide(color: widget.theme.colors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+              borderSide: BorderSide(color: widget.primaryColor, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+              borderSide: BorderSide(color: widget.theme.colors.error),
+            ),
+            errorText: _hasError ? (widget.state.errorMessage ?? 'Invalid input') : null,
+          ),
+        ),
+        SizedBox(height: widget.theme.spacing.sm),
+        ElevatedButton(
+          onPressed: _submitted ? null : _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: widget.primaryColor,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(vertical: widget.theme.spacing.md),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+            ),
+          ),
+          child: const Text('Submit'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Widget for file upload
+class FileUploadNodeWidget extends StatefulWidget {
+  final FileUploadUIState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const FileUploadNodeWidget({
+    super.key,
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  State<FileUploadNodeWidget> createState() => _FileUploadNodeWidgetState();
+}
+
+class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
+  String? _selectedFileName;
+  bool _isUploading = false;
+
+  void _pickFile() {
+    // File picker would be implemented here
+    // For now, this is a placeholder
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.state.questionText.isNotEmpty) ...[
+          BotMessageBubble(text: widget.state.questionText, theme: widget.theme),
+          SizedBox(height: widget.theme.spacing.sm),
+        ],
+        InkWell(
+          onTap: _isUploading ? null : _pickFile,
+          borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+          child: Container(
+            height: 120,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: widget.primaryColor.withOpacity(0.5),
+                width: 2,
+                strokeAlign: BorderSide.strokeAlignInside,
+              ),
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+              color: widget.theme.colors.surface,
+            ),
+            child: _isUploading
+                ? Center(
+                    child: CircularProgressIndicator(color: widget.primaryColor),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.cloud_upload_outlined,
+                        size: 40,
+                        color: widget.primaryColor,
+                      ),
+                      SizedBox(height: widget.theme.spacing.sm),
+                      Text(
+                        _selectedFileName ?? 'Tap to upload file',
+                        style: TextStyle(
+                          fontSize: widget.theme.typography.fontSizeMd,
+                          color: widget.theme.colors.text,
+                        ),
+                      ),
+                      SizedBox(height: widget.theme.spacing.xs),
+                      Text(
+                        'Max ${widget.state.maxSizeMb}MB',
+                        style: TextStyle(
+                          fontSize: widget.theme.typography.fontSizeSm,
+                          color: widget.theme.colors.textSecondary,
+                        ),
+                      ),
+                      if (widget.state.allowedTypes != null &&
+                          widget.state.allowedTypes!.isNotEmpty) ...[
+                        SizedBox(height: widget.theme.spacing.xs),
+                        Text(
+                          'Allowed: ${widget.state.allowedTypes!.join(', ')}',
+                          style: TextStyle(
+                            fontSize: widget.theme.typography.fontSizeXs,
+                            color: widget.theme.colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ==================== CHOICE NODES ====================
+
+/// Widget for single choice selection (buttons)
+class SingleChoiceNodeWidget extends StatefulWidget {
+  final SingleChoiceUIState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const SingleChoiceNodeWidget({
+    super.key,
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  State<SingleChoiceNodeWidget> createState() => _SingleChoiceNodeWidgetState();
+}
+
+class _SingleChoiceNodeWidgetState extends State<SingleChoiceNodeWidget> {
+  String? _selectedId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.state.questionText != null &&
+            widget.state.questionText!.isNotEmpty) ...[
+          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          SizedBox(height: widget.theme.spacing.sm),
+        ],
+        ...widget.state.choices.map((choice) {
+          final isSelected = _selectedId == choice.id;
+          return Padding(
+            padding: EdgeInsets.only(bottom: widget.theme.spacing.xs),
+            child: OutlinedButton(
+              onPressed: _selectedId != null
+                  ? null
+                  : () {
+                      setState(() => _selectedId = choice.id);
+                      widget.onResponse({'id': choice.id, 'text': choice.text});
+                    },
+              style: OutlinedButton.styleFrom(
+                backgroundColor:
+                    isSelected ? widget.primaryColor : widget.theme.colors.surface,
+                foregroundColor:
+                    isSelected ? Colors.white : widget.theme.colors.text,
+                side: BorderSide(
+                  color: isSelected ? widget.primaryColor : widget.primaryColor,
+                ),
+                padding: EdgeInsets.symmetric(
+                  vertical: widget.theme.spacing.md,
+                  horizontal: widget.theme.spacing.md,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+                ),
+              ),
+              child: Text(choice.text),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+/// Widget for multiple choice selection (checkboxes)
+class MultipleChoiceNodeWidget extends StatefulWidget {
+  final MultipleChoiceUIState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const MultipleChoiceNodeWidget({
+    super.key,
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  State<MultipleChoiceNodeWidget> createState() =>
+      _MultipleChoiceNodeWidgetState();
+}
+
+class _MultipleChoiceNodeWidgetState extends State<MultipleChoiceNodeWidget> {
+  final Set<String> _selectedIds = {};
+  bool _submitted = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.state.questionText != null &&
+            widget.state.questionText!.isNotEmpty) ...[
+          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          SizedBox(height: widget.theme.spacing.sm),
+        ],
+        ...widget.state.options.map((option) {
+          final isSelected = _selectedIds.contains(option.id);
+          return Padding(
+            padding: EdgeInsets.only(bottom: widget.theme.spacing.xs),
+            child: InkWell(
+              onTap: _submitted
+                  ? null
+                  : () {
+                      setState(() {
+                        if (isSelected) {
+                          _selectedIds.remove(option.id);
+                        } else {
+                          _selectedIds.add(option.id);
+                        }
+                      });
+                    },
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+              child: Container(
+                padding: EdgeInsets.all(widget.theme.spacing.md),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: isSelected
+                        ? widget.primaryColor
+                        : widget.theme.colors.border,
+                  ),
+                  borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+                ),
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: isSelected,
+                      onChanged: _submitted
+                          ? null
+                          : (value) {
+                              setState(() {
+                                if (value == true) {
+                                  _selectedIds.add(option.id);
+                                } else {
+                                  _selectedIds.remove(option.id);
+                                }
+                              });
+                            },
+                      activeColor: widget.primaryColor,
+                    ),
+                    SizedBox(width: widget.theme.spacing.sm),
+                    Expanded(
+                      child: Text(
+                        option.text,
+                        style: TextStyle(
+                          fontSize: widget.theme.typography.fontSizeMd,
+                          color: widget.theme.colors.text,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+        SizedBox(height: widget.theme.spacing.sm),
+        ElevatedButton(
+          onPressed: _submitted || _selectedIds.isEmpty
+              ? null
+              : () {
+                  setState(() => _submitted = true);
+                  final selectedTexts = widget.state.options
+                      .where((o) => _selectedIds.contains(o.id))
+                      .map((o) => o.text)
+                      .toList();
+                  widget.onResponse(selectedTexts);
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: widget.primaryColor,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(vertical: widget.theme.spacing.md),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+            ),
+          ),
+          child: const Text('Submit'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Widget for image choice grid
+class ImageChoiceNodeWidget extends StatefulWidget {
+  final ImageChoiceUIState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const ImageChoiceNodeWidget({
+    super.key,
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  State<ImageChoiceNodeWidget> createState() => _ImageChoiceNodeWidgetState();
+}
+
+class _ImageChoiceNodeWidgetState extends State<ImageChoiceNodeWidget> {
+  String? _selectedId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.state.questionText != null &&
+            widget.state.questionText!.isNotEmpty) ...[
+          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          SizedBox(height: widget.theme.spacing.sm),
+        ],
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: 1,
+          ),
+          itemCount: widget.state.images.length,
+          itemBuilder: (context, index) {
+            final image = widget.state.images[index];
+            final isSelected = _selectedId == image.id;
+
+            return InkWell(
+              onTap: _selectedId != null
+                  ? null
+                  : () {
+                      setState(() => _selectedId = image.id);
+                      widget.onResponse({
+                        'id': image.id,
+                        'label': image.label,
+                        'imageUrl': image.imageUrl,
+                      });
+                    },
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+                  border: isSelected
+                      ? Border.all(color: widget.primaryColor, width: 3)
+                      : null,
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      image.imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: widget.theme.colors.surface,
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: widget.theme.colors.textSecondary,
+                          ),
+                        );
+                      },
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: EdgeInsets.all(widget.theme.spacing.sm),
+                        color: Colors.black.withOpacity(0.6),
+                        child: Text(
+                          image.label,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: widget.theme.typography.fontSizeSm,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// ==================== RATING NODES ====================
+
+/// Widget for rating selection (stars/numbers/smileys)
+class RatingNodeWidget extends StatefulWidget {
+  final RatingUIState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const RatingNodeWidget({
+    super.key,
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  State<RatingNodeWidget> createState() => _RatingNodeWidgetState();
+}
+
+class _RatingNodeWidgetState extends State<RatingNodeWidget> {
+  int? _selectedRating;
+
+  void _selectRating(int rating) {
+    if (_selectedRating != null) return;
+    setState(() => _selectedRating = rating);
+    widget.onResponse(rating);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.state.questionText != null &&
+            widget.state.questionText!.isNotEmpty) ...[
+          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          SizedBox(height: widget.theme.spacing.sm),
+        ],
+        switch (widget.state.ratingType) {
+          RatingType.star => _buildStarRating(),
+          RatingType.smiley => _buildSmileyRating(),
+          RatingType.number || RatingType.opinionScale => _buildNumberRating(),
+        },
+      ],
+    );
+  }
+
+  Widget _buildStarRating() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(widget.state.maxValue, (index) {
+        final rating = index + 1;
+        final isSelected = _selectedRating != null && rating <= _selectedRating!;
+        return IconButton(
+          onPressed: _selectedRating != null ? null : () => _selectRating(rating),
+          icon: Icon(
+            isSelected ? Icons.star : Icons.star_outline,
+            size: 40,
+            color: isSelected ? widget.primaryColor : Colors.grey,
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildSmileyRating() {
+    final smileys = ['😢', '😕', '😐', '🙂', '😄'];
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: List.generate(smileys.length, (index) {
+        final rating = index + 1;
+        final isSelected = _selectedRating == rating;
+        return InkWell(
+          onTap: _selectedRating != null ? null : () => _selectRating(rating),
+          borderRadius: BorderRadius.circular(widget.theme.borderRadius.full),
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isSelected
+                  ? widget.primaryColor.withOpacity(0.2)
+                  : Colors.transparent,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              smileys[index],
+              style: const TextStyle(fontSize: 32),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildNumberRating() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: List.generate(
+          widget.state.maxValue - widget.state.minValue + 1,
+          (index) {
+            final value = widget.state.minValue + index;
+            final isSelected = _selectedRating == value;
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: widget.theme.spacing.xs),
+              child: InkWell(
+                onTap: _selectedRating != null ? null : () => _selectRating(value),
+                borderRadius: BorderRadius.circular(widget.theme.borderRadius.full),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected
+                        ? widget.primaryColor
+                        : widget.theme.colors.surface,
+                    border: Border.all(
+                      color: isSelected
+                          ? widget.primaryColor
+                          : widget.theme.colors.border,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    value.toString(),
+                    style: TextStyle(
+                      fontSize: widget.theme.typography.fontSizeMd,
+                      color: isSelected ? Colors.white : widget.theme.colors.text,
+                      fontWeight: widget.theme.typography.fontWeightMedium,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== OTHER INPUT NODES ====================
+
+/// Widget for dropdown selection
+class DropdownNodeWidget extends StatefulWidget {
+  final DropdownUIState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const DropdownNodeWidget({
+    super.key,
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  State<DropdownNodeWidget> createState() => _DropdownNodeWidgetState();
+}
+
+class _DropdownNodeWidgetState extends State<DropdownNodeWidget> {
+  SelectOption? _selectedOption;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.state.questionText != null &&
+            widget.state.questionText!.isNotEmpty) ...[
+          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          SizedBox(height: widget.theme.spacing.sm),
+        ],
+        DropdownButtonFormField<SelectOption>(
+          value: _selectedOption,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: widget.theme.colors.surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+              borderSide: BorderSide(color: widget.theme.colors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+              borderSide: BorderSide(color: widget.theme.colors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+              borderSide: BorderSide(color: widget.primaryColor, width: 2),
+            ),
+            hintText: 'Select an option',
+          ),
+          items: widget.state.options.map((option) {
+            return DropdownMenuItem<SelectOption>(
+              value: option,
+              child: Text(option.text),
+            );
+          }).toList(),
+          onChanged: _selectedOption != null
+              ? null
+              : (option) {
+                  if (option != null) {
+                    setState(() => _selectedOption = option);
+                    widget.onResponse({'id': option.id, 'text': option.text});
+                  }
+                },
+        ),
+      ],
+    );
+  }
+}
+
+/// Widget for range slider
+class RangeNodeWidget extends StatefulWidget {
+  final RangeUIState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const RangeNodeWidget({
+    super.key,
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  State<RangeNodeWidget> createState() => _RangeNodeWidgetState();
+}
+
+class _RangeNodeWidgetState extends State<RangeNodeWidget> {
+  late double _value;
+  bool _submitted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _value = (widget.state.defaultValue ??
+            ((widget.state.minValue + widget.state.maxValue) / 2))
+        .toDouble();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.state.questionText != null &&
+            widget.state.questionText!.isNotEmpty) ...[
+          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          SizedBox(height: widget.theme.spacing.sm),
+        ],
+        Row(
+          children: [
+            Text(
+              widget.state.minValue.toString(),
+              style: TextStyle(
+                fontSize: widget.theme.typography.fontSizeSm,
+                color: widget.theme.colors.textSecondary,
+              ),
+            ),
+            Expanded(
+              child: Slider(
+                value: _value,
+                min: widget.state.minValue.toDouble(),
+                max: widget.state.maxValue.toDouble(),
+                divisions: widget.state.maxValue - widget.state.minValue,
+                onChanged: _submitted
+                    ? null
+                    : (value) {
+                        setState(() => _value = value);
+                      },
+                activeColor: widget.primaryColor,
+              ),
+            ),
+            Text(
+              widget.state.maxValue.toString(),
+              style: TextStyle(
+                fontSize: widget.theme.typography.fontSizeSm,
+                color: widget.theme.colors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+        Text(
+          'Selected: ${_value.toInt()}',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: widget.theme.typography.fontSizeMd,
+            fontWeight: widget.theme.typography.fontWeightMedium,
+          ),
+        ),
+        SizedBox(height: widget.theme.spacing.sm),
+        ElevatedButton(
+          onPressed: _submitted
+              ? null
+              : () {
+                  setState(() => _submitted = true);
+                  widget.onResponse(_value.toInt());
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: widget.primaryColor,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(vertical: widget.theme.spacing.md),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+            ),
+          ),
+          child: const Text('Submit'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Widget for calendar/date picker
+class CalendarNodeWidget extends StatefulWidget {
+  final CalendarUIState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const CalendarNodeWidget({
+    super.key,
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  State<CalendarNodeWidget> createState() => _CalendarNodeWidgetState();
+}
+
+class _CalendarNodeWidgetState extends State<CalendarNodeWidget> {
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
+  bool _submitted = false;
+
+  Future<void> _pickDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(primary: widget.primaryColor),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (date != null) {
+      setState(() => _selectedDate = date);
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(primary: widget.primaryColor),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (time != null) {
+      setState(() => _selectedTime = time);
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String _formatTime(TimeOfDay time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.state.questionText != null &&
+            widget.state.questionText!.isNotEmpty) ...[
+          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          SizedBox(height: widget.theme.spacing.sm),
+        ],
+        Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(widget.theme.spacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Select Date',
+                  style: TextStyle(
+                    fontSize: widget.theme.typography.fontSizeMd,
+                    fontWeight: widget.theme.typography.fontWeightMedium,
+                  ),
+                ),
+                SizedBox(height: widget.theme.spacing.sm),
+                OutlinedButton.icon(
+                  onPressed: _submitted ? null : _pickDate,
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    _selectedDate != null
+                        ? _formatDate(_selectedDate!)
+                        : 'Choose date',
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.all(widget.theme.spacing.md),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(widget.theme.borderRadius.md),
+                    ),
+                  ),
+                ),
+                if (widget.state.showTimeSelection) ...[
+                  SizedBox(height: widget.theme.spacing.md),
+                  Text(
+                    'Select Time',
+                    style: TextStyle(
+                      fontSize: widget.theme.typography.fontSizeMd,
+                      fontWeight: widget.theme.typography.fontWeightMedium,
+                    ),
+                  ),
+                  SizedBox(height: widget.theme.spacing.sm),
+                  OutlinedButton.icon(
+                    onPressed: _submitted ? null : _pickTime,
+                    icon: const Icon(Icons.access_time),
+                    label: Text(
+                      _selectedTime != null
+                          ? _formatTime(_selectedTime!)
+                          : 'Choose time',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.all(widget.theme.spacing.md),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(widget.theme.borderRadius.md),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: widget.theme.spacing.sm),
+        ElevatedButton(
+          onPressed: _submitted || _selectedDate == null
+              ? null
+              : () {
+                  setState(() => _submitted = true);
+                  widget.onResponse({
+                    'date': _formatDate(_selectedDate!),
+                    'time': _selectedTime != null
+                        ? _formatTime(_selectedTime!)
+                        : null,
+                  });
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: widget.primaryColor,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(vertical: widget.theme.spacing.md),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+            ),
+          ),
+          child: const Text('Confirm'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Widget for quiz questions
+class QuizNodeWidget extends StatefulWidget {
+  final QuizUIState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const QuizNodeWidget({
+    super.key,
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  State<QuizNodeWidget> createState() => _QuizNodeWidgetState();
+}
+
+class _QuizNodeWidgetState extends State<QuizNodeWidget> {
+  int? _selectedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.state.questionText.isNotEmpty) ...[
+          BotMessageBubble(text: widget.state.questionText, theme: widget.theme),
+          SizedBox(height: widget.theme.spacing.sm),
+        ],
+        ...widget.state.options.asMap().entries.map((entry) {
+          final index = entry.key;
+          final option = entry.value;
+          final isSelected = _selectedIndex == index;
+          final isCorrect = index == widget.state.correctAnswerIndex;
+
+          Color backgroundColor;
+          Color textColor;
+          if (_selectedIndex != null && isSelected) {
+            backgroundColor = isCorrect
+                ? const Color(0xFF4CAF50)
+                : const Color(0xFFF44336);
+            textColor = Colors.white;
+          } else {
+            backgroundColor = widget.theme.colors.surface;
+            textColor = widget.theme.colors.text;
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: widget.theme.spacing.xs),
+            child: OutlinedButton(
+              onPressed: _selectedIndex != null
+                  ? null
+                  : () {
+                      setState(() => _selectedIndex = index);
+                      widget.onResponse({'index': index, 'text': option});
+                    },
+              style: OutlinedButton.styleFrom(
+                backgroundColor: backgroundColor,
+                foregroundColor: textColor,
+                side: BorderSide(
+                  color:
+                      _selectedIndex == null ? widget.primaryColor : Colors.transparent,
+                ),
+                padding: EdgeInsets.symmetric(
+                  vertical: widget.theme.spacing.md,
+                  horizontal: widget.theme.spacing.md,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+                ),
+              ),
+              child: Text(option),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+/// Widget for multiple sequential questions
+class MultipleQuestionsNodeWidget extends StatelessWidget {
+  final MultipleQuestionsUIState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const MultipleQuestionsNodeWidget({
+    super.key,
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currentQuestion =
+        state.currentIndex < state.questions.length
+            ? state.questions[state.currentIndex]
+            : null;
+
+    if (currentQuestion == null) {
+      return const SizedBox.shrink();
+    }
+
+    return TextInputNodeWidget(
+      state: TextInputUIState(
+        questionText: currentQuestion.questionText,
+        inputType: _mapAnswerType(currentQuestion.answerType),
+        nodeId: state.nodeId,
+        answerKey: currentQuestion.answerKey,
+      ),
+      onResponse: onResponse,
+      primaryColor: primaryColor,
+      theme: theme,
+    );
+  }
+
+  TextInputType _mapAnswerType(String answerType) {
+    return switch (answerType.toLowerCase()) {
+      'email' => TextInputType.email,
+      'phone' || 'mobile' => TextInputType.phone,
+      'name' => TextInputType.name,
+      _ => TextInputType.text,
+    };
+  }
+}
+
+/// Widget for human handover
+class HumanHandoverNodeWidget extends StatelessWidget {
+  final HumanHandoverUIState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const HumanHandoverNodeWidget({
+    super.key,
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (state.state) {
+      HandoverState.preChatQuestions => _buildPreChatQuestions(),
+      HandoverState.waitingForAgent => _buildWaitingForAgent(),
+      HandoverState.agentConnected => _buildAgentConnected(),
+      HandoverState.noAgentsAvailable => _buildNoAgentsAvailable(),
+      HandoverState.postChatSurvey => _buildPostChatSurvey(),
+    };
+  }
+
+  Widget _buildPreChatQuestions() {
+    final currentQuestion = state.preChatQuestions != null &&
+            state.currentQuestionIndex < state.preChatQuestions!.length
+        ? state.preChatQuestions![state.currentQuestionIndex]
+        : null;
+
+    if (currentQuestion == null) {
+      return const SizedBox.shrink();
+    }
+
+    return TextInputNodeWidget(
+      state: TextInputUIState(
+        questionText: currentQuestion.questionText,
+        inputType: _mapAnswerType(currentQuestion.answerType),
+        nodeId: state.nodeId,
+        answerKey: currentQuestion.answerKey,
+      ),
+      onResponse: onResponse,
+      primaryColor: primaryColor,
+      theme: theme,
+    );
+  }
+
+  Widget _buildWaitingForAgent() {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: primaryColor),
+            SizedBox(height: theme.spacing.md),
+            Text(
+              state.handoverMessage ?? 'Connecting you to an agent...',
+              style: TextStyle(
+                fontSize: theme.typography.fontSizeMd,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (state.maxWaitTime != null) ...[
+              SizedBox(height: theme.spacing.sm),
+              Text(
+                'Estimated wait: ${state.maxWaitTime} minutes',
+                style: TextStyle(
+                  fontSize: theme.typography.fontSizeSm,
+                  color: theme.colors.textSecondary,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAgentConnected() {
+    return Card(
+      color: const Color(0xFFE8F5E9),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.md),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.check_circle,
+              color: Color(0xFF4CAF50),
+            ),
+            SizedBox(width: theme.spacing.sm),
+            Expanded(
+              child: Text(
+                '${state.agentName ?? "Agent"} has joined the chat',
+                style: TextStyle(
+                  fontSize: theme.typography.fontSizeMd,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoAgentsAvailable() {
+    return Card(
+      color: const Color(0xFFFFF3E0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.warning,
+              color: Color(0xFFFF9800),
+            ),
+            SizedBox(height: theme.spacing.sm),
+            Text(
+              state.handoverMessage ?? 'No agents available',
+              style: TextStyle(
+                fontSize: theme.typography.fontSizeMd,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPostChatSurvey() {
+    final currentQuestion = state.preChatQuestions != null &&
+            state.currentQuestionIndex < state.preChatQuestions!.length
+        ? state.preChatQuestions![state.currentQuestionIndex]
+        : null;
+
+    if (currentQuestion == null) {
+      return const SizedBox.shrink();
+    }
+
+    return TextInputNodeWidget(
+      state: TextInputUIState(
+        questionText: currentQuestion.questionText,
+        inputType: TextInputType.text,
+        nodeId: state.nodeId,
+        answerKey: currentQuestion.answerKey,
+      ),
+      onResponse: onResponse,
+      primaryColor: primaryColor,
+      theme: theme,
+    );
+  }
+
+  TextInputType _mapAnswerType(String answerType) {
+    return switch (answerType.toLowerCase()) {
+      'email' => TextInputType.email,
+      'phone' || 'mobile' => TextInputType.phone,
+      'name' => TextInputType.name,
+      _ => TextInputType.text,
+    };
+  }
+}
+
+// ==================== OTHER NODES ====================
+
+/// Widget for HTML content
+class HtmlNodeWidget extends StatelessWidget {
+  final HtmlUIState state;
+  final ConferBotTheme theme;
+
+  const HtmlNodeWidget({
+    super.key,
+    required this.state,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // HTML rendering placeholder - would use flutter_html or webview in production
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.md),
+        child: Text(
+          'HTML Content',
+          style: TextStyle(
+            fontSize: theme.typography.fontSizeMd,
+            color: theme.colors.text,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Widget for payment
+class PaymentNodeWidget extends StatelessWidget {
+  final PaymentUIState state;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const PaymentNodeWidget({
+    super.key,
+    required this.state,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Payment',
+              style: TextStyle(
+                fontSize: theme.typography.fontSizeLg,
+                fontWeight: theme.typography.fontWeightMedium,
+              ),
+            ),
+            if (state.amount != null && state.currency != null) ...[
+              SizedBox(height: theme.spacing.sm),
+              Text(
+                '${state.currency} ${state.amount}',
+                style: TextStyle(
+                  fontSize: theme.typography.fontSizeXl,
+                  fontWeight: theme.typography.fontWeightBold,
+                ),
+              ),
+            ],
+            if (state.description != null && state.description!.isNotEmpty) ...[
+              SizedBox(height: theme.spacing.xs),
+              Text(
+                state.description!,
+                style: TextStyle(
+                  fontSize: theme.typography.fontSizeMd,
+                  color: theme.colors.textSecondary,
+                ),
+              ),
+            ],
+            SizedBox(height: theme.spacing.md),
+            ElevatedButton(
+              onPressed: state.paymentUrl.isNotEmpty
+                  ? () {
+                      // Would use url_launcher to open payment URL
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF635BFF), // Stripe color
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(
+                  vertical: theme.spacing.sm,
+                  horizontal: theme.spacing.lg,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(theme.borderRadius.md),
+                ),
+              ),
+              child: const Text('Pay Now'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Widget for redirect
+class RedirectNodeWidget extends StatelessWidget {
+  final RedirectUIState state;
+  final ConferBotTheme theme;
+
+  const RedirectNodeWidget({
+    super.key,
+    required this.state,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // In production, would use url_launcher to open the URL
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(theme.spacing.md),
+        child: Row(
+          children: [
+            Icon(
+              Icons.open_in_new,
+              color: theme.colors.primary,
+            ),
+            SizedBox(width: theme.spacing.sm),
+            Text(
+              'Redirecting...',
+              style: TextStyle(
+                fontSize: theme.typography.fontSizeMd,
+                color: theme.colors.text,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== HELPER COMPONENTS ====================
+
+/// Bot message bubble widget
+class BotMessageBubble extends StatelessWidget {
+  final String text;
+  final ConferBotTheme theme;
+
+  const BotMessageBubble({
+    super.key,
+    required this.text,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(theme.spacing.sm),
+      decoration: BoxDecoration(
+        color: theme.colors.botBubble,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(theme.borderRadius.lg),
+          topRight: Radius.circular(theme.borderRadius.lg),
+          bottomRight: Radius.circular(theme.borderRadius.lg),
+          bottomLeft: Radius.circular(theme.borderRadius.sm),
+        ),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: theme.typography.fontSizeMd,
+          color: theme.colors.botBubbleText,
+          height: theme.typography.lineHeightNormal,
+        ),
+      ),
+    );
+  }
+}
