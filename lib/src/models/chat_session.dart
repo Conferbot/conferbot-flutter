@@ -11,6 +11,18 @@ class ChatSession {
   final Map<String, dynamic>? visitorMeta;
   final bool isActive;
 
+  /// Chatbot flow steps (nodes) - optional, returned by API
+  final List<Map<String, dynamic>>? steps;
+
+  /// Chatbot flow edges (connections) - optional, returned by API
+  final List<Map<String, dynamic>>? edges;
+
+  /// Total message count (for pagination)
+  final int? totalMessages;
+
+  /// Current page (for pagination)
+  final int? currentPage;
+
   const ChatSession({
     required this.id,
     required this.chatSessionId,
@@ -20,6 +32,10 @@ class ChatSession {
     this.chatDate,
     this.visitorMeta,
     this.isActive = true,
+    this.steps,
+    this.edges,
+    this.totalMessages,
+    this.currentPage,
   });
 
   factory ChatSession.fromJson(Map<String, dynamic> json) {
@@ -27,6 +43,14 @@ class ChatSession {
             ?.map((item) => RecordItem.fromJson(item as Map<String, dynamic>))
             .toList() ??
         [];
+
+    final stepsList = (json['steps'] as List?)
+        ?.map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+
+    final edgesList = (json['edges'] as List?)
+        ?.map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
 
     return ChatSession(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
@@ -37,6 +61,10 @@ class ChatSession {
       chatDate: json['chatDate'] != null ? DateTime.parse(json['chatDate'] as String) : null,
       visitorMeta: json['visitorMeta'] as Map<String, dynamic>?,
       isActive: json['isActive'] as bool? ?? true,
+      steps: stepsList,
+      edges: edgesList,
+      totalMessages: json['totalMessages'] as int?,
+      currentPage: json['currentPage'] as int?,
     );
   }
 
@@ -50,6 +78,10 @@ class ChatSession {
       if (chatDate != null) 'chatDate': chatDate!.toIso8601String(),
       if (visitorMeta != null) 'visitorMeta': visitorMeta,
       'isActive': isActive,
+      if (steps != null) 'steps': steps,
+      if (edges != null) 'edges': edges,
+      if (totalMessages != null) 'totalMessages': totalMessages,
+      if (currentPage != null) 'currentPage': currentPage,
     };
   }
 
@@ -62,6 +94,10 @@ class ChatSession {
     DateTime? chatDate,
     Map<String, dynamic>? visitorMeta,
     bool? isActive,
+    List<Map<String, dynamic>>? steps,
+    List<Map<String, dynamic>>? edges,
+    int? totalMessages,
+    int? currentPage,
   }) {
     return ChatSession(
       id: id ?? this.id,
@@ -72,6 +108,10 @@ class ChatSession {
       chatDate: chatDate ?? this.chatDate,
       visitorMeta: visitorMeta ?? this.visitorMeta,
       isActive: isActive ?? this.isActive,
+      steps: steps ?? this.steps,
+      edges: edges ?? this.edges,
+      totalMessages: totalMessages ?? this.totalMessages,
+      currentPage: currentPage ?? this.currentPage,
     );
   }
 }
