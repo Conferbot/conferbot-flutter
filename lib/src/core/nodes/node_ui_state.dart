@@ -110,11 +110,29 @@ class FileUploadUIState extends NodeUIState {
   final String questionText;
   final int maxSizeMb;
   final List<String>? allowedTypes;
+  final String? answerKey;
 
   const FileUploadUIState({
     required this.questionText,
     this.maxSizeMb = 10,
     this.allowedTypes,
+    this.answerKey,
+    required super.nodeId,
+  });
+}
+
+/// Voice input for recording voice messages
+class VoiceInputUIState extends NodeUIState {
+  final String questionText;
+  final int maxDurationSeconds;
+  final String? answerKey;
+  final bool allowTextFallback;
+
+  const VoiceInputUIState({
+    required this.questionText,
+    this.maxDurationSeconds = 120,
+    this.answerKey,
+    this.allowTextFallback = true,
     required super.nodeId,
   });
 }
@@ -278,6 +296,8 @@ class CalendarUIState extends NodeUIState {
   final DateTime? minDate;
   final DateTime? maxDate;
   final List<int>? disabledDays;
+  final String? timezone;
+  final String? answerKey;
 
   const CalendarUIState({
     this.questionText,
@@ -285,6 +305,8 @@ class CalendarUIState extends NodeUIState {
     this.minDate,
     this.maxDate,
     this.disabledDays,
+    this.timezone,
+    this.answerKey,
     required super.nodeId,
   });
 }
@@ -319,6 +341,9 @@ class QuestionDefinition {
     required this.answerKey,
   });
 }
+
+/// Alias for backward compatibility
+typedef Question = QuestionDefinition;
 
 /// Multiple sequential questions
 class MultipleQuestionsUIState extends NodeUIState {
@@ -391,6 +416,24 @@ class RedirectUIState extends NodeUIState {
   const RedirectUIState({
     required this.url,
     this.openInNewTab = true,
+    required super.nodeId,
+  });
+}
+
+// ==================== VOICE MESSAGE UI STATE ====================
+
+/// Voice message display state for received voice messages
+class VoiceMessageUIState extends NodeUIState {
+  final String audioUrl;
+  final Duration? duration;
+  final List<double>? waveformData;
+  final bool isUserMessage;
+
+  const VoiceMessageUIState({
+    required this.audioUrl,
+    this.duration,
+    this.waveformData,
+    this.isUserMessage = false,
     required super.nodeId,
   });
 }
