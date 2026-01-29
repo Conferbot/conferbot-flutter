@@ -3,6 +3,11 @@ import 'package:flutter/services.dart';
 import '../../core/nodes/node_ui_state.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
+import '../../widgets/voice_message/voice_input_widget.dart';
+import '../../widgets/voice_message/voice_player.dart';
+import '../../widgets/media/image_viewer.dart';
+import '../../widgets/media/video_player_widget.dart';
+import '../../widgets/media/audio_player_widget.dart';
 
 /// Main widget that routes to the correct node component based on UI state
 class NodeRenderer extends StatelessWidget {
@@ -26,9 +31,21 @@ class NodeRenderer extends StatelessWidget {
 
     return switch (uiState) {
       MessageUIState state => MessageNodeWidget(state: state, theme: effectiveTheme),
-      ImageUIState state => ImageNodeWidget(state: state, theme: effectiveTheme),
-      VideoUIState state => VideoNodeWidget(state: state, theme: effectiveTheme),
-      AudioUIState state => AudioNodeWidget(state: state, theme: effectiveTheme),
+      ImageUIState state => ImageNodeWidget(
+          state: state,
+          theme: effectiveTheme,
+          primaryColor: effectivePrimaryColor,
+        ),
+      VideoUIState state => VideoNodeWidget(
+          state: state,
+          theme: effectiveTheme,
+          primaryColor: effectivePrimaryColor,
+        ),
+      AudioUIState state => AudioNodeWidget(
+          state: state,
+          theme: effectiveTheme,
+          primaryColor: effectivePrimaryColor,
+        ),
       FileUIState state => FileNodeWidget(state: state, theme: effectiveTheme),
       TextInputUIState state => TextInputNodeWidget(
           state: state,
@@ -39,6 +56,17 @@ class NodeRenderer extends StatelessWidget {
       FileUploadUIState state => FileUploadNodeWidget(
           state: state,
           onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      VoiceInputUIState state => VoiceInputNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      VoiceMessageUIState state => VoiceMessageNodeWidget(
+          state: state,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
@@ -132,172 +160,86 @@ class MessageNodeWidget extends StatelessWidget {
   }
 }
 
-/// Widget displaying an image with optional caption
+/// Widget displaying an image with optional caption and full-screen viewer
 class ImageNodeWidget extends StatelessWidget {
   final ImageUIState state;
   final ConferBotTheme theme;
+  final Color? primaryColor;
 
   const ImageNodeWidget({
     super.key,
     required this.state,
     required this.theme,
+    this.primaryColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(theme.borderRadius.lg),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 300),
-            child: Image.network(
-              state.url,
-              fit: BoxFit.contain,
-              width: double.infinity,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Container(
-                  height: 200,
-                  alignment: Alignment.center,
-                  child: CircularProgressIndicator(
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                        : null,
-                    color: theme.colors.primary,
-                  ),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 200,
-                  color: theme.colors.surface,
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.broken_image_outlined,
-                    size: 48,
-                    color: theme.colors.textSecondary,
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-        if (state.caption != null && state.caption!.isNotEmpty) ...[
-          SizedBox(height: theme.spacing.xs),
-          Text(
-            state.caption!,
-            style: TextStyle(
-              fontSize: theme.typography.fontSizeSm,
-              color: theme.colors.textSecondary,
-            ),
-          ),
-        ],
-      ],
+    return ImageThumbnail(
+      imageUrl: state.url,
+      caption: state.caption,
+      theme: theme,
+      maxHeight: 300,
+      heroTag: 'image_${state.nodeId}',
+      openFullScreenOnTap: true,
     );
   }
 }
 
-/// Widget displaying a video player placeholder
+/// Widget displaying a video player with full controls
 class VideoNodeWidget extends StatelessWidget {
   final VideoUIState state;
   final ConferBotTheme theme;
+  final Color? primaryColor;
 
   const VideoNodeWidget({
     super.key,
     required this.state,
     required this.theme,
+    this.primaryColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        width: double.infinity,
-        height: 200,
-        color: Colors.black,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(
-              Icons.play_arrow,
-              size: 48,
-              color: Colors.white,
-            ),
-            if (state.caption != null && state.caption!.isNotEmpty)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: EdgeInsets.all(theme.spacing.sm),
-                  color: Colors.black54,
-                  child: Text(
-                    state.caption!,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: theme.typography.fontSizeSm,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+    return VideoPlayerWidget(
+      videoUrl: state.url,
+      caption: state.caption,
+      theme: theme,
+      playerId: 'video_${state.nodeId}',
+      config: VideoPlayerConfig(
+        autoPlay: state.autoplay,
+        showControls: true,
+        allowFullScreen: true,
+        showProgressBar: true,
       ),
     );
   }
 }
 
-/// Widget displaying an audio player
+/// Widget displaying an audio player with waveform visualization
 class AudioNodeWidget extends StatelessWidget {
   final AudioUIState state;
   final ConferBotTheme theme;
+  final Color? primaryColor;
 
   const AudioNodeWidget({
     super.key,
     required this.state,
     required this.theme,
+    this.primaryColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(theme.spacing.md),
-        child: Row(
-          children: [
-            Icon(
-              Icons.play_arrow,
-              size: 32,
-              color: theme.colors.primary,
-            ),
-            SizedBox(width: theme.spacing.sm),
-            Expanded(
-              child: LinearProgressIndicator(
-                value: 0,
-                backgroundColor: theme.colors.border,
-                valueColor: AlwaysStoppedAnimation(theme.colors.primary),
-              ),
-            ),
-            SizedBox(width: theme.spacing.sm),
-            Text(
-              '0:00',
-              style: TextStyle(
-                fontSize: theme.typography.fontSizeSm,
-                color: theme.colors.textSecondary,
-              ),
-            ),
-          ],
-        ),
+    return AudioPlayerWidget(
+      audioUrl: state.url,
+      title: state.title,
+      theme: theme,
+      primaryColor: primaryColor ?? theme.colors.primary,
+      playerId: 'audio_${state.nodeId}',
+      config: const AudioPlayerConfig(
+        showSpeedControl: true,
+        showWaveform: true,
       ),
     );
   }
@@ -331,13 +273,28 @@ class FileNodeWidget extends StatelessWidget {
             ),
             SizedBox(width: theme.spacing.sm),
             Expanded(
-              child: Text(
-                state.fileName,
-                style: TextStyle(
-                  fontSize: theme.typography.fontSizeMd,
-                  color: theme.colors.text,
-                ),
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    state.fileName,
+                    style: TextStyle(
+                      fontSize: theme.typography.fontSizeMd,
+                      color: theme.colors.text,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (state.fileSize != null) ...[
+                    SizedBox(height: theme.spacing.xs),
+                    Text(
+                      state.fileSize!,
+                      style: TextStyle(
+                        fontSize: theme.typography.fontSizeXs,
+                        color: theme.colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             Icon(
@@ -347,6 +304,35 @@ class FileNodeWidget extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ==================== VOICE MESSAGE NODE ====================
+
+/// Widget for displaying voice messages in chat
+class VoiceMessageNodeWidget extends StatelessWidget {
+  final VoiceMessageUIState state;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const VoiceMessageNodeWidget({
+    super.key,
+    required this.state,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return VoicePlayerWidget(
+      audioSource: state.audioUrl,
+      isLocalFile: false,
+      duration: state.duration,
+      waveformData: state.waveformData,
+      isUserMessage: state.isUserMessage,
+      theme: theme,
+      primaryColor: primaryColor,
     );
   }
 }
