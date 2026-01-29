@@ -5,6 +5,8 @@ import '../models/socket_events.dart';
 import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/socket_client.dart';
+import '../core/node_flow_engine.dart';
+import '../core/nodes/node_ui_state.dart';
 
 /// ConferBot provider configuration
 class ConferBotConfig {
@@ -24,6 +26,7 @@ class ConferBotConfig {
 }
 
 /// ConferBot provider for state management
+/// Integrates with NodeFlowEngine for handling all 51 node types
 class ConferBotProvider with ChangeNotifier {
   final String apiKey;
   final String botId;
@@ -35,6 +38,7 @@ class ConferBotProvider with ChangeNotifier {
 
   late final ApiClient _apiClient;
   late final SocketClient _socketClient;
+  late final NodeFlowEngine _flowEngine;
 
   // State
   bool _isInitialized = false;
@@ -45,6 +49,10 @@ class ConferBotProvider with ChangeNotifier {
   List<RecordItem> _record = [];
   Agent? _currentAgent;
   int _unreadCount = 0;
+
+  // Chatbot flow data
+  List<Map<String, dynamic>> _steps = [];
+  List<Map<String, dynamic>> _edges = [];
 
   ConferBotProvider({
     required this.apiKey,
@@ -67,6 +75,8 @@ class ConferBotProvider with ChangeNotifier {
       socketUrl: socketUrl ?? 'https://embed.conferbot.com',
     );
 
+    _flowEngine = NodeFlowEngine(socketClient: _socketClient);
+
     if (config.autoConnect) {
       _initialize();
     }
@@ -82,10 +92,26 @@ class ConferBotProvider with ChangeNotifier {
   Agent? get currentAgent => _currentAgent;
   int get unreadCount => _unreadCount;
 
+  /// Flow engine for node processing
+  NodeFlowEngine get flowEngine => _flowEngine;
+
+  /// Current UI state from flow engine
+  NodeUIState? get currentUIState => _flowEngine.currentUIState;
+
+  /// Whether the engine is processing a node
+  bool get isProcessing => _flowEngine.isProcessing;
+
+  /// Flow completion status
+  bool get isFlowComplete => _flowEngine.isFlowComplete;
+
+  /// Error message from engine
+  String? get errorMessage => _flowEngine.errorMessage;
+
   /// Initialize the SDK
   Future<void> _initialize() async {
     _socketClient.connect();
     _setupSocketListeners();
+    _setupFlowEngineListeners();
     _isInitialized = true;
     notifyListeners();
   }
@@ -105,25 +131,31 @@ class ConferBotProvider with ChangeNotifier {
       notifyListeners();
     });
 
-    // Chatbot data fetched
+    // Chatbot data fetched - contains steps and edges for flow
     _socketClient.on(SocketEvents.fetchedChatbotData, (data) {
       if (data != null && data is Map<String, dynamic>) {
         if (kDebugMode) {
           print('[ConferBot] Chatbot data received');
         }
-        // Store chatbot config if needed
-        // _chatbotConfig = data['chatbotData'];
+        _handleChatbotData(data);
       }
     });
 
-    // Bot response
+    // Bot response - incoming node from server
     _socketClient.on(SocketEvents.botResponse, (data) {
       if (data != null && data is Map<String, dynamic>) {
+        // Add to record for display
         final message = RecordItem.fromJson(data);
         _record.add(message);
         if (!_isOpen) {
           _unreadCount++;
         }
+
+        // Process through flow engine if it has node data
+        if (data['nodeData'] != null) {
+          _flowEngine.handleServerMessage(data);
+        }
+
         notifyListeners();
       }
     });
@@ -140,20 +172,27 @@ class ConferBotProvider with ChangeNotifier {
       }
     });
 
-    // Agent accepted handover (embed-server sends agentDetails)
+    // Agent accepted handover
     _socketClient.on(SocketEvents.agentAccepted, (data) {
       if (data != null && data is Map<String, dynamic>) {
         final agentDetails = data['agentDetails'] as Map<String, dynamic>?;
         if (agentDetails != null) {
-          // Map agentDetails to Agent
           _currentAgent = Agent(
             id: agentDetails['_id'] as String,
             name: agentDetails['name'] as String,
             email: agentDetails['email'] as String?,
           );
+          // Notify flow engine of agent acceptance
+          _flowEngine.handleAgentAccepted(_currentAgent!.name);
           notifyListeners();
         }
       }
+    });
+
+    // No agents available
+    _socketClient.on(SocketEvents.noAgentsAvailable, (_) {
+      _flowEngine.handleNoAgentsAvailable();
+      notifyListeners();
     });
 
     // Agent left
@@ -165,23 +204,65 @@ class ConferBotProvider with ChangeNotifier {
     // Chat ended
     _socketClient.on(SocketEvents.chatEnded, (_) {
       _currentAgent = null;
+      _flowEngine.handleChatEnded();
       notifyListeners();
     });
   }
 
-  /// Open chat
+  /// Setup flow engine listeners
+  void _setupFlowEngineListeners() {
+    _flowEngine.addListener(_onFlowEngineChange);
+  }
+
+  /// Handle flow engine state changes
+  void _onFlowEngineChange() {
+    notifyListeners();
+  }
+
+  /// Handle incoming chatbot data (steps and edges)
+  void _handleChatbotData(Map<String, dynamic> data) {
+    final chatbotData = data['chatbotData'] as Map<String, dynamic>?;
+    if (chatbotData != null) {
+      // Extract steps (nodes) and edges from chatbot data
+      final stepsData = chatbotData['steps'] as List<dynamic>?;
+      final edgesData = chatbotData['edges'] as List<dynamic>?;
+
+      if (stepsData != null) {
+        _steps = stepsData.map((s) => Map<String, dynamic>.from(s as Map)).toList();
+      }
+      if (edgesData != null) {
+        _edges = edgesData.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+
+      if (kDebugMode) {
+        print('[ConferBot] Loaded ${_steps.length} steps and ${_edges.length} edges');
+      }
+    }
+  }
+
+  /// Open chat and start the flow
   Future<void> openChat() async {
     if (_chatSessionId == null) {
-      // Try to initialize session via REST API (if available)
+      // Try to initialize session via REST API
       try {
         final response = await _apiClient.initSession(userId: user?.id ?? _visitorId);
         if (response.success && response.data != null) {
           _chatSessionId = response.data!.chatSessionId;
+          _visitorId = response.data!.visitorId ?? _visitorId;
           _record = response.data!.record;
+
+          // Load steps and edges if provided in session
+          if (response.data!.steps != null) {
+            _steps = response.data!.steps!;
+          }
+          if (response.data!.edges != null) {
+            _edges = response.data!.edges!;
+          }
         }
       } catch (e) {
-        // REST API not available yet, generate local session ID
+        // REST API not available, generate local session ID
         _chatSessionId = 'mobile_${DateTime.now().millisecondsSinceEpoch}';
+        _visitorId = 'visitor_${DateTime.now().millisecondsSinceEpoch}';
         if (kDebugMode) {
           print('[ConferBot] Using local session ID: $_chatSessionId');
         }
@@ -190,6 +271,18 @@ class ConferBotProvider with ChangeNotifier {
       // Join chat room via socket
       if (_chatSessionId != null) {
         _socketClient.joinChatRoomVisitor(_chatSessionId!);
+      }
+
+      // Initialize and start the flow engine
+      if (_steps.isNotEmpty) {
+        _flowEngine.initialize(
+          chatSessionId: _chatSessionId!,
+          visitorId: _visitorId ?? '',
+          botId: botId,
+          stepsData: _steps,
+          edgesData: _edges,
+        );
+        _flowEngine.start();
       }
     }
 
@@ -204,24 +297,33 @@ class ConferBotProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Send message
+  /// Submit response for current interactive node
+  void submitResponse(dynamic response) {
+    _flowEngine.submitResponse(response);
+  }
+
+  /// Send text message (legacy fallback for simple text input)
   Future<void> sendMessage(String text) async {
     if (_chatSessionId == null || text.trim().isEmpty) {
       return;
     }
 
-    // Create user message (use user-input-response type for chatbot flow)
+    // If flow engine has a current node, submit as response
+    if (_flowEngine.currentNodeId != null) {
+      submitResponse(text);
+      return;
+    }
+
+    // Legacy fallback: direct socket message
     final userMessage = UserInputResponseRecord(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       time: DateTime.now(),
       text: text,
     );
 
-    // Add to record optimistically
     _record.add(userMessage);
     notifyListeners();
 
-    // Send via socket (send full record array as embed-server expects)
     _socketClient.sendResponseRecord(
       chatSessionId: _chatSessionId!,
       record: _record.map((r) => r.toJson()).toList(),
@@ -265,6 +367,20 @@ class ConferBotProvider with ChangeNotifier {
     );
   }
 
+  /// Clear current error
+  void clearError() {
+    _flowEngine.clearError();
+  }
+
+  /// Reset conversation and start fresh
+  void resetConversation() {
+    _flowEngine.reset();
+    _record.clear();
+    _chatSessionId = null;
+    _currentAgent = null;
+    notifyListeners();
+  }
+
   /// Listen to custom socket event
   void on(String event, Function(dynamic) callback) {
     _socketClient.on(event, callback);
@@ -277,9 +393,11 @@ class ConferBotProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _flowEngine.removeListener(_onFlowEngineChange);
     if (_chatSessionId != null) {
       _socketClient.leaveChatRoom(_chatSessionId!);
     }
+    _flowEngine.dispose();
     _socketClient.dispose();
     _apiClient.dispose();
     super.dispose();
