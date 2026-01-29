@@ -1,3 +1,17 @@
+/// Ask question handlers - barrel export for backward compatibility
+///
+/// This file re-exports all ask question handlers from their split files
+/// to maintain backward compatibility with existing imports.
+///
+/// For new code, prefer importing directly from:
+/// - ask_questions/base_ask_handler.dart
+/// - ask_questions/text_input_handlers.dart
+/// - ask_questions/complex_input_handlers.dart
+///
+/// Or use the consolidated barrel:
+/// - ask_questions/ask_questions.dart
+library;
+
 import '../node_types.dart';
 import '../node_result.dart';
 import '../node_ui_state.dart';
@@ -130,10 +144,7 @@ class AskNameNodeHandler extends BaseAskNodeHandler {
     final questionText = getString(nodeData, 'questionText', 'What is your name?');
     final answerKey = getString(nodeData, 'answerVariable', 'name');
 
-    // Add question to transcript
     state.addToTranscript('bot', questionText);
-
-    // Initialize answer variable
     state.addAnswerVariable(nodeId, answerKey);
 
     return NodeResult.displayUI(
@@ -162,16 +173,10 @@ class AskNameNodeHandler extends BaseAskNodeHandler {
       );
     }
 
-    // Update answer variable
     state.setAnswerVariable(nodeId, name);
-
-    // Set user metadata
     state.setUserMetadata('name', name);
-
-    // Add to transcript
     state.addToTranscript('user', name);
 
-    // Record the response
     recordResponse(
       nodeId: nodeId,
       shape: 'user-ask-name-response',
@@ -179,17 +184,14 @@ class AskNameNodeHandler extends BaseAskNodeHandler {
       type: nodeType,
     );
 
-    // Display greeting if configured
     final greetResponse = nodeData['nameGreetResponse']?.toString() ??
         nodeData['nameGreet']?.toString();
 
     if (greetResponse != null && greetResponse.isNotEmpty) {
-      // Replace placeholders with name
       final greeting = greetResponse
           .replaceAll('{name}', name)
           .replaceAll('\${name}', name)
           .replaceAll('{{name}}', name);
-
       state.addToTranscript('bot', greeting);
     }
 
@@ -198,7 +200,6 @@ class AskNameNodeHandler extends BaseAskNodeHandler {
 }
 
 /// Handler for ask-email-node
-/// Asks user for their email
 class AskEmailNodeHandler extends BaseAskNodeHandler {
   @override
   String get nodeType => NodeTypes.askEmail;
@@ -207,11 +208,7 @@ class AskEmailNodeHandler extends BaseAskNodeHandler {
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
     final questionText = getString(nodeData, 'questionText', 'What is your email?');
     final answerKey = getString(nodeData, 'answerVariable', 'email');
-    final errorMessage = getString(
-      nodeData,
-      'incorrectEmailResponse',
-      'Please enter a valid email address',
-    );
+    final errorMessage = getString(nodeData, 'incorrectEmailResponse', 'Please enter a valid email address');
 
     state.addToTranscript('bot', questionText);
     state.addAnswerVariable(nodeId, answerKey);
@@ -229,17 +226,9 @@ class AskEmailNodeHandler extends BaseAskNodeHandler {
   }
 
   @override
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
+  Future<NodeResult> handleResponse(dynamic response, Map<String, dynamic> nodeData, String nodeId) async {
     final email = response.toString().trim();
-    final errorMessage = getString(
-      nodeData,
-      'incorrectEmailResponse',
-      'Please enter a valid email address',
-    );
+    final errorMessage = getString(nodeData, 'incorrectEmailResponse', 'Please enter a valid email address');
 
     if (!isValidEmail(email)) {
       return NodeResult.error(message: errorMessage, shouldProceed: false);
@@ -249,19 +238,12 @@ class AskEmailNodeHandler extends BaseAskNodeHandler {
     state.setUserMetadata('email', email);
     state.addToTranscript('user', email);
 
-    recordResponse(
-      nodeId: nodeId,
-      shape: 'user-ask-email-response',
-      text: email,
-      type: nodeType,
-    );
-
+    recordResponse(nodeId: nodeId, shape: 'user-ask-email-response', text: email, type: nodeType);
     return const NodeResult.proceed();
   }
 }
 
 /// Handler for ask-phone-number-node
-/// Asks user for their phone number
 class AskPhoneNodeHandler extends BaseAskNodeHandler {
   @override
   String get nodeType => NodeTypes.askPhone;
@@ -270,11 +252,7 @@ class AskPhoneNodeHandler extends BaseAskNodeHandler {
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
     final questionText = getString(nodeData, 'questionText', 'What is your phone number?');
     final answerKey = getString(nodeData, 'answerVariable', 'phone');
-    final errorMessage = getString(
-      nodeData,
-      'incorrectPhoneNumberResponse',
-      'Please enter a valid phone number',
-    );
+    final errorMessage = getString(nodeData, 'incorrectPhoneNumberResponse', 'Please enter a valid phone number');
 
     state.addToTranscript('bot', questionText);
     state.addAnswerVariable(nodeId, answerKey);
@@ -292,17 +270,9 @@ class AskPhoneNodeHandler extends BaseAskNodeHandler {
   }
 
   @override
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
+  Future<NodeResult> handleResponse(dynamic response, Map<String, dynamic> nodeData, String nodeId) async {
     final phone = response.toString().trim();
-    final errorMessage = getString(
-      nodeData,
-      'incorrectPhoneNumberResponse',
-      'Please enter a valid phone number',
-    );
+    final errorMessage = getString(nodeData, 'incorrectPhoneNumberResponse', 'Please enter a valid phone number');
 
     if (!isValidPhone(phone)) {
       return NodeResult.error(message: errorMessage, shouldProceed: false);
@@ -312,19 +282,12 @@ class AskPhoneNodeHandler extends BaseAskNodeHandler {
     state.setUserMetadata('phone', phone);
     state.addToTranscript('user', phone);
 
-    recordResponse(
-      nodeId: nodeId,
-      shape: 'user-ask-phone-response',
-      text: phone,
-      type: nodeType,
-    );
-
+    recordResponse(nodeId: nodeId, shape: 'user-ask-phone-response', text: phone, type: nodeType);
     return const NodeResult.proceed();
   }
 }
 
 /// Handler for ask-number-node
-/// Asks user for a number
 class AskNumberNodeHandler extends BaseAskNodeHandler {
   @override
   String get nodeType => NodeTypes.askNumber;
@@ -350,38 +313,23 @@ class AskNumberNodeHandler extends BaseAskNodeHandler {
   }
 
   @override
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
+  Future<NodeResult> handleResponse(dynamic response, Map<String, dynamic> nodeData, String nodeId) async {
     final value = response.toString().trim();
 
     if (!isValidNumber(value)) {
-      return const NodeResult.error(
-        message: 'Please enter a valid number',
-        shouldProceed: false,
-      );
+      return const NodeResult.error(message: 'Please enter a valid number', shouldProceed: false);
     }
 
     final number = double.tryParse(value) ?? 0.0;
-
     state.setAnswerVariable(nodeId, number);
     state.addToTranscript('user', value);
 
-    recordResponse(
-      nodeId: nodeId,
-      shape: 'user-ask-number-response',
-      text: value,
-      type: nodeType,
-    );
-
+    recordResponse(nodeId: nodeId, shape: 'user-ask-number-response', text: value, type: nodeType);
     return const NodeResult.proceed();
   }
 }
 
 /// Handler for ask-url-node
-/// Asks user for a URL
 class AskUrlNodeHandler extends BaseAskNodeHandler {
   @override
   String get nodeType => NodeTypes.askUrl;
@@ -407,36 +355,22 @@ class AskUrlNodeHandler extends BaseAskNodeHandler {
   }
 
   @override
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
+  Future<NodeResult> handleResponse(dynamic response, Map<String, dynamic> nodeData, String nodeId) async {
     final url = response.toString().trim();
 
     if (!isValidUrl(url)) {
-      return const NodeResult.error(
-        message: 'Please enter a valid URL',
-        shouldProceed: false,
-      );
+      return const NodeResult.error(message: 'Please enter a valid URL', shouldProceed: false);
     }
 
     state.setAnswerVariable(nodeId, url);
     state.addToTranscript('user', url);
 
-    recordResponse(
-      nodeId: nodeId,
-      shape: 'user-ask-url-response',
-      text: url,
-      type: nodeType,
-    );
-
+    recordResponse(nodeId: nodeId, shape: 'user-ask-url-response', text: url, type: nodeType);
     return const NodeResult.proceed();
   }
 }
 
 /// Handler for ask-location-node
-/// Asks user for a location
 class AskLocationNodeHandler extends BaseAskNodeHandler {
   @override
   String get nodeType => NodeTypes.askLocation;
@@ -461,36 +395,22 @@ class AskLocationNodeHandler extends BaseAskNodeHandler {
   }
 
   @override
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
+  Future<NodeResult> handleResponse(dynamic response, Map<String, dynamic> nodeData, String nodeId) async {
     final location = response.toString().trim();
 
     if (location.isEmpty) {
-      return const NodeResult.error(
-        message: 'Please enter a location',
-        shouldProceed: false,
-      );
+      return const NodeResult.error(message: 'Please enter a location', shouldProceed: false);
     }
 
     state.setAnswerVariable(nodeId, location);
     state.addToTranscript('user', location);
 
-    recordResponse(
-      nodeId: nodeId,
-      shape: 'user-ask-location-response',
-      text: location,
-      type: nodeType,
-    );
-
+    recordResponse(nodeId: nodeId, shape: 'user-ask-location-response', text: location, type: nodeType);
     return const NodeResult.proceed();
   }
 }
 
 /// Handler for ask-custom-question-node
-/// Asks a custom question
 class AskCustomNodeHandler extends BaseAskNodeHandler {
   @override
   String get nodeType => NodeTypes.askCustom;
@@ -515,36 +435,22 @@ class AskCustomNodeHandler extends BaseAskNodeHandler {
   }
 
   @override
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
+  Future<NodeResult> handleResponse(dynamic response, Map<String, dynamic> nodeData, String nodeId) async {
     final answer = response.toString().trim();
 
     if (answer.isEmpty) {
-      return const NodeResult.error(
-        message: 'Please enter an answer',
-        shouldProceed: false,
-      );
+      return const NodeResult.error(message: 'Please enter an answer', shouldProceed: false);
     }
 
     state.setAnswerVariable(nodeId, answer);
     state.addToTranscript('user', answer);
 
-    recordResponse(
-      nodeId: nodeId,
-      shape: 'user-ask-custom-response',
-      text: answer,
-      type: nodeType,
-    );
-
+    recordResponse(nodeId: nodeId, shape: 'user-ask-custom-response', text: answer, type: nodeType);
     return const NodeResult.proceed();
   }
 }
 
 /// Handler for ask-file-node
-/// Asks user to upload a file
 class AskFileNodeHandler extends BaseAskNodeHandler {
   @override
   String get nodeType => NodeTypes.askFile;
@@ -559,22 +465,12 @@ class AskFileNodeHandler extends BaseAskNodeHandler {
     state.addAnswerVariable(nodeId, answerKey);
 
     return NodeResult.displayUI(
-      FileUploadUIState(
-        questionText: questionText,
-        maxSizeMb: maxSizeMb,
-        nodeId: nodeId,
-        answerKey: answerKey,
-      ),
+      FileUploadUIState(questionText: questionText, maxSizeMb: maxSizeMb, nodeId: nodeId, answerKey: answerKey),
     );
   }
 
   @override
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
-    // Response should be a map with url and fileName
+  Future<NodeResult> handleResponse(dynamic response, Map<String, dynamic> nodeData, String nodeId) async {
     Map<String, dynamic> responseMap;
     if (response is Map<String, dynamic>) {
       responseMap = response;
@@ -586,14 +482,10 @@ class AskFileNodeHandler extends BaseAskNodeHandler {
 
     final fileUrl = responseMap['url']?.toString();
     if (fileUrl == null || fileUrl.isEmpty) {
-      return const NodeResult.error(
-        message: 'Invalid file upload',
-        shouldProceed: false,
-      );
+      return const NodeResult.error(message: 'Invalid file upload', shouldProceed: false);
     }
 
     final fileName = responseMap['fileName']?.toString() ?? 'uploaded_file';
-
     state.setAnswerVariable(nodeId, fileUrl);
     state.addToTranscript('user', '[File: $fileName]');
 
@@ -604,43 +496,29 @@ class AskFileNodeHandler extends BaseAskNodeHandler {
       type: nodeType,
       additionalData: {'url': fileUrl, 'fileName': fileName},
     );
-
     return const NodeResult.proceed();
   }
 }
 
 /// Handler for ask-multiple-questions-node
-/// Asks multiple questions in sequence
 class AskMultipleQuestionsNodeHandler extends BaseAskNodeHandler {
   @override
   String get nodeType => NodeTypes.askMultiple;
 
-  // Track current question index per node
   final Map<String, int> _questionIndices = {};
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
     final questions = getList<Map<String, dynamic>>(nodeData, 'questions');
 
-    if (questions.isEmpty) {
-      return const NodeResult.proceed();
-    }
-
-    // Initialize question index for this node
-    if (!_questionIndices.containsKey(nodeId)) {
-      _questionIndices[nodeId] = 0;
-    }
+    if (questions.isEmpty) return const NodeResult.proceed();
+    if (!_questionIndices.containsKey(nodeId)) _questionIndices[nodeId] = 0;
 
     return _displayCurrentQuestion(nodeData, nodeId, questions);
   }
 
-  NodeResult _displayCurrentQuestion(
-    Map<String, dynamic> nodeData,
-    String nodeId,
-    List<Map<String, dynamic>> questions,
-  ) {
+  NodeResult _displayCurrentQuestion(Map<String, dynamic> nodeData, String nodeId, List<Map<String, dynamic>> questions) {
     final currentIndex = _questionIndices[nodeId] ?? 0;
-
     if (currentIndex >= questions.length) {
       _questionIndices.remove(nodeId);
       return const NodeResult.proceed();
@@ -650,21 +528,15 @@ class AskMultipleQuestionsNodeHandler extends BaseAskNodeHandler {
     final questionText = question['questionText']?.toString() ?? 'Please answer';
 
     state.addToTranscript('bot', questionText);
-
-    final answerKey = '${nodeId}_q$currentIndex';
-    state.addAnswerVariable(nodeId, answerKey);
+    state.addAnswerVariable(nodeId, '${nodeId}_q$currentIndex');
 
     return NodeResult.displayUI(
       MultipleQuestionsUIState(
-        questions: questions.asMap().entries.map((entry) {
-          final i = entry.key;
-          final q = entry.value;
-          return Question(
-            questionText: q['questionText']?.toString() ?? '',
-            answerType: q['answerVariable']?.toString() ?? 'text',
-            answerKey: '${nodeId}_q$i',
-          );
-        }).toList(),
+        questions: questions.asMap().entries.map((e) => Question(
+              questionText: e.value['questionText']?.toString() ?? '',
+              answerType: e.value['answerVariable']?.toString() ?? 'text',
+              answerKey: '${nodeId}_q${e.key}',
+            )).toList(),
         currentIndex: currentIndex,
         nodeId: nodeId,
       ),
@@ -672,11 +544,7 @@ class AskMultipleQuestionsNodeHandler extends BaseAskNodeHandler {
   }
 
   @override
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
+  Future<NodeResult> handleResponse(dynamic response, Map<String, dynamic> nodeData, String nodeId) async {
     final questions = getList<Map<String, dynamic>>(nodeData, 'questions');
     final currentIndex = _questionIndices[nodeId] ?? 0;
 
@@ -689,83 +557,48 @@ class AskMultipleQuestionsNodeHandler extends BaseAskNodeHandler {
     final answerType = question['answerVariable']?.toString() ?? 'text';
     final value = response.toString().trim();
 
-    // Validate based on answer type
     switch (answerType.toLowerCase()) {
       case 'email':
         if (!isValidEmail(value)) {
-          final errorMsg = question['incorrectEmailResponse']?.toString() ??
-              nodeData['incorrectEmailResponse']?.toString() ??
-              'Please enter a valid email';
+          final errorMsg = question['incorrectEmailResponse']?.toString() ?? 'Please enter a valid email';
           return NodeResult.error(message: errorMsg, shouldProceed: false);
         }
         state.setUserMetadata('email', value);
         break;
-
       case 'phone':
       case 'mobile':
         if (!isValidPhone(value)) {
-          final errorMsg = question['incorrectPhoneNumberResponse']?.toString() ??
-              nodeData['incorrectPhoneNumberResponse']?.toString() ??
-              'Please enter a valid phone number';
+          final errorMsg = question['incorrectPhoneNumberResponse']?.toString() ?? 'Please enter a valid phone number';
           return NodeResult.error(message: errorMsg, shouldProceed: false);
         }
         state.setUserMetadata('phone', value);
         break;
-
       case 'name':
-        if (value.isEmpty) {
-          return const NodeResult.error(
-            message: 'Please enter your name',
-            shouldProceed: false,
-          );
-        }
+        if (value.isEmpty) return const NodeResult.error(message: 'Please enter your name', shouldProceed: false);
         state.setUserMetadata('name', value);
         break;
     }
 
-    // Store answer
     final answerKey = '${nodeId}_q$currentIndex';
     state.setAnswerVariable(nodeId, value);
     state.setAnswerVariableByKey(answerKey, value);
     state.addToTranscript('user', value);
 
-    recordResponse(
-      nodeId: nodeId,
-      shape: 'user-multiple-questions-response',
-      text: value,
-      type: nodeType,
-      additionalData: {
-        'questionIndex': currentIndex,
-        'answerType': answerType,
-      },
-    );
+    recordResponse(nodeId: nodeId, shape: 'user-multiple-questions-response', text: value, type: nodeType,
+        additionalData: {'questionIndex': currentIndex, 'answerType': answerType});
 
-    // Move to next question
     _questionIndices[nodeId] = currentIndex + 1;
+    if (currentIndex + 1 < questions.length) return _displayCurrentQuestion(nodeData, nodeId, questions);
 
-    // Check if more questions
-    if (currentIndex + 1 < questions.length) {
-      return _displayCurrentQuestion(nodeData, nodeId, questions);
-    }
-
-    // All questions answered
     _questionIndices.remove(nodeId);
     return const NodeResult.proceed();
   }
 
-  /// Reset state for a specific node (useful for testing or re-processing)
-  void resetNodeState(String nodeId) {
-    _questionIndices.remove(nodeId);
-  }
-
-  /// Reset all state
-  void resetAllState() {
-    _questionIndices.clear();
-  }
+  void resetNodeState(String nodeId) => _questionIndices.remove(nodeId);
+  void resetAllState() => _questionIndices.clear();
 }
 
 /// Handler for calendar-node
-/// Displays date/time picker
 class CalendarNodeHandler extends BaseAskNodeHandler {
   @override
   String get nodeType => NodeTypes.calendar;
@@ -777,29 +610,16 @@ class CalendarNodeHandler extends BaseAskNodeHandler {
     final timezone = nodeData['botTimeZone']?.toString() ?? nodeData['timezone']?.toString();
     final answerKey = getString(nodeData, 'answerVariable', 'calendar_selection');
 
-    if (questionText != null && questionText.isNotEmpty) {
-      state.addToTranscript('bot', questionText);
-    }
+    if (questionText != null && questionText.isNotEmpty) state.addToTranscript('bot', questionText);
     state.addAnswerVariable(nodeId, answerKey);
 
     return NodeResult.displayUI(
-      CalendarUIState(
-        questionText: questionText,
-        showTimeSelection: showTimeSelection,
-        timezone: timezone,
-        nodeId: nodeId,
-        answerKey: answerKey,
-      ),
+      CalendarUIState(questionText: questionText, showTimeSelection: showTimeSelection, timezone: timezone, nodeId: nodeId, answerKey: answerKey),
     );
   }
 
   @override
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
-    // Response should be a map with date/time info
+  Future<NodeResult> handleResponse(dynamic response, Map<String, dynamic> nodeData, String nodeId) async {
     Map<String, dynamic> responseMap;
     if (response is Map<String, dynamic>) {
       responseMap = response;
@@ -813,9 +633,7 @@ class CalendarNodeHandler extends BaseAskNodeHandler {
     final time = responseMap['time']?.toString();
     final showTimeSelection = getBoolean(nodeData, 'showTimeSelection', false);
 
-    final displayText = (showTimeSelection && time != null && time.isNotEmpty)
-        ? '$date at $time'
-        : date;
+    final displayText = (showTimeSelection && time != null && time.isNotEmpty) ? '$date at $time' : date;
 
     state.setAnswerVariable(nodeId, displayText);
     state.addToTranscript('user', displayText);
