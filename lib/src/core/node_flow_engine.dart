@@ -6,7 +6,12 @@ import 'nodes/node_ui_state.dart';
 import 'nodes/node_handler_registry.dart';
 import 'nodes/handlers/legacy_handlers.dart' show NodeHandler;
 import 'state/chat_state.dart';
+import 'errors/conferbot_exceptions.dart';
+import 'errors/error_handler.dart';
 import '../services/socket_client.dart';
+import '../providers/analytics_provider.dart';
+import '../models/analytics.dart';
+import '../utils/logger.dart';
 
 /// Core engine that processes the chatbot flow
 /// Orchestrates node handlers, manages state, and coordinates with socket
@@ -16,6 +21,9 @@ class NodeFlowEngine extends ChangeNotifier {
 
   /// Handler registry instance
   final NodeHandlerRegistry _handlerRegistry = NodeHandlerRegistry.instance;
+
+  /// Analytics provider for tracking
+  final AnalyticsProvider _analytics = AnalyticsProvider.instance;
 
   /// Constructor
   NodeFlowEngine({
@@ -32,9 +40,12 @@ class NodeFlowEngine extends ChangeNotifier {
   bool _isProcessing = false;
   bool get isProcessing => _isProcessing;
 
-  /// Error state
-  String? _errorMessage;
-  String? get errorMessage => _errorMessage;
+  /// Error state (typed exception)
+  ConferBotException? _currentError;
+  ConferBotException? get currentError => _currentError;
+
+  /// Legacy error message getter for backwards compatibility
+  String? get errorMessage => _currentError?.userMessage;
 
   /// Flow is complete
   bool _isFlowComplete = false;
@@ -70,10 +81,15 @@ class NodeFlowEngine extends ChangeNotifier {
       StreamController<bool>.broadcast();
   Stream<bool> get isProcessingStream => _processingController.stream;
 
-  /// Stream controller for error messages
+  /// Stream controller for error messages (legacy string-based)
   final StreamController<String?> _errorController =
       StreamController<String?>.broadcast();
   Stream<String?> get errorMessageStream => _errorController.stream;
+
+  /// Stream controller for typed errors
+  final StreamController<ConferBotException?> _typedErrorController =
+      StreamController<ConferBotException?>.broadcast();
+  Stream<ConferBotException?> get errorStream => _typedErrorController.stream;
 
   /// Stream controller for flow completion
   final StreamController<bool> _flowCompleteController =
@@ -101,7 +117,15 @@ class NodeFlowEngine extends ChangeNotifier {
     _edges = List.from(edgesData);
     _chatState.setSteps(stepsData);
 
-    _logDebug('[NodeFlowEngine] Initialized with ${_steps.length} steps and ${_edges.length} edges');
+    // Initialize analytics session
+    _analytics.startSession(
+      sessionId: chatSessionId,
+      visitorId: visitorId,
+      botId: botId,
+      workspaceId: workspaceId,
+    );
+
+    flowLogger.debug('Initialized with ${_steps.length} steps and ${_edges.length} edges');
   }
 
   // ========== Flow Control ==========
@@ -128,7 +152,7 @@ class NodeFlowEngine extends ChangeNotifier {
 
     final nodeId = node['id']?.toString();
     if (nodeId == null) {
-      _logDebug('[NodeFlowEngine] Node at index $index has no ID, skipping');
+      flowLogger.debug('Node at index $index has no ID, skipping');
       _proceedToNextNode(null);
       return;
     }
@@ -137,13 +161,23 @@ class NodeFlowEngine extends ChangeNotifier {
     final nodeType = nodeData['type']?.toString() ?? node['type']?.toString();
 
     if (nodeType == null) {
-      _logDebug('[NodeFlowEngine] Node $nodeId has no type, skipping');
+      flowLogger.debug('Node $nodeId has no type, skipping');
       _proceedToNextNode(null);
       return;
     }
 
     _currentNodeId = nodeId;
     _currentNodeData = nodeData;
+
+    // Track node entry in analytics
+    final nodeName = nodeData['name']?.toString() ??
+                     nodeData['label']?.toString() ??
+                     nodeType;
+    _analytics.trackNodeEntry(
+      nodeId: nodeId,
+      nodeType: nodeType,
+      nodeName: nodeName,
+    );
 
     await _processNode(nodeId, nodeType, nodeData);
   }
@@ -160,8 +194,15 @@ class NodeFlowEngine extends ChangeNotifier {
     final handler = _handlerRegistry.getHandler(nodeType);
 
     if (handler == null) {
-      _logDebug('[NodeFlowEngine] No handler for node type: $nodeType, skipping');
+      flowLogger.debug('No handler for node type: $nodeType, skipping');
       _setProcessing(false);
+
+      // Track node exit with skip
+      _analytics.trackNodeExit(exitType: NodeExitType.skipped);
+
+      // Set a typed error for debugging (but allow proceeding)
+      _setTypedError(NodeProcessingException.handlerNotFound(nodeType));
+
       await _proceedToNextNode(null);
       return;
     }
@@ -170,12 +211,39 @@ class NodeFlowEngine extends ChangeNotifier {
       final result = await handler.process(nodeData, nodeId);
       await _handleNodeResult(result, nodeData);
     } catch (e, stackTrace) {
-      _logDebug('[NodeFlowEngine] Error processing node $nodeId: $e\n$stackTrace');
-      _setError('Error processing node: $e');
+      flowLogger.error('Error processing node $nodeId: $e', e, stackTrace);
+
+      // Convert to typed exception
+      final typedException = e is ConferBotException
+          ? e
+          : NodeProcessingException.processingFailed(
+              nodeId: nodeId,
+              nodeType: nodeType,
+              phase: 'process',
+              originalError: e,
+              originalStackTrace: stackTrace,
+            );
+
+      _setTypedError(typedException);
       _setProcessing(false);
-      // Try to proceed anyway
-      await _proceedToNextNode(null);
+
+      // Track node exit with error
+      _analytics.trackNodeExit(exitType: NodeExitType.error);
+
+      // Try to proceed anyway for recoverable errors
+      if (typedException.isRetryable || _shouldProceedOnError(typedException)) {
+        await _proceedToNextNode(null);
+      }
     }
+  }
+
+  /// Determine if flow should proceed after an error
+  bool _shouldProceedOnError(ConferBotException error) {
+    // For most node processing errors, try to continue the flow
+    if (error is NodeProcessingException) {
+      return error.code != 'NODE_INVALID_DATA';
+    }
+    return false;
   }
 
   /// Handle the result from a node handler
@@ -188,15 +256,29 @@ class NodeFlowEngine extends ChangeNotifier {
         _setProcessing(false);
         _setUIState(result.uiState);
 
+        // Track bot message for display nodes
+        final text = _extractDisplayText(result.uiState);
+        if (text != null) {
+          _analytics.trackMessage(sender: 'bot', text: text);
+        }
+
         // For message-only nodes, auto-proceed after delay
         if (_isMessageOnlyUI(result.uiState)) {
           await Future.delayed(const Duration(seconds: 1));
+
+          // Track node exit
+          _analytics.trackNodeExit(exitType: NodeExitType.proceeded);
+
           _sendResponseToServer();
           await _proceedToNextNode(null);
         }
 
       case ProceedResult():
         _setProcessing(false);
+
+        // Track node exit
+        _analytics.trackNodeExit(exitType: NodeExitType.proceeded);
+
         _sendResponseToServer();
         await _proceedToNextNode(result.targetPort);
 
@@ -204,6 +286,10 @@ class NodeFlowEngine extends ChangeNotifier {
         _setProcessing(true);
         await Future.delayed(result.delay);
         _setProcessing(false);
+
+        // Track node exit
+        _analytics.trackNodeExit(exitType: NodeExitType.proceeded);
+
         _sendResponseToServer();
         await _proceedToNextNode(result.targetPort);
 
@@ -212,22 +298,56 @@ class NodeFlowEngine extends ChangeNotifier {
         _setProcessing(true);
         await Future.delayed(Duration(milliseconds: result.delayMs));
         _setProcessing(false);
+
+        // Track node exit
+        _analytics.trackNodeExit(exitType: NodeExitType.proceeded);
+
         _sendResponseToServer();
         await _proceedToNextNode(result.targetPort);
 
       case JumpToResult():
         _setProcessing(false);
+
+        // Track node exit
+        _analytics.trackNodeExit(exitType: NodeExitType.proceeded);
+
         _sendResponseToServer();
         await _jumpToNode(result.targetNodeId);
 
       case ErrorResult():
         _setProcessing(false);
-        _setError(result.message);
+
+        // Convert error result to typed exception
+        final nodeType = nodeData['type']?.toString() ?? 'unknown';
+        final typedException = NodeProcessingException(
+          message: result.message,
+          code: 'NODE_ERROR',
+          nodeId: _currentNodeId,
+          nodeType: nodeType,
+        );
+        _setTypedError(typedException);
+
+        // Track node exit with error
+        _analytics.trackNodeExit(exitType: NodeExitType.error);
+
         if (result.shouldProceed) {
           _sendResponseToServer();
           await _proceedToNextNode(null);
         }
     }
+  }
+
+  /// Extract display text from UI state for analytics
+  String? _extractDisplayText(NodeUIState uiState) {
+    if (uiState is MessageUIState) {
+      return uiState.text;
+    } else if (uiState is TextInputUIState) {
+      return uiState.question;
+    } else if (uiState is MultiChoiceUIState) {
+      return uiState.question;
+    }
+    // Add more cases as needed
+    return null;
   }
 
   /// Check if UI state is message-only (auto-proceeds)
@@ -248,7 +368,7 @@ class NodeFlowEngine extends ChangeNotifier {
     final nodeData = _currentNodeData;
 
     if (nodeId == null || nodeData == null) {
-      _logDebug('[NodeFlowEngine] Cannot submit response: no current node');
+      flowLogger.debug('Cannot submit response: no current node');
       return;
     }
 
@@ -270,6 +390,21 @@ class NodeFlowEngine extends ChangeNotifier {
       return;
     }
 
+    // Track user message
+    final responseText = response is String ? response : response.toString();
+    _analytics.trackMessage(sender: 'user', text: responseText);
+
+    // Track node exit with user input
+    String? selectedOption;
+    if (response is Map && response.containsKey('selectedOption')) {
+      selectedOption = response['selectedOption']?.toString();
+    }
+    _analytics.trackNodeExit(
+      exitType: NodeExitType.proceeded,
+      userInput: response,
+      selectedOption: selectedOption,
+    );
+
     final handler = _handlerRegistry.getHandler(nodeType);
     if (handler == null) {
       _setProcessing(false);
@@ -281,8 +416,20 @@ class NodeFlowEngine extends ChangeNotifier {
       final result = await handler.handleResponse(response, nodeData, nodeId);
       await _handleNodeResult(result, nodeData);
     } catch (e, stackTrace) {
-      _logDebug('[NodeFlowEngine] Error handling response: $e\n$stackTrace');
-      _setError(e.toString());
+      flowLogger.error('Error handling response: $e', e, stackTrace);
+
+      // Convert to typed exception
+      final typedException = e is ConferBotException
+          ? e
+          : NodeProcessingException.processingFailed(
+              nodeId: nodeId,
+              nodeType: nodeType,
+              phase: 'handleResponse',
+              originalError: e,
+              originalStackTrace: stackTrace,
+            );
+
+      _setTypedError(typedException);
       _setProcessing(false);
     }
   }
@@ -334,7 +481,11 @@ class NodeFlowEngine extends ChangeNotifier {
       await _processNodeAtIndex(targetIndex);
     } else {
       // Node not found, proceed sequentially
-      _logDebug('[NodeFlowEngine] Jump target $targetNodeId not found, proceeding sequentially');
+      flowLogger.debug('Jump target $targetNodeId not found, proceeding sequentially');
+
+      // Set a warning error (non-blocking)
+      _setTypedError(NodeProcessingException.notFound(targetNodeId));
+
       await _proceedToNextNode(null);
     }
   }
@@ -372,7 +523,7 @@ class NodeFlowEngine extends ChangeNotifier {
     final chatSessionId = _chatState.chatSessionId;
 
     if (chatSessionId == null) {
-      _logDebug('[NodeFlowEngine] Cannot send response: no chat session ID');
+      flowLogger.debug('Cannot send response: no chat session ID');
       return;
     }
 
@@ -398,11 +549,25 @@ class NodeFlowEngine extends ChangeNotifier {
           message['_id']?.toString() ?? message['id']?.toString() ?? '';
       _currentNodeId = nodeId;
       _currentNodeData = nodeData;
+
+      // Track node entry for server-pushed nodes
+      final nodeName = nodeData['name']?.toString() ??
+                       nodeData['label']?.toString() ??
+                       nodeType;
+      _analytics.trackNodeEntry(
+        nodeId: nodeId,
+        nodeType: nodeType,
+        nodeName: nodeName,
+      );
+
       await _processNode(nodeId, nodeType, nodeData);
     } else {
       // Plain text message
       final text = message['text']?.toString();
       if (text != null) {
+        // Track bot message
+        _analytics.trackMessage(sender: 'bot', text: text);
+
         _setUIState(MessageUIState(
           text: text,
           nodeId: message['_id']?.toString() ?? '',
@@ -419,6 +584,12 @@ class NodeFlowEngine extends ChangeNotifier {
     final nodeData = _currentNodeData;
 
     if (nodeId == null || nodeData == null) return;
+
+    // Track interaction
+    _analytics.trackInteraction(
+      type: 'agent_accepted',
+      data: {'agentName': agentName},
+    );
 
     if (nodeData['type']?.toString() == NodeTypes.humanHandover) {
       final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
@@ -442,6 +613,12 @@ class NodeFlowEngine extends ChangeNotifier {
     final nodeData = _currentNodeData;
 
     if (nodeId == null || nodeData == null) return;
+
+    // Track interaction
+    _analytics.trackInteraction(
+      type: 'no_agents_available',
+      data: {},
+    );
 
     if (nodeData['type']?.toString() == NodeTypes.humanHandover) {
       final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
@@ -475,6 +652,12 @@ class NodeFlowEngine extends ChangeNotifier {
     final nodeData = _currentNodeData;
 
     if (nodeId == null || nodeData == null) return;
+
+    // Track interaction
+    _analytics.trackInteraction(
+      type: 'chat_ended',
+      data: {},
+    );
 
     if (nodeData['type']?.toString() == NodeTypes.humanHandover) {
       final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
@@ -511,14 +694,30 @@ class NodeFlowEngine extends ChangeNotifier {
   }
 
   void _setError(String? error) {
-    _errorMessage = error;
+    if (error == null) {
+      _currentError = null;
+    }
     _errorController.add(error);
+    _typedErrorController.add(_currentError);
+    notifyListeners();
+  }
+
+  void _setTypedError(ConferBotException? error) {
+    _currentError = error;
+    _errorController.add(error?.userMessage);
+    _typedErrorController.add(error);
     notifyListeners();
   }
 
   void _setFlowComplete(bool complete) {
     _isFlowComplete = complete;
     _flowCompleteController.add(complete);
+
+    // End analytics session when flow completes
+    if (complete) {
+      _analytics.endSession();
+    }
+
     notifyListeners();
   }
 
@@ -526,9 +725,12 @@ class NodeFlowEngine extends ChangeNotifier {
 
   /// Reset the engine for a new conversation
   void reset() {
+    // End current analytics session
+    _analytics.endSession();
+
     _currentUIState = null;
     _isProcessing = false;
-    _errorMessage = null;
+    _currentError = null;
     _isFlowComplete = false;
     _currentNodeId = null;
     _currentNodeData = null;
@@ -542,21 +744,16 @@ class NodeFlowEngine extends ChangeNotifier {
   /// Clean up resources
   @override
   void dispose() {
+    // End analytics session on dispose
+    _analytics.endSession();
+
     _uiStateController.close();
     _processingController.close();
     _errorController.close();
+    _typedErrorController.close();
     _flowCompleteController.close();
     _chatState.reset();
     super.dispose();
-  }
-
-  // ========== Logging ==========
-
-  void _logDebug(String message) {
-    if (kDebugMode) {
-      // ignore: avoid_print
-      print(message);
-    }
   }
 }
 
