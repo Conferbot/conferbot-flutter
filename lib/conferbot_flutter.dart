@@ -11,6 +11,23 @@ export 'src/services/api_client.dart';
 export 'src/services/socket_client.dart';
 export 'src/config/constants.dart';
 
+// ========== Node System (All 51 Node Types) ========== //
+export 'src/core/state/chat_state.dart';
+export 'src/core/node_flow_engine.dart';
+export 'src/core/nodes/node_types.dart';
+export 'src/core/nodes/node_result.dart';
+export 'src/core/nodes/node_ui_state.dart';
+export 'src/core/nodes/node_handler_registry.dart';
+
+// Node Handlers
+export 'src/core/nodes/handlers/legacy_handlers.dart';
+export 'src/core/nodes/handlers/display_handlers.dart';
+export 'src/core/nodes/handlers/ask_question_handlers.dart';
+export 'src/core/nodes/handlers/choice_handlers.dart';
+export 'src/core/nodes/handlers/logic_handlers.dart';
+export 'src/core/nodes/handlers/integration_handlers.dart';
+export 'src/core/nodes/handlers/special_handlers.dart';
+
 // ========== Theme System ========== //
 export 'src/theme/conferbot_theme.dart';
 export 'src/theme/default_theme.dart';
@@ -26,3 +43,10 @@ export 'src/widgets/chat_input.dart';
 export 'src/widgets/chat_header.dart';
 export 'src/widgets/message_list.dart';
 export 'src/widgets/chat_widget.dart';
+
+// Node UI Widgets
+export 'src/ui/widgets/node_widgets.dart';
+export 'src/ui/widgets/choice_widgets.dart';
+
+// ========== Utilities ========== //
+export 'src/utils/validation_utils.dart';
