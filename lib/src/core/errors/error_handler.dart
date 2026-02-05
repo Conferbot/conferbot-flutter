@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show SocketException as DartSocketException;
+import 'dart:io' show SocketException;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'conferbot_exceptions.dart';
@@ -106,7 +106,7 @@ class ErrorHandler {
     }
 
     // Dart SocketException (network connectivity)
-    if (error is DartSocketException) {
+    if (error is SocketException) {
       return NetworkException.noConnection(
         originalError: error,
         originalStackTrace: stackTrace,
