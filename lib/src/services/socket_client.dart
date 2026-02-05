@@ -720,7 +720,7 @@ class SocketClient with ChangeNotifier {
   }
 
   /// Check if socket has listeners for event
-  bool hasListeners(String event) {
+  bool hasListenersForEvent(String event) {
     return _socket?.hasListeners(event) ?? false;
   }
 
