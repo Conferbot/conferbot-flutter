@@ -54,8 +54,24 @@ class WebhookNodeHandler extends BaseNodeHandler {
       if (answerVariable != null && answerVariable.isNotEmpty && response != null) {
         state?.setAnswerVariable(nodeId, response);
       }
+    } on SocketException catch (e) {
+      // Network error - log and continue flow
+      recordResponse(
+        nodeId: nodeId,
+        shape: 'webhook-error',
+        text: 'Network error: $e',
+        type: nodeType,
+      );
+    } on FormatException catch (e) {
+      // Data format error - log and continue flow
+      recordResponse(
+        nodeId: nodeId,
+        shape: 'webhook-error',
+        text: 'Data format error: $e',
+        type: nodeType,
+      );
     } catch (e) {
-      // Log error but continue flow
+      // Unexpected error - log and continue flow
       recordResponse(
         nodeId: nodeId,
         shape: 'webhook-error',
@@ -72,8 +88,8 @@ class WebhookNodeHandler extends BaseNodeHandler {
     String username,
     String password,
   ) async {
+    final client = HttpClient();
     try {
-      final client = HttpClient();
       final request = await client.postUrl(Uri.parse(tokenUrl));
       request.headers.contentType = ContentType.json;
 
@@ -89,10 +105,17 @@ class WebhookNodeHandler extends BaseNodeHandler {
         final json = jsonDecode(responseBody) as Map<String, dynamic>;
         return json['access']?.toString() ?? json['token']?.toString();
       }
-      client.close();
+      return null;
+    } on SocketException catch (e) {
+      // Network error during authentication
+      return null;
+    } on FormatException catch (e) {
+      // Invalid response format
       return null;
     } catch (e) {
       return null;
+    } finally {
+      client.close();
     }
   }
 
@@ -113,7 +136,7 @@ class WebhookNodeHandler extends BaseNodeHandler {
 
     // Include answer variables from ChatState if requested
     if (includeAnswerVariables) {
-      final chatState = ChatState();
+      final chatState = ChatState.instance;
       json['answerVariables'] = chatState.getAnswerVariablesMap();
       json['userMetadata'] = chatState.userMetadata.toJson();
     }
@@ -129,52 +152,55 @@ class WebhookNodeHandler extends BaseNodeHandler {
     String? body,
   ) async {
     final client = HttpClient();
-    final uri = Uri.parse(url);
-    HttpClientRequest request;
+    try {
+      final uri = Uri.parse(url);
+      HttpClientRequest request;
 
-    switch (method) {
-      case 'GET':
-        request = await client.getUrl(uri);
-        break;
-      case 'POST':
-        request = await client.postUrl(uri);
-        break;
-      case 'PUT':
-        request = await client.putUrl(uri);
-        break;
-      case 'PATCH':
-        request = await client.patchUrl(uri);
-        break;
-      case 'DELETE':
-        request = await client.deleteUrl(uri);
-        break;
-      default:
-        request = await client.postUrl(uri);
+      switch (method) {
+        case 'GET':
+          request = await client.getUrl(uri);
+          break;
+        case 'POST':
+          request = await client.postUrl(uri);
+          break;
+        case 'PUT':
+          request = await client.putUrl(uri);
+          break;
+        case 'PATCH':
+          request = await client.patchUrl(uri);
+          break;
+        case 'DELETE':
+          request = await client.deleteUrl(uri);
+          break;
+        default:
+          request = await client.postUrl(uri);
+      }
+
+      request.headers.contentType = ContentType.json;
+
+      // Add custom headers
+      headers.forEach((key, value) {
+        request.headers.add(key, value?.toString() ?? '');
+      });
+
+      // Add auth token if present
+      if (authToken != null) {
+        request.headers.add('Authorization', 'Bearer $authToken');
+      }
+
+      // Write body for POST/PUT/PATCH
+      if (body != null && ['POST', 'PUT', 'PATCH'].contains(method)) {
+        request.write(body);
+      }
+
+      final response = await request.close();
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return await response.transform(utf8.decoder).join();
+      }
+      return null;
+    } finally {
+      client.close();
     }
-
-    request.headers.contentType = ContentType.json;
-
-    // Add custom headers
-    headers.forEach((key, value) {
-      request.headers.add(key, value?.toString() ?? '');
-    });
-
-    // Add auth token if present
-    if (authToken != null) {
-      request.headers.add('Authorization', 'Bearer $authToken');
-    }
-
-    // Write body for POST/PUT/PATCH
-    if (body != null && ['POST', 'PUT', 'PATCH'].contains(method)) {
-      request.write(body);
-    }
-
-    final response = await request.close();
-    client.close();
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return await response.transform(utf8.decoder).join();
-    }
-    return null;
   }
 }
