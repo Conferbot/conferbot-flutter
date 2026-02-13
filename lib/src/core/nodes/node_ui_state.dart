@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart' show TextInputType;
-
 /// Sealed class representing the possible UI states from a node handler
 sealed class NodeUIState {
   final String nodeId;
 
   const NodeUIState({required this.nodeId});
 }
+
+/// Text input types for ask question handlers
+/// These map to the chatbot node's input type configuration
+enum TextInputType { text, name, email, phone, number, url, location }
 
 // ==================== MESSAGE UI STATES ====================
 
@@ -344,6 +346,18 @@ class QuestionDefinition {
 
 /// Alias for backward compatibility
 typedef Question = QuestionDefinition;
+
+/// Pre-chat question for human handover (extends QuestionDefinition with id)
+class PreChatQuestion extends QuestionDefinition {
+  final String id;
+
+  const PreChatQuestion({
+    required this.id,
+    required super.questionText,
+    required super.answerType,
+    required super.answerKey,
+  });
+}
 
 /// Multiple sequential questions
 class MultipleQuestionsUIState extends NodeUIState {
