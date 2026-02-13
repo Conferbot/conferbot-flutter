@@ -12,7 +12,7 @@ import 'handlers/special_handlers.dart';
 /// Registry of all node handlers
 /// Maps node types to their handlers
 ///
-/// This is a singleton that manages all 51 node handlers.
+/// This is a singleton that manages all 58 node handlers.
 /// Use [NodeHandlerRegistry.instance] to access the registry.
 class NodeHandlerRegistry {
   NodeHandlerRegistry._internal() {
@@ -148,6 +148,6 @@ class NodeHandlerRegistry {
     return missing;
   }
 
-  /// Check if registry is complete (all 51 handlers registered)
-  bool get isComplete => handlerCount == 51 && validateHandlers().isEmpty;
+  /// Check if registry is complete (all 58 handlers registered)
+  bool get isComplete => handlerCount == 58 && validateHandlers().isEmpty;
 }
