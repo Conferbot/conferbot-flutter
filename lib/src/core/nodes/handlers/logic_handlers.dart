@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import '../node_handler.dart';
-import '../node_result.dart';
 import '../node_types.dart';
 import '../../state/chat_state.dart';
 
@@ -65,6 +64,14 @@ class ConditionNodeHandler extends BaseNodeHandler {
         return left.toLowerCase() == right.toLowerCase();
       case '!=':
         return left.toLowerCase() != right.toLowerCase();
+      case '<':
+        return left.toLowerCase().compareTo(right.toLowerCase()) < 0;
+      case '>':
+        return left.toLowerCase().compareTo(right.toLowerCase()) > 0;
+      case '<=':
+        return left.toLowerCase().compareTo(right.toLowerCase()) <= 0;
+      case '>=':
+        return left.toLowerCase().compareTo(right.toLowerCase()) >= 0;
       case 'contains':
         return left.toLowerCase().contains(right.toLowerCase());
       case 'does not contain':
