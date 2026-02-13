@@ -25,6 +25,15 @@ class NodeFlowEngine extends ChangeNotifier {
   /// Analytics provider for tracking
   final AnalyticsProvider _analytics = AnalyticsProvider.instance;
 
+  /// Timeout for processing a single node
+  static const Duration _nodeProcessingTimeout = Duration(seconds: 30);
+
+  /// Visited node tracking for infinite loop protection
+  final Set<String> _visitedNodes = {};
+
+  /// Maximum number of node visits before declaring a cycle
+  static const int _maxNodeVisits = 100;
+
   /// Constructor
   NodeFlowEngine({
     required SocketClient socketClient,
@@ -117,6 +126,9 @@ class NodeFlowEngine extends ChangeNotifier {
     _edges = List.from(edgesData);
     _chatState.setSteps(stepsData);
 
+    // Reset visited nodes for new flow initialization
+    _visitedNodes.clear();
+
     // Initialize analytics session
     _analytics.startSession(
       sessionId: chatSessionId,
@@ -132,12 +144,26 @@ class NodeFlowEngine extends ChangeNotifier {
 
   /// Start processing from the first node
   void start() {
+    _visitedNodes.clear();
+
     if (_steps.isEmpty) {
       _setFlowComplete(true);
       return;
     }
 
     _processNodeAtIndex(0);
+  }
+
+  /// Resume from a specific node by ID (used when restoring session)
+  void resumeFromNode(String nodeId) {
+    _visitedNodes.clear();
+    final index = _steps.indexWhere((step) => step['id'] == nodeId);
+    if (index >= 0) {
+      _processNodeAtIndex(index);
+    } else {
+      flowLogger.warning('Resume target node $nodeId not found, starting from beginning');
+      start();
+    }
   }
 
   /// Process node at given index
@@ -156,6 +182,20 @@ class NodeFlowEngine extends ChangeNotifier {
       _proceedToNextNode(null);
       return;
     }
+
+    // HIGH FIX 2: Infinite loop protection
+    if (_visitedNodes.length >= _maxNodeVisits) {
+      flowLogger.error('Flow cycle detected after $_maxNodeVisits nodes');
+      _setTypedError(NodeProcessingException(
+        message: 'Flow cycle detected after $_maxNodeVisits nodes',
+        code: 'NODE_FLOW_CYCLE',
+        nodeId: nodeId,
+      ));
+      _setProcessing(false);
+      _setFlowComplete(true);
+      return;
+    }
+    _visitedNodes.add(nodeId);
 
     final nodeData = node['data'] as Map<String, dynamic>? ?? {};
     final nodeType = nodeData['type']?.toString() ?? node['type']?.toString();
@@ -208,21 +248,57 @@ class NodeFlowEngine extends ChangeNotifier {
     }
 
     try {
-      final result = await handler.process(nodeData, nodeId);
+      // HIGH FIX 1: Node processing timeout
+      final result = await handler.process(nodeData, nodeId).timeout(
+        _nodeProcessingTimeout,
+        onTimeout: () {
+          flowLogger.warning('Node processing timed out for: $nodeId');
+          return ErrorResult(
+            message: 'Node processing timed out',
+            shouldProceed: true,
+          );
+        },
+      );
       await _handleNodeResult(result, nodeData);
+    } on TimeoutException catch (e, stackTrace) {
+      // HIGH FIX 6: Specific timeout exception handling
+      flowLogger.error('Node processing timeout for $nodeId: $e', e, stackTrace);
+
+      final typedException = NodeProcessingException(
+        message: 'Node processing timed out',
+        code: 'NODE_TIMEOUT',
+        nodeId: nodeId,
+        nodeType: nodeType,
+        originalError: e,
+        originalStackTrace: stackTrace,
+      );
+
+      _setTypedError(typedException);
+      _setProcessing(false);
+      _analytics.trackNodeExit(exitType: NodeExitType.error);
+      await _proceedToNextNode(null);
+    } on ConferBotException catch (e) {
+      // HIGH FIX 6: Specific ConferBotException handling
+      flowLogger.error('ConferBot error processing node $nodeId: $e', e, e.originalStackTrace);
+
+      _setTypedError(e);
+      _setProcessing(false);
+      _analytics.trackNodeExit(exitType: NodeExitType.error);
+
+      if (e.isRetryable || _shouldProceedOnError(e)) {
+        await _proceedToNextNode(null);
+      }
     } catch (e, stackTrace) {
       flowLogger.error('Error processing node $nodeId: $e', e, stackTrace);
 
       // Convert to typed exception
-      final typedException = e is ConferBotException
-          ? e
-          : NodeProcessingException.processingFailed(
-              nodeId: nodeId,
-              nodeType: nodeType,
-              phase: 'process',
-              originalError: e,
-              originalStackTrace: stackTrace,
-            );
+      final typedException = NodeProcessingException.processingFailed(
+        nodeId: nodeId,
+        nodeType: nodeType,
+        phase: 'process',
+        originalError: e,
+        originalStackTrace: stackTrace,
+      );
 
       _setTypedError(typedException);
       _setProcessing(false);
@@ -413,21 +489,50 @@ class NodeFlowEngine extends ChangeNotifier {
     }
 
     try {
-      final result = await handler.handleResponse(response, nodeData, nodeId);
+      // HIGH FIX 1: Timeout for response handling
+      final result = await handler.handleResponse(response, nodeData, nodeId).timeout(
+        _nodeProcessingTimeout,
+        onTimeout: () {
+          flowLogger.warning('Response handling timed out for node: $nodeId');
+          return ErrorResult(
+            message: 'Response handling timed out',
+            shouldProceed: true,
+          );
+        },
+      );
       await _handleNodeResult(result, nodeData);
+    } on TimeoutException catch (e, stackTrace) {
+      // HIGH FIX 6: Specific timeout exception handling
+      flowLogger.error('Response handling timeout for $nodeId: $e', e, stackTrace);
+
+      final typedException = NodeProcessingException(
+        message: 'Response handling timed out',
+        code: 'NODE_TIMEOUT',
+        nodeId: nodeId,
+        nodeType: nodeType,
+        originalError: e,
+        originalStackTrace: stackTrace,
+      );
+
+      _setTypedError(typedException);
+      _setProcessing(false);
+    } on ConferBotException catch (e) {
+      // HIGH FIX 6: Specific ConferBotException handling
+      flowLogger.error('ConferBot error handling response: $e', e, e.originalStackTrace);
+
+      _setTypedError(e);
+      _setProcessing(false);
     } catch (e, stackTrace) {
       flowLogger.error('Error handling response: $e', e, stackTrace);
 
       // Convert to typed exception
-      final typedException = e is ConferBotException
-          ? e
-          : NodeProcessingException.processingFailed(
-              nodeId: nodeId,
-              nodeType: nodeType,
-              phase: 'handleResponse',
-              originalError: e,
-              originalStackTrace: stackTrace,
-            );
+      final typedException = NodeProcessingException.processingFailed(
+        nodeId: nodeId,
+        nodeType: nodeType,
+        phase: 'handleResponse',
+        originalError: e,
+        originalStackTrace: stackTrace,
+      );
 
       _setTypedError(typedException);
       _setProcessing(false);
@@ -462,6 +567,9 @@ class NodeFlowEngine extends ChangeNotifier {
       if (nextIndex >= 0) {
         await _processNodeAtIndex(nextIndex);
         return;
+      } else {
+        // HIGH FIX 5: Log when edge target node doesn't exist in steps
+        flowLogger.warning('Edge target node $nextNodeId not found in steps, falling back to sequential');
       }
     }
 
@@ -491,6 +599,7 @@ class NodeFlowEngine extends ChangeNotifier {
   }
 
   /// Find next node using edge with specific source port
+  /// HIGH FIX 5: Edge routing validation with logging
   String? _findNextNodeByPort(String sourceId, String sourcePort) {
     // Look for edge from this node's specific port
     final edge = _edges.firstWhere(
@@ -503,16 +612,27 @@ class NodeFlowEngine extends ChangeNotifier {
       },
       orElse: () => <String, dynamic>{},
     );
-    return edge['target']?.toString();
+
+    final target = edge['target']?.toString();
+    if (target == null) {
+      flowLogger.warning('No edge found for port: $sourcePort on node: $sourceId');
+    }
+    return target;
   }
 
   /// Find next node using default edge (any edge from source)
+  /// HIGH FIX 5: Edge routing validation with logging
   String? _findNextNodeByDefaultEdge(String sourceId) {
     final edge = _edges.firstWhere(
       (edge) => edge['source'] == sourceId,
       orElse: () => <String, dynamic>{},
     );
-    return edge['target']?.toString();
+
+    final target = edge['target']?.toString();
+    if (target == null) {
+      flowLogger.warning('No default edge found for node: $sourceId');
+    }
+    return target;
   }
 
   // ========== Server Communication ==========
@@ -736,6 +856,7 @@ class NodeFlowEngine extends ChangeNotifier {
     _currentNodeData = null;
     _steps = [];
     _edges = [];
+    _visitedNodes.clear();
     _chatState.reset();
 
     notifyListeners();
