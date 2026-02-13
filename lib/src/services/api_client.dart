@@ -104,6 +104,14 @@ class ApiClientConfig {
     this.autoRetryTimeout = true,
   });
 
+  /// Create config from ConferBotNetworkConfig (uses runtime-configurable values)
+  factory ApiClientConfig.fromNetworkConfig() {
+    return ApiClientConfig(
+      connectionTimeout: ConferBotNetworkConfig.apiTimeout.inMilliseconds,
+      readTimeout: ConferBotNetworkConfig.apiTimeout.inMilliseconds,
+    );
+  }
+
   /// Default configuration
   static const ApiClientConfig defaultConfig = ApiClientConfig();
 }
