@@ -242,11 +242,25 @@ class GptNodeHandler extends BaseNodeHandler {
           ),
         );
       }
+    } on SocketException catch (e) {
+      recordResponse(
+        nodeId: nodeId,
+        shape: 'gpt-error',
+        text: 'Network error: $e',
+        type: nodeType,
+      );
+    } on FormatException catch (e) {
+      recordResponse(
+        nodeId: nodeId,
+        shape: 'gpt-error',
+        text: 'Data format error: $e',
+        type: nodeType,
+      );
     } catch (e) {
       recordResponse(
         nodeId: nodeId,
         shape: 'gpt-error',
-        text: e.toString(),
+        text: 'Unexpected error: $e',
         type: nodeType,
       );
     }
@@ -268,39 +282,42 @@ class GptNodeHandler extends BaseNodeHandler {
     int maxTokens = 1000,
   }) async {
     final client = HttpClient();
-    final request = await client.postUrl(
-      Uri.parse('https://api.openai.com/v1/chat/completions'),
-    );
+    try {
+      final request = await client.postUrl(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+      );
 
-    request.headers.contentType = ContentType.json;
-    request.headers.add('Authorization', 'Bearer $apiKey');
+      request.headers.contentType = ContentType.json;
+      request.headers.add('Authorization', 'Bearer $apiKey');
 
-    final body = jsonEncode({
-      'model': model,
-      'messages': messages,
-      'temperature': temperature,
-      'max_tokens': maxTokens,
-    });
-    request.write(body);
+      final body = jsonEncode({
+        'model': model,
+        'messages': messages,
+        'temperature': temperature,
+        'max_tokens': maxTokens,
+      });
+      request.write(body);
 
-    final response = await request.close();
-    client.close();
+      final response = await request.close();
 
-    if (response.statusCode == HttpStatus.ok) {
-      final responseBody = await response.transform(utf8.decoder).join();
-      final json = jsonDecode(responseBody) as Map<String, dynamic>;
-      final choices = json['choices'] as List<dynamic>;
-      if (choices.isNotEmpty) {
-        final firstChoice = choices[0] as Map<String, dynamic>;
-        final message = firstChoice['message'] as Map<String, dynamic>;
-        return message['content'] as String;
+      if (response.statusCode == HttpStatus.ok) {
+        final responseBody = await response.transform(utf8.decoder).join();
+        final json = jsonDecode(responseBody) as Map<String, dynamic>;
+        final choices = json['choices'] as List<dynamic>;
+        if (choices.isNotEmpty) {
+          final firstChoice = choices[0] as Map<String, dynamic>;
+          final message = firstChoice['message'] as Map<String, dynamic>;
+          return message['content'] as String;
+        }
+      } else {
+        // Handle API error
+        final responseBody = await response.transform(utf8.decoder).join();
+        throw Exception('OpenAI API error: ${response.statusCode} - $responseBody');
       }
-    } else {
-      // Handle API error
-      final responseBody = await response.transform(utf8.decoder).join();
-      throw Exception('OpenAI API error: ${response.statusCode} - $responseBody');
+      return null;
+    } finally {
+      client.close();
     }
-    return null;
   }
 
   /// Build GPT context map for external use (e.g., server-side processing)
