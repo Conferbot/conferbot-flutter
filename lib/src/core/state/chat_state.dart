@@ -237,6 +237,9 @@ class ChatState extends ChangeNotifier {
   /// Maximum messages to keep in memory
   static const int defaultMaxInMemory = 150;
 
+  /// Maximum transcript entries to keep (oldest trimmed when exceeded)
+  static const int maxTranscriptSize = 500;
+
   // Pagination controller for message management
   MessagePaginationController? _paginationController;
   MessagePaginationController? get paginationController => _paginationController;
@@ -851,6 +854,12 @@ class ChatState extends ChangeNotifier {
   /// Add entry to transcript
   void addToTranscript(String by, String message) {
     _transcript.add(TranscriptEntry(by: by, message: message));
+
+    // Trim oldest entries if transcript exceeds max size
+    if (_transcript.length > maxTranscriptSize) {
+      _transcript.removeRange(0, _transcript.length - maxTranscriptSize);
+    }
+
     notifyListeners();
     _schedulePersist();
   }
