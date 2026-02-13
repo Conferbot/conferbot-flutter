@@ -49,11 +49,11 @@ class ConferBotLogger {
 
   /// List of patterns to redact from log messages (security)
   static final List<RegExp> _redactPatterns = [
-    RegExp(r'api[_-]?key["\s:=]+["\']?[\w-]+["\']?', caseSensitive: false),
-    RegExp(r'token["\s:=]+["\']?[\w.-]+["\']?', caseSensitive: false),
-    RegExp(r'password["\s:=]+["\']?[^\s"\']+["\']?', caseSensitive: false),
-    RegExp(r'secret["\s:=]+["\']?[\w-]+["\']?', caseSensitive: false),
-    RegExp(r'authorization["\s:=]+["\']?[\w.-]+["\']?', caseSensitive: false),
+    RegExp('api[_-]?key["\\s:=]+["\']?[\\w-]+["\']?', caseSensitive: false),
+    RegExp('token["\\s:=]+["\']?[\\w.-]+["\']?', caseSensitive: false),
+    RegExp('password["\\s:=]+["\']?[^\\s"\']+["\']?', caseSensitive: false),
+    RegExp('secret["\\s:=]+["\']?[\\w-]+["\']?', caseSensitive: false),
+    RegExp('authorization["\\s:=]+["\']?[\\w.-]+["\']?', caseSensitive: false),
   ];
 
   // ========== Configuration ==========

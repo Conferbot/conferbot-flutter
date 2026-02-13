@@ -1,4 +1,5 @@
 import 'package:conferbot_flutter/src/services/socket_client.dart';
+import 'package:conferbot_flutter/src/models/queued_message.dart';
 
 /// Mock implementation of SocketClient for testing
 class MockSocketClient extends SocketClient {
@@ -12,7 +13,7 @@ class MockSocketClient extends SocketClient {
   bool get isConnected => mockIsConnected;
 
   @override
-  void connect() {
+  Future<void> connect() async {
     mockIsConnected = true;
   }
 
@@ -57,18 +58,19 @@ class MockSocketClient extends SocketClient {
   }
 
   @override
-  void sendResponseRecord({
+  Future<QueuedMessage?> sendResponseRecord({
     required String chatSessionId,
     required dynamic record,
     List<dynamic>? answerVariables,
     Map<String, dynamic>? visitorMeta,
-  }) {
+  }) async {
     emit('response-record', {
       'chatSessionId': chatSessionId,
       'record': record,
       'answerVariables': answerVariables ?? [],
       if (visitorMeta != null) 'visitorMeta': visitorMeta,
     });
+    return null;
   }
 
   @override
@@ -83,14 +85,15 @@ class MockSocketClient extends SocketClient {
   }
 
   @override
-  void initiateHandover({
+  Future<QueuedMessage?> initiateHandover({
     required String chatSessionId,
     String? message,
-  }) {
+  }) async {
     emit('initiate-handover', {
       'chatSessionId': chatSessionId,
       if (message != null) 'message': message,
     });
+    return null;
   }
 
   @override
