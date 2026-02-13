@@ -1,55 +1,23 @@
 import '../node_types.dart';
+import '../node_result.dart';
+import '../node_ui_state.dart' show TextInputType;
+import '../../state/chat_state.dart';
 
-/// Result of processing a node
-sealed class NodeResult {
-  const NodeResult();
-}
+// Re-export NodeResult and all its subclasses/aliases from the single source of truth
+export '../node_result.dart';
 
-/// Node requires UI display and user interaction
-class DisplayUI extends NodeResult {
-  final NodeUIState uiState;
+// Re-export TextInputType so consumers of legacy_handlers.dart get it too
+export '../node_ui_state.dart' show TextInputType;
 
-  const DisplayUI(this.uiState);
-}
-
-/// Node processed successfully, proceed to next node
-class Proceed extends NodeResult {
-  /// null = default "source", "source-0", "source-1", etc.
-  final String? targetPort;
-
-  const Proceed({this.targetPort});
-}
-
-/// Node processed with delay before proceeding
-class DelayedProceed extends NodeResult {
-  final int delayMs;
-  final String? targetPort;
-
-  const DelayedProceed({required this.delayMs, this.targetPort});
-}
-
-/// Jump to specific node by ID
-class JumpTo extends NodeResult {
-  final String targetNodeId;
-
-  const JumpTo(this.targetNodeId);
-}
-
-/// Error occurred during processing
-class NodeError extends NodeResult {
-  final String message;
-  final bool shouldProceed;
-
-  const NodeError(this.message, {this.shouldProceed = true});
-}
-
-/// UI state for nodes that require display
+/// UI state for nodes that require display (legacy variant)
+///
+/// This is the legacy NodeUIState base class used by display_handlers.dart,
+/// choice_ui_states.dart, and integration_handlers.dart.
+/// v2 handlers use the NodeUIState from node_ui_state.dart instead.
+/// Both variants are accepted by NodeResult.displayUI() / DisplayUIResult.
 sealed class NodeUIState {
   const NodeUIState();
 }
-
-/// Text input types
-enum TextInputType { text, name, email, phone, number, url, location }
 
 /// Text input field
 class TextInputState extends NodeUIState {
@@ -157,49 +125,24 @@ class QuizState extends NodeUIState {
   });
 }
 
-/// Record entry for tracking responses
-class RecordEntry {
-  final String id;
-  final String shape;
-  final String? type;
-  final String? text;
-  final Map<String, dynamic> data;
-
-  const RecordEntry({
-    required this.id,
-    required this.shape,
-    this.type,
-    this.text,
-    this.data = const {},
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      '_id': id,
-      'shape': shape,
-      if (type != null) 'type': type,
-      if (text != null) 'text': text,
-      ...data,
-    };
-  }
-}
+// RecordEntry is imported from chat_state.dart (single source of truth)
 
 /// Chat state interface for handlers to interact with
 abstract class ChatStateInterface {
   void addAnswerVariable(String nodeId, String answerKey);
   void setAnswerVariable(String nodeId, dynamic value);
+  void setAnswerVariableByKey(String key, dynamic value);
   void setUserMetadata(String key, String value);
   void addToTranscript(String role, String text);
   void pushToRecord(RecordEntry entry);
+  void setVariable(String name, dynamic value);
+  dynamic resolveValue(String value);
 }
 
 /// Base interface for all node handlers
 abstract class NodeHandler {
   /// The node type this handler processes
   String get nodeType;
-
-  /// Chat state for interacting with session data
-  ChatStateInterface? state;
 
   /// Process the node and return result
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId);
@@ -216,6 +159,9 @@ abstract class NodeHandler {
 
 /// Base class with common functionality for handlers
 abstract class BaseNodeHandler extends NodeHandler {
+  /// ChatState singleton provides full state access
+  ChatState get state => ChatState.instance;
+
   /// Record a user response
   void recordResponse({
     required String nodeId,
@@ -231,7 +177,7 @@ abstract class BaseNodeHandler extends NodeHandler {
       text: text,
       data: additionalData,
     );
-    state?.pushToRecord(entry);
+    state.pushToRecord(entry);
   }
 
   /// Get string from nodeData with default
@@ -329,7 +275,7 @@ class UserInputNodeHandler extends BaseNodeHandler {
     final inputType = getString(nodeData, 'type', 'text');
     final answerKey = getString(nodeData, 'answerVariable', nodeId);
 
-    state?.addAnswerVariable(nodeId, answerKey);
+    state.addAnswerVariable(nodeId, answerKey);
 
     switch (inputType.toLowerCase()) {
       case 'name':
@@ -446,7 +392,7 @@ class UserInputNodeHandler extends BaseNodeHandler {
             shouldProceed: false,
           );
         }
-        state?.setUserMetadata('email', value);
+        state.setUserMetadata('email', value);
 
       case 'number':
         if (!isValidNumber(value)) {
@@ -468,7 +414,7 @@ class UserInputNodeHandler extends BaseNodeHandler {
         if (value.isEmpty) {
           return const NodeError('Please enter your name', shouldProceed: false);
         }
-        state?.setUserMetadata('name', value);
+        state.setUserMetadata('name', value);
 
       case 'mobile':
       case 'phone':
@@ -476,11 +422,11 @@ class UserInputNodeHandler extends BaseNodeHandler {
           return const NodeError('Please enter a valid phone number',
               shouldProceed: false);
         }
-        state?.setUserMetadata('phone', value);
+        state.setUserMetadata('phone', value);
     }
 
-    state?.setAnswerVariable(nodeId, value);
-    state?.addToTranscript('user', value);
+    state.setAnswerVariable(nodeId, value);
+    state.addToTranscript('user', value);
 
     recordResponse(
       nodeId: nodeId,
@@ -497,7 +443,7 @@ class UserInputNodeHandler extends BaseNodeHandler {
         final greeting = greetResponse
             .replaceAll('{name}', value)
             .replaceAll('\${name}', value);
-        state?.addToTranscript('bot', greeting);
+        state.addToTranscript('bot', greeting);
       }
       return const DelayedProceed(delayMs: 2000);
     }
@@ -519,7 +465,7 @@ class UserRangeNodeHandler extends BaseNodeHandler {
     final maxVal = getInt(nodeData, 'maxVal', 100);
     final answerKey = getString(nodeData, 'answerVariable', nodeId);
 
-    state?.addAnswerVariable(nodeId, answerKey);
+    state.addAnswerVariable(nodeId, answerKey);
 
     return DisplayUI(
       RangeState(
@@ -551,8 +497,8 @@ class UserRangeNodeHandler extends BaseNodeHandler {
     final minVal = getInt(nodeData, 'minVal', 0);
     final maxVal = getInt(nodeData, 'maxVal', 100);
 
-    state?.setAnswerVariable(nodeId, value);
-    state?.addToTranscript('user', value.toString());
+    state.setAnswerVariable(nodeId, value);
+    state.addToTranscript('user', value.toString());
 
     recordResponse(
       nodeId: nodeId,
@@ -590,7 +536,7 @@ class QuizNodeHandler extends BaseNodeHandler {
   Future<NodeResult> process(
       Map<String, dynamic> nodeData, String nodeId) async {
     final answerKey = getString(nodeData, 'answerVariable', nodeId);
-    state?.addAnswerVariable(nodeId, answerKey);
+    state.addAnswerVariable(nodeId, answerKey);
 
     // Build options from option1, option2, etc.
     final options = <String>[];
@@ -644,8 +590,8 @@ class QuizNodeHandler extends BaseNodeHandler {
     final optionKey = 'option${selectedIndex + 1}';
     final selectedText = nodeData[optionKey]?.toString() ?? 'Unknown';
 
-    state?.setAnswerVariable(nodeId, selectedText);
-    state?.addToTranscript('user', selectedText);
+    state.setAnswerVariable(nodeId, selectedText);
+    state.addToTranscript('user', selectedText);
 
     recordResponse(
       nodeId: nodeId,
