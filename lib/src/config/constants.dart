@@ -64,3 +64,99 @@ class ConferBotConstants {
   /// Maximum stored sessions to keep
   static const int maxStoredSessions = 10;
 }
+
+
+/// Configurable network settings for timeouts and retry policies.
+///
+/// Use [configure] to override default network behavior at SDK initialization.
+/// Use [reset] to restore defaults (useful for testing).
+class ConferBotNetworkConfig {
+  static Duration _apiTimeout = const Duration(milliseconds: ConferBotConstants.apiTimeout);
+  static Duration _socketTimeout = const Duration(milliseconds: ConferBotConstants.socketTimeout);
+  static int _reconnectionAttempts = ConferBotConstants.socketReconnectionAttempts;
+  static Duration _reconnectionDelay = const Duration(milliseconds: ConferBotConstants.socketReconnectionDelay);
+  static Duration _reconnectionDelayMax = const Duration(milliseconds: ConferBotConstants.socketReconnectionDelayMax);
+
+  static Duration get apiTimeout => _apiTimeout;
+  static Duration get socketTimeout => _socketTimeout;
+  static int get reconnectionAttempts => _reconnectionAttempts;
+  static Duration get reconnectionDelay => _reconnectionDelay;
+  static Duration get reconnectionDelayMax => _reconnectionDelayMax;
+
+  /// Configure custom network settings.
+  ///
+  /// All durations must be positive. Reconnection attempts must be >= 0.
+  static void configure({
+    Duration? apiTimeout,
+    Duration? socketTimeout,
+    int? reconnectionAttempts,
+    Duration? reconnectionDelay,
+    Duration? reconnectionDelayMax,
+  }) {
+    if (apiTimeout != null) {
+      assert(apiTimeout.inMilliseconds > 0, 'API timeout must be positive');
+      _apiTimeout = apiTimeout;
+    }
+    if (socketTimeout != null) {
+      assert(socketTimeout.inMilliseconds > 0, 'Socket timeout must be positive');
+      _socketTimeout = socketTimeout;
+    }
+    if (reconnectionAttempts != null) {
+      assert(reconnectionAttempts >= 0, 'Reconnection attempts must be >= 0');
+      _reconnectionAttempts = reconnectionAttempts;
+    }
+    if (reconnectionDelay != null) {
+      assert(reconnectionDelay.inMilliseconds > 0, 'Reconnection delay must be positive');
+      _reconnectionDelay = reconnectionDelay;
+    }
+    if (reconnectionDelayMax != null) {
+      assert(reconnectionDelayMax.inMilliseconds > 0, 'Reconnection delay max must be positive');
+      _reconnectionDelayMax = reconnectionDelayMax;
+    }
+  }
+
+  /// Reset all network settings to defaults.
+  static void reset() {
+    _apiTimeout = const Duration(milliseconds: ConferBotConstants.apiTimeout);
+    _socketTimeout = const Duration(milliseconds: ConferBotConstants.socketTimeout);
+    _reconnectionAttempts = ConferBotConstants.socketReconnectionAttempts;
+    _reconnectionDelay = const Duration(milliseconds: ConferBotConstants.socketReconnectionDelay);
+    _reconnectionDelayMax = const Duration(milliseconds: ConferBotConstants.socketReconnectionDelayMax);
+  }
+}
+
+/// Configurable endpoint URLs with HTTPS enforcement.
+///
+/// Use [configure] to override the default URLs at SDK initialization.
+/// All URLs must use HTTPS for security.
+class ConferBotEndpoints {
+  static String _apiBaseUrl = ConferBotConstants.defaultApiBaseUrl;
+  static String _socketUrl = ConferBotConstants.defaultSocketUrl;
+
+  /// Current API base URL
+  static String get apiBaseUrl => _apiBaseUrl;
+
+  /// Current socket URL
+  static String get socketUrl => _socketUrl;
+
+  /// Configure custom endpoint URLs.
+  ///
+  /// Both [apiBaseUrl] and [socketUrl] must use HTTPS if provided.
+  /// Throws [AssertionError] in debug mode if HTTP is used.
+  static void configure({String? apiBaseUrl, String? socketUrl}) {
+    if (apiBaseUrl != null) {
+      assert(apiBaseUrl.startsWith('https://'), 'API URL must use HTTPS');
+      _apiBaseUrl = apiBaseUrl;
+    }
+    if (socketUrl != null) {
+      assert(socketUrl.startsWith('https://'), 'Socket URL must use HTTPS');
+      _socketUrl = socketUrl;
+    }
+  }
+
+  /// Reset endpoints to defaults (useful for testing)
+  static void reset() {
+    _apiBaseUrl = ConferBotConstants.defaultApiBaseUrl;
+    _socketUrl = ConferBotConstants.defaultSocketUrl;
+  }
+}
