@@ -72,6 +72,16 @@ class SocketClientConfig {
     this.enableOfflineQueue = true,
   });
 
+  /// Create config from ConferBotNetworkConfig (uses runtime-configurable values)
+  factory SocketClientConfig.fromNetworkConfig() {
+    return SocketClientConfig(
+      maxReconnectionAttempts: ConferBotNetworkConfig.reconnectionAttempts,
+      reconnectionDelay: ConferBotNetworkConfig.reconnectionDelay.inMilliseconds,
+      reconnectionDelayMax: ConferBotNetworkConfig.reconnectionDelayMax.inMilliseconds,
+      connectionTimeout: ConferBotNetworkConfig.socketTimeout.inMilliseconds,
+    );
+  }
+
   /// Default configuration
   static const SocketClientConfig defaultConfig = SocketClientConfig();
 }
@@ -792,6 +802,7 @@ class SocketClient with ChangeNotifier {
     _cancelReconnectionTimer();
 
     if (_socket != null) {
+      _socket!.clearListeners();
       _socket!.disconnect();
       _socket!.dispose();
       _socket = null;
