@@ -1,5 +1,4 @@
-import '../node_handler.dart';
-import '../node_result.dart';
+import '../node_handler.dart' hide NodeUIState;
 import '../node_types.dart';
 import '../node_ui_state.dart';
 
