@@ -1,9 +1,9 @@
-/// All 51 node types supported by Conferbot
+/// All 58 node types supported by Conferbot
 /// Organized by category matching the web widget
 class NodeTypes {
   NodeTypes._();
 
-  // ==================== DISPLAY NODES (28 types) ====================
+  // ==================== DISPLAY NODES (32 types) ====================
 
   // Legacy nodes (v1)
   static const String twoChoices = 'two-choices-node';
