@@ -5,6 +5,7 @@ import '../models/message.dart';
 import '../models/socket_events.dart';
 import '../models/user.dart';
 import '../models/analytics.dart';
+import '../config/constants.dart';
 import '../services/api_client.dart';
 import '../services/socket_client.dart';
 import '../services/storage_service.dart';
@@ -116,13 +117,13 @@ class ConferBotProvider with ChangeNotifier {
     _apiClient = ApiClient(
       apiKey: apiKey,
       botId: botId,
-      baseUrl: baseUrl ?? 'https://embed.conferbot.com/api/v1/mobile',
+      baseUrl: baseUrl ?? ConferBotEndpoints.apiBaseUrl,
     );
 
     _socketClient = SocketClient(
       apiKey: apiKey,
       botId: botId,
-      socketUrl: socketUrl ?? 'https://embed.conferbot.com',
+      socketUrl: socketUrl ?? ConferBotEndpoints.socketUrl,
     );
 
     _flowEngine = NodeFlowEngine(socketClient: _socketClient);
@@ -427,8 +428,14 @@ class ConferBotProvider with ChangeNotifier {
     });
   }
 
-  /// Add message to record with pagination support
+  /// Add message to record with pagination support and deduplication
   void _addMessageToRecord(RecordItem message) {
+    // HIGH FIX 4: Deduplication by message ID
+    if (_record.any((m) => m.id == message.id)) {
+      _logger.debug('Skipping duplicate message: ${message.id}');
+      return;
+    }
+
     _record.add(message);
     if (!_isOpen) {
       _unreadCount++;
