@@ -13,7 +13,6 @@ library;
 import '../../node_types.dart';
 import '../../node_result.dart';
 import '../../node_ui_state.dart';
-import 'package:flutter/material.dart' show TextInputType;
 import 'base_ask_handler.dart';
 
 /// Handler for ask-name-node
