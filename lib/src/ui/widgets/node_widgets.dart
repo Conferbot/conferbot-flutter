@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter_html/flutter_html.dart';
 import '../../core/nodes/node_ui_state.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
@@ -503,9 +505,75 @@ class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
   String? _selectedFileName;
   bool _isUploading = false;
 
-  void _pickFile() {
-    // File picker would be implemented here
-    // For now, this is a placeholder
+  Future<void> _pickFile() async {
+    try {
+      // Build allowed extensions from the state's allowedTypes
+      List<String>? allowedExtensions;
+      FileType fileType = FileType.any;
+
+      if (widget.state.allowedTypes != null &&
+          widget.state.allowedTypes!.isNotEmpty) {
+        fileType = FileType.custom;
+        allowedExtensions = widget.state.allowedTypes!
+            .map((t) => t.replaceAll('.', '').trim())
+            .where((t) => t.isNotEmpty)
+            .toList();
+        if (allowedExtensions.isEmpty) {
+          fileType = FileType.any;
+          allowedExtensions = null;
+        }
+      }
+
+      final result = await FilePicker.platform.pickFiles(
+        type: fileType,
+        allowedExtensions: allowedExtensions,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+
+      // Check file size
+      final fileSizeBytes = file.size;
+      final maxSizeBytes = widget.state.maxSizeMb * 1024 * 1024;
+      if (fileSizeBytes > maxSizeBytes) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'File too large. Maximum size is ${widget.state.maxSizeMb}MB.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() {
+        _selectedFileName = file.name;
+        _isUploading = true;
+      });
+
+      // Send the file info back via onResponse
+      widget.onResponse({
+        'fileName': file.name,
+        'filePath': file.path,
+        'fileSize': file.size,
+        'fileExtension': file.extension,
+        'fileBytes': file.bytes,
+      });
+
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick file: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -1694,19 +1762,27 @@ class HtmlNodeWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // HTML rendering placeholder - would use flutter_html or webview in production
+    final htmlContent = state.htmlContent;
+
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(theme.borderRadius.lg),
       ),
       child: Padding(
         padding: EdgeInsets.all(theme.spacing.md),
-        child: Text(
-          'HTML Content',
-          style: TextStyle(
-            fontSize: theme.typography.fontSizeMd,
-            color: theme.colors.text,
-          ),
+        child: Html(
+          data: htmlContent,
+          style: {
+            'body': Style(
+              fontSize: FontSize(theme.typography.fontSizeMd),
+              color: theme.colors.text,
+              margin: Margins.zero,
+              padding: HtmlPaddings.zero,
+            ),
+            'a': Style(
+              color: theme.colors.primary,
+            ),
+          },
         ),
       ),
     );
