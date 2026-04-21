@@ -159,7 +159,7 @@ class StripeNodeHandler extends BaseNodeHandler {
       if (resultNodeId != nodeId) return;
 
       timeout?.cancel();
-      socket.off(SocketEvents.integrationResult);
+      socket.off(SocketEvents.integrationResult, onResult);
 
       if (data['success'] == true) {
         final resultData = data['data'] as Map<String, dynamic>?;
@@ -187,7 +187,7 @@ class StripeNodeHandler extends BaseNodeHandler {
 
     // Timeout after 15 seconds to avoid hanging indefinitely
     timeout = Timer(const Duration(seconds: 15), () {
-      socket.off(SocketEvents.integrationResult);
+      socket.off(SocketEvents.integrationResult, onResult);
       if (!completer.isCompleted) completer.complete('');
     });
 
