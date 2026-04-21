@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/nodes/node_ui_state.dart';
 import '../../models/agent.dart';
-import '../../models/socket_events.dart' show HandoverState;
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 import 'pre_chat_form.dart';
