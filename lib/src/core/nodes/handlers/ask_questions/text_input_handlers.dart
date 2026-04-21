@@ -115,7 +115,7 @@ class AskEmailNodeHandler extends BaseAskNodeHandler {
     return NodeResult.displayUI(
       TextInputUIState(
         questionText: questionText,
-        inputType: TextInputType.emailAddress,
+        inputType: TextInputType.email,
         placeholder: 'Enter your email',
         errorMessage: errorMessage,
         nodeId: nodeId,
@@ -348,7 +348,7 @@ class AskLocationNodeHandler extends BaseAskNodeHandler {
     return NodeResult.displayUI(
       TextInputUIState(
         questionText: questionText,
-        inputType: TextInputType.streetAddress,
+        inputType: TextInputType.location,
         placeholder: 'Enter your location',
         nodeId: nodeId,
         answerKey: answerKey,
