@@ -422,9 +422,9 @@ class NodeFlowEngine extends ChangeNotifier {
     if (uiState is MessageUIState) {
       return uiState.text;
     } else if (uiState is TextInputUIState) {
-      return uiState.question;
-    } else if (uiState is MultiChoiceUIState) {
-      return uiState.question;
+      return uiState.questionText;
+    } else if (uiState is MultipleChoiceUIState) {
+      return uiState.questionText;
     }
     // Add more cases as needed
     return null;
