@@ -376,18 +376,18 @@ class _TextInputNodeWidgetState extends State<TextInputNodeWidget> {
 
   TextInputType _getKeyboardType() {
     return switch (widget.state.inputType) {
-      TextInputType.email => TextInputType.emailAddress,
-      TextInputType.phone => TextInputType.phone,
-      TextInputType.number => TextInputType.number,
-      TextInputType.url => TextInputType.url,
+      ui_state.TextInputType.email => TextInputType.emailAddress,
+      ui_state.TextInputType.phone => TextInputType.phone,
+      ui_state.TextInputType.number => TextInputType.number,
+      ui_state.TextInputType.url => TextInputType.url,
       _ => TextInputType.text,
     };
   }
 
   List<TextInputFormatter>? _getInputFormatters() {
     return switch (widget.state.inputType) {
-      TextInputType.phone => [FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s()]'))],
-      TextInputType.number => [FilteringTextInputFormatter.digitsOnly],
+      ui_state.TextInputType.phone => [FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s()]'))],
+      ui_state.TextInputType.number => [FilteringTextInputFormatter.digitsOnly],
       _ => null,
     };
   }
@@ -402,9 +402,9 @@ class _TextInputNodeWidgetState extends State<TextInputNodeWidget> {
 
     // Built-in validation based on type
     return switch (widget.state.inputType) {
-      TextInputType.email => RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value),
-      TextInputType.phone => value.length >= 10,
-      TextInputType.url => Uri.tryParse(value)?.hasAbsolutePath ?? false,
+      ui_state.TextInputType.email => RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value),
+      ui_state.TextInputType.phone => value.length >= 10,
+      ui_state.TextInputType.url => Uri.tryParse(value)?.hasAbsolutePath ?? false,
       _ => true,
     };
   }
@@ -990,9 +990,9 @@ class _RatingNodeWidgetState extends State<RatingNodeWidget> {
           SizedBox(height: widget.theme.spacing.sm),
         ],
         switch (widget.state.ratingType) {
-          RatingType.star => _buildStarRating(),
-          RatingType.smiley => _buildSmileyRating(),
-          RatingType.number || RatingType.opinionScale => _buildNumberRating(),
+          ui_state.RatingType.star => _buildStarRating(),
+          ui_state.RatingType.smiley => _buildSmileyRating(),
+          ui_state.RatingType.number || ui_state.RatingType.opinionScale => _buildNumberRating(),
         },
       ],
     );
@@ -1115,7 +1115,7 @@ class DropdownNodeWidget extends StatefulWidget {
 }
 
 class _DropdownNodeWidgetState extends State<DropdownNodeWidget> {
-  SelectOption? _selectedOption;
+  ui_state.SelectOption? _selectedOption;
 
   @override
   Widget build(BuildContext context) {
@@ -1127,7 +1127,7 @@ class _DropdownNodeWidgetState extends State<DropdownNodeWidget> {
           BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
           SizedBox(height: widget.theme.spacing.sm),
         ],
-        DropdownButtonFormField<SelectOption>(
+        DropdownButtonFormField<ui_state.SelectOption>(
           value: _selectedOption,
           decoration: InputDecoration(
             filled: true,
@@ -1147,7 +1147,7 @@ class _DropdownNodeWidgetState extends State<DropdownNodeWidget> {
             hintText: 'Select an option',
           ),
           items: widget.state.options.map((option) {
-            return DropdownMenuItem<SelectOption>(
+            return DropdownMenuItem<ui_state.SelectOption>(
               value: option,
               child: Text(option.text),
             );
@@ -1551,7 +1551,7 @@ class MultipleQuestionsNodeWidget extends StatelessWidget {
     }
 
     return TextInputNodeWidget(
-      state: TextInputUIState(
+      state: ui_state.TextInputUIState(
         questionText: currentQuestion.questionText,
         inputType: _mapAnswerType(currentQuestion.answerType),
         nodeId: state.nodeId,
@@ -1563,12 +1563,12 @@ class MultipleQuestionsNodeWidget extends StatelessWidget {
     );
   }
 
-  TextInputType _mapAnswerType(String answerType) {
+  ui_state.TextInputType _mapAnswerType(String answerType) {
     return switch (answerType.toLowerCase()) {
-      'email' => TextInputType.email,
-      'phone' || 'mobile' => TextInputType.phone,
-      'name' => TextInputType.name,
-      _ => TextInputType.text,
+      'email' => ui_state.TextInputType.email,
+      'phone' || 'mobile' => ui_state.TextInputType.phone,
+      'name' => ui_state.TextInputType.name,
+      _ => ui_state.TextInputType.text,
     };
   }
 }
@@ -1591,11 +1591,11 @@ class HumanHandoverNodeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (state.state) {
-      HandoverState.preChatQuestions => _buildPreChatQuestions(),
-      HandoverState.waitingForAgent => _buildWaitingForAgent(),
-      HandoverState.agentConnected => _buildAgentConnected(),
-      HandoverState.noAgentsAvailable => _buildNoAgentsAvailable(),
-      HandoverState.postChatSurvey => _buildPostChatSurvey(),
+      ui_state.HandoverState.preChatQuestions => _buildPreChatQuestions(),
+      ui_state.HandoverState.waitingForAgent => _buildWaitingForAgent(),
+      ui_state.HandoverState.agentConnected => _buildAgentConnected(),
+      ui_state.HandoverState.noAgentsAvailable => _buildNoAgentsAvailable(),
+      ui_state.HandoverState.postChatSurvey => _buildPostChatSurvey(),
     };
   }
 
@@ -1610,7 +1610,7 @@ class HumanHandoverNodeWidget extends StatelessWidget {
     }
 
     return TextInputNodeWidget(
-      state: TextInputUIState(
+      state: ui_state.TextInputUIState(
         questionText: currentQuestion.questionText,
         inputType: _mapAnswerType(currentQuestion.answerType),
         nodeId: state.nodeId,
@@ -1726,9 +1726,9 @@ class HumanHandoverNodeWidget extends StatelessWidget {
     }
 
     return TextInputNodeWidget(
-      state: TextInputUIState(
+      state: ui_state.TextInputUIState(
         questionText: currentQuestion.questionText,
-        inputType: TextInputType.text,
+        inputType: ui_state.TextInputType.text,
         nodeId: state.nodeId,
         answerKey: currentQuestion.answerKey,
       ),
@@ -1738,12 +1738,12 @@ class HumanHandoverNodeWidget extends StatelessWidget {
     );
   }
 
-  TextInputType _mapAnswerType(String answerType) {
+  ui_state.TextInputType _mapAnswerType(String answerType) {
     return switch (answerType.toLowerCase()) {
-      'email' => TextInputType.email,
-      'phone' || 'mobile' => TextInputType.phone,
-      'name' => TextInputType.name,
-      _ => TextInputType.text,
+      'email' => ui_state.TextInputType.email,
+      'phone' || 'mobile' => ui_state.TextInputType.phone,
+      'name' => ui_state.TextInputType.name,
+      _ => ui_state.TextInputType.text,
     };
   }
 }
@@ -1792,7 +1792,7 @@ class HtmlNodeWidget extends StatelessWidget {
 
 /// Widget for payment
 class PaymentNodeWidget extends StatelessWidget {
-  final PaymentUIState state;
+  final ui_state.PaymentUIState state;
   final Color primaryColor;
   final ConferBotTheme theme;
 
@@ -1844,8 +1844,8 @@ class PaymentNodeWidget extends StatelessWidget {
             SizedBox(height: theme.spacing.md),
             ElevatedButton(
               onPressed: state.paymentUrl.isNotEmpty
-                  ? () {
-                      // Would use url_launcher to open payment URL
+                  ? () async {
+                      await launchUrl(Uri.parse(state.paymentUrl), mode: LaunchMode.externalApplication);
                     }
                   : null,
               style: ElevatedButton.styleFrom(
@@ -1870,7 +1870,7 @@ class PaymentNodeWidget extends StatelessWidget {
 
 /// Widget for redirect
 class RedirectNodeWidget extends StatelessWidget {
-  final RedirectUIState state;
+  final ui_state.RedirectUIState state;
   final ConferBotTheme theme;
 
   const RedirectNodeWidget({
