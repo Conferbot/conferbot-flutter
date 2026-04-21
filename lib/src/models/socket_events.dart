@@ -12,6 +12,8 @@ class SocketEvents {
   static const String toggleVisitorInput = 'toggle-visitor-input';
   static const String emailNodeTrigger = 'email-node-trigger';
   static const String zapierNodeTrigger = 'zapier-node-trigger';
+  static const String executeIntegration = 'execute-integration';
+  static const String integrationResult = 'integration-result';
   static const String calendarSlotSelectionRecord = 'calendar-slot-selection-record';
   static const String handoverTimeout = 'handover-timeout';
 
