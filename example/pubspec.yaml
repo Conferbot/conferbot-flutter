@@ -14,6 +14,9 @@ dependencies:
   conferbot_flutter:
     path: ../
 
+  # State management
+  provider: ^6.1.1
+
   # UI
   cupertino_icons: ^1.0.6
 
