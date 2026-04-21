@@ -5,6 +5,7 @@ import 'nodes/node_result.dart';
 import 'nodes/node_ui_state.dart';
 import 'nodes/node_handler_registry.dart';
 import 'nodes/handlers/legacy_handlers.dart' show NodeHandler;
+import 'nodes/handlers/integrations/other_handlers.dart' show StripeNodeHandler;
 import 'state/chat_state.dart';
 import 'errors/conferbot_exceptions.dart';
 import 'errors/error_handler.dart';
@@ -37,7 +38,10 @@ class NodeFlowEngine extends ChangeNotifier {
   /// Constructor
   NodeFlowEngine({
     required SocketClient socketClient,
-  }) : _socketClient = socketClient;
+  }) : _socketClient = socketClient {
+    // Inject socket client into handlers that need server communication
+    StripeNodeHandler.socketClient = socketClient;
+  }
 
   // ========== State Fields ==========
 
