@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_html/flutter_html.dart';
-import '../../core/nodes/node_ui_state.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/nodes/node_ui_state.dart' as ui_state;
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 import '../../widgets/voice_message/voice_input_widget.dart';
@@ -13,7 +14,7 @@ import '../../widgets/media/audio_player_widget.dart';
 
 /// Main widget that routes to the correct node component based on UI state
 class NodeRenderer extends StatelessWidget {
-  final NodeUIState uiState;
+  final ui_state.NodeUIState uiState;
   final ValueChanged<dynamic> onResponse;
   final Color? primaryColor;
   final ConferBotTheme? theme;
@@ -32,113 +33,113 @@ class NodeRenderer extends StatelessWidget {
     final effectivePrimaryColor = primaryColor ?? effectiveTheme.colors.primary;
 
     return switch (uiState) {
-      MessageUIState state => MessageNodeWidget(state: state, theme: effectiveTheme),
-      ImageUIState state => ImageNodeWidget(
+      ui_state.MessageUIState state => MessageNodeWidget(state: state, theme: effectiveTheme),
+      ui_state.ImageUIState state => ImageNodeWidget(
           state: state,
           theme: effectiveTheme,
           primaryColor: effectivePrimaryColor,
         ),
-      VideoUIState state => VideoNodeWidget(
+      ui_state.VideoUIState state => VideoNodeWidget(
           state: state,
           theme: effectiveTheme,
           primaryColor: effectivePrimaryColor,
         ),
-      AudioUIState state => AudioNodeWidget(
+      ui_state.AudioUIState state => AudioNodeWidget(
           state: state,
           theme: effectiveTheme,
           primaryColor: effectivePrimaryColor,
         ),
-      FileUIState state => FileNodeWidget(state: state, theme: effectiveTheme),
-      TextInputUIState state => TextInputNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      FileUploadUIState state => FileUploadNodeWidget(
+      ui_state.FileUIState state => FileNodeWidget(state: state, theme: effectiveTheme),
+      ui_state.TextInputUIState state => TextInputNodeWidget(
           state: state,
           onResponse: onResponse,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      VoiceInputUIState state => VoiceInputNodeWidget(
+      ui_state.FileUploadUIState state => FileUploadNodeWidget(
           state: state,
           onResponse: onResponse,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      VoiceMessageUIState state => VoiceMessageNodeWidget(
-          state: state,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      SingleChoiceUIState state => SingleChoiceNodeWidget(
+      ui_state.VoiceInputUIState state => VoiceInputNodeWidget(
           state: state,
           onResponse: onResponse,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      MultipleChoiceUIState state => MultipleChoiceNodeWidget(
+      ui_state.VoiceMessageUIState state => VoiceMessageNodeWidget(
+          state: state,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      ui_state.SingleChoiceUIState state => SingleChoiceNodeWidget(
           state: state,
           onResponse: onResponse,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      RatingUIState state => RatingNodeWidget(
+      ui_state.MultipleChoiceUIState state => MultipleChoiceNodeWidget(
           state: state,
           onResponse: onResponse,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      DropdownUIState state => DropdownNodeWidget(
+      ui_state.RatingUIState state => RatingNodeWidget(
           state: state,
           onResponse: onResponse,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      RangeUIState state => RangeNodeWidget(
+      ui_state.DropdownUIState state => DropdownNodeWidget(
           state: state,
           onResponse: onResponse,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      CalendarUIState state => CalendarNodeWidget(
+      ui_state.RangeUIState state => RangeNodeWidget(
           state: state,
           onResponse: onResponse,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      ImageChoiceUIState state => ImageChoiceNodeWidget(
+      ui_state.CalendarUIState state => CalendarNodeWidget(
           state: state,
           onResponse: onResponse,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      QuizUIState state => QuizNodeWidget(
+      ui_state.ImageChoiceUIState state => ImageChoiceNodeWidget(
           state: state,
           onResponse: onResponse,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      MultipleQuestionsUIState state => MultipleQuestionsNodeWidget(
+      ui_state.QuizUIState state => QuizNodeWidget(
           state: state,
           onResponse: onResponse,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      HumanHandoverUIState state => HumanHandoverNodeWidget(
+      ui_state.MultipleQuestionsUIState state => MultipleQuestionsNodeWidget(
           state: state,
           onResponse: onResponse,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      HtmlUIState state => HtmlNodeWidget(state: state, theme: effectiveTheme),
-      PaymentUIState state => PaymentNodeWidget(
+      ui_state.HumanHandoverUIState state => HumanHandoverNodeWidget(
+          state: state,
+          onResponse: onResponse,
+          primaryColor: effectivePrimaryColor,
+          theme: effectiveTheme,
+        ),
+      ui_state.HtmlUIState state => HtmlNodeWidget(state: state, theme: effectiveTheme),
+      ui_state.PaymentUIState state => PaymentNodeWidget(
           state: state,
           primaryColor: effectivePrimaryColor,
           theme: effectiveTheme,
         ),
-      RedirectUIState state => RedirectNodeWidget(state: state, theme: effectiveTheme),
+      ui_state.RedirectUIState state => RedirectNodeWidget(state: state, theme: effectiveTheme),
     };
   }
 }
@@ -147,7 +148,7 @@ class NodeRenderer extends StatelessWidget {
 
 /// Widget displaying a simple text message from the bot
 class MessageNodeWidget extends StatelessWidget {
-  final MessageUIState state;
+  final ui_state.MessageUIState state;
   final ConferBotTheme theme;
 
   const MessageNodeWidget({
@@ -164,7 +165,7 @@ class MessageNodeWidget extends StatelessWidget {
 
 /// Widget displaying an image with optional caption and full-screen viewer
 class ImageNodeWidget extends StatelessWidget {
-  final ImageUIState state;
+  final ui_state.ImageUIState state;
   final ConferBotTheme theme;
   final Color? primaryColor;
 
@@ -190,7 +191,7 @@ class ImageNodeWidget extends StatelessWidget {
 
 /// Widget displaying a video player with full controls
 class VideoNodeWidget extends StatelessWidget {
-  final VideoUIState state;
+  final ui_state.VideoUIState state;
   final ConferBotTheme theme;
   final Color? primaryColor;
 
@@ -220,7 +221,7 @@ class VideoNodeWidget extends StatelessWidget {
 
 /// Widget displaying an audio player with waveform visualization
 class AudioNodeWidget extends StatelessWidget {
-  final AudioUIState state;
+  final ui_state.AudioUIState state;
   final ConferBotTheme theme;
   final Color? primaryColor;
 
@@ -249,7 +250,7 @@ class AudioNodeWidget extends StatelessWidget {
 
 /// Widget displaying a file download option
 class FileNodeWidget extends StatelessWidget {
-  final FileUIState state;
+  final ui_state.FileUIState state;
   final ConferBotTheme theme;
 
   const FileNodeWidget({
@@ -314,7 +315,7 @@ class FileNodeWidget extends StatelessWidget {
 
 /// Widget for displaying voice messages in chat
 class VoiceMessageNodeWidget extends StatelessWidget {
-  final VoiceMessageUIState state;
+  final ui_state.VoiceMessageUIState state;
   final Color primaryColor;
   final ConferBotTheme theme;
 
@@ -343,7 +344,7 @@ class VoiceMessageNodeWidget extends StatelessWidget {
 
 /// Widget for text input with keyboard type support
 class TextInputNodeWidget extends StatefulWidget {
-  final TextInputUIState state;
+  final ui_state.TextInputUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
@@ -484,7 +485,7 @@ class _TextInputNodeWidgetState extends State<TextInputNodeWidget> {
 
 /// Widget for file upload
 class FileUploadNodeWidget extends StatefulWidget {
-  final FileUploadUIState state;
+  final ui_state.FileUploadUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
@@ -651,7 +652,7 @@ class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
 
 /// Widget for single choice selection (buttons)
 class SingleChoiceNodeWidget extends StatefulWidget {
-  final SingleChoiceUIState state;
+  final ui_state.SingleChoiceUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
@@ -719,7 +720,7 @@ class _SingleChoiceNodeWidgetState extends State<SingleChoiceNodeWidget> {
 
 /// Widget for multiple choice selection (checkboxes)
 class MultipleChoiceNodeWidget extends StatefulWidget {
-  final MultipleChoiceUIState state;
+  final ui_state.MultipleChoiceUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
@@ -840,7 +841,7 @@ class _MultipleChoiceNodeWidgetState extends State<MultipleChoiceNodeWidget> {
 
 /// Widget for image choice grid
 class ImageChoiceNodeWidget extends StatefulWidget {
-  final ImageChoiceUIState state;
+  final ui_state.ImageChoiceUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
@@ -952,7 +953,7 @@ class _ImageChoiceNodeWidgetState extends State<ImageChoiceNodeWidget> {
 
 /// Widget for rating selection (stars/numbers/smileys)
 class RatingNodeWidget extends StatefulWidget {
-  final RatingUIState state;
+  final ui_state.RatingUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
@@ -1096,7 +1097,7 @@ class _RatingNodeWidgetState extends State<RatingNodeWidget> {
 
 /// Widget for dropdown selection
 class DropdownNodeWidget extends StatefulWidget {
-  final DropdownUIState state;
+  final ui_state.DropdownUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
@@ -1167,7 +1168,7 @@ class _DropdownNodeWidgetState extends State<DropdownNodeWidget> {
 
 /// Widget for range slider
 class RangeNodeWidget extends StatefulWidget {
-  final RangeUIState state;
+  final ui_state.RangeUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
@@ -1271,7 +1272,7 @@ class _RangeNodeWidgetState extends State<RangeNodeWidget> {
 
 /// Widget for calendar/date picker
 class CalendarNodeWidget extends StatefulWidget {
-  final CalendarUIState state;
+  final ui_state.CalendarUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
@@ -1443,7 +1444,7 @@ class _CalendarNodeWidgetState extends State<CalendarNodeWidget> {
 
 /// Widget for quiz questions
 class QuizNodeWidget extends StatefulWidget {
-  final QuizUIState state;
+  final ui_state.QuizUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
@@ -1525,7 +1526,7 @@ class _QuizNodeWidgetState extends State<QuizNodeWidget> {
 
 /// Widget for multiple sequential questions
 class MultipleQuestionsNodeWidget extends StatelessWidget {
-  final MultipleQuestionsUIState state;
+  final ui_state.MultipleQuestionsUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
@@ -1574,7 +1575,7 @@ class MultipleQuestionsNodeWidget extends StatelessWidget {
 
 /// Widget for human handover
 class HumanHandoverNodeWidget extends StatelessWidget {
-  final HumanHandoverUIState state;
+  final ui_state.HumanHandoverUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
@@ -1751,7 +1752,7 @@ class HumanHandoverNodeWidget extends StatelessWidget {
 
 /// Widget for HTML content
 class HtmlNodeWidget extends StatelessWidget {
-  final HtmlUIState state;
+  final ui_state.HtmlUIState state;
   final ConferBotTheme theme;
 
   const HtmlNodeWidget({
