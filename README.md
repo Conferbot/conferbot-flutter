@@ -1,21 +1,43 @@
 # Conferbot Flutter SDK
 
-Official Flutter SDK for integrating Conferbot chatbot into your iOS and Android mobile applications.
+[![pub package](https://img.shields.io/pub/v/conferbot_flutter.svg)](https://pub.dev/packages/conferbot_flutter)
+[![Flutter](https://img.shields.io/badge/Flutter-%3E%3D3.10-blue.svg)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-%3E%3D3.0-blue.svg)](https://dart.dev)
+[![License](https://img.shields.io/badge/license-proprietary-lightgrey.svg)](https://conferbot.com/terms)
+
+Native Flutter SDK for embedding Conferbot AI chatbots into iOS and Android applications.
+
+---
 
 ## Features
 
-- 🚀 **Easy Integration** - Drop-in chat widget with Provider state management
-- 💬 **Real-time Messaging** - Socket.IO based real-time communication
-- 📱 **Cross-Platform** - Works on both iOS and Android
-- 🎨 **Customizable** - Fully customizable UI widgets and theming
-- 🤖 **AI-Powered** - Connect to Conferbot's AI chatbot engine
-- 👤 **Live Agent Handover** - Seamless handover to human agents
-- 💾 **Offline Support** - Queue messages when offline
-- 🎯 **Type Safe** - Full Dart type safety with null safety
+- **Drop-in Chat Widget** -- Full-featured chat UI in a single widget
+- **Headless SDK** -- Provider-based state management for fully custom UIs
+- **Real-time Messaging** -- Socket.IO powered communication
+- **Live Agent Handover** -- Seamless transition to human agents with queue status and pre-chat forms
+- **Offline Support** -- Message queuing and automatic retry when connectivity returns
+- **Voice Messages** -- Record, send, and play back voice messages
+- **Rich Media** -- Image viewer, video player, audio player, and file attachments
+- **Markdown Rendering** -- Full markdown support with syntax-highlighted code blocks
+- **Knowledge Base** -- Searchable help center with categories and article detail views
+- **Analytics** -- Session and event tracking with automatic batched uploads
+- **Theming** -- Light and dark themes out of the box, fully customizable
+- **51 Node Types** -- Complete node flow engine matching the Conferbot web widget
+- **Session Persistence** -- Chat history survives app restarts via Hive storage
+- **Message Pagination** -- Efficient loading of large conversation histories
+
+## Requirements
+
+| Platform | Minimum Version |
+|----------|----------------|
+| Flutter  | 3.10           |
+| Dart     | 3.0            |
+| iOS      | 12.0           |
+| Android  | API 21         |
 
 ## Installation
 
-Add to your `pubspec.yaml`:
+Add the dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
@@ -30,7 +52,9 @@ flutter pub get
 
 ## Quick Start
 
-### 1. Wrap your app with ConferBotProvider
+### 1. Drop-in ChatWidget
+
+The fastest way to get started. Wrap your app with `ConferBotProvider` and push the `ChatWidget`:
 
 ```dart
 import 'package:flutter/material.dart';
@@ -41,81 +65,77 @@ void main() {
   runApp(
     ChangeNotifierProvider(
       create: (_) => ConferBotProvider(
-        apiKey: 'conf_sk_your_api_key_here',
-        botId: 'your_bot_id_here',
-        config: ConferBotConfig(
-          enableNotifications: true,
-          enableOfflineMode: true,
-        ),
+        apiKey: 'YOUR_API_KEY',
+        botId: 'YOUR_BOT_ID',
       ),
       child: MyApp(),
     ),
   );
 }
-```
 
-### 2. Use the ChatWidget
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: HomeScreen(),
+    );
+  }
+}
 
-```dart
-// Open chat widget
-Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => ChangeNotifierProvider.value(
-      value: context.read<ConferBotProvider>(),
-      child: ChatWidget(
-        title: 'Support Chat',
-        placeholder: 'Type your message...',
-        showTimestamps: true,
+class HomeScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChangeNotifierProvider.value(
+                value: context.read<ConferBotProvider>(),
+                child: ChatWidget(
+                  title: 'Support',
+                  placeholder: 'Type your message...',
+                  showTimestamps: true,
+                ),
+              ),
+            ),
+          );
+        },
+        child: Icon(Icons.chat),
       ),
-    ),
-  ),
-);
+    );
+  }
+}
 ```
-
-## Example App
-
-Want to see it in action? Check out the **example app** in the `/example` directory.
-
-```bash
-cd example
-flutter run
-```
-
-The example demonstrates:
-- ✅ Drop-in widget (easiest integration)
-- ✅ Headless SDK (custom UI)
-- ✅ Mix & match (pre-built + custom components)
-
-## Three Usage Patterns
-
-### 1. Drop-in Widget (Easiest)
-
-```dart
-ChatWidget(
-  title: 'Support Chat',
-  showTimestamps: true,
-)
-```
-
-Full-featured chat in one widget!
 
 ### 2. Headless SDK (Custom UI)
+
+Use `ConferBotProvider` directly to build your own chat interface:
 
 ```dart
 final provider = context.watch<ConferBotProvider>();
 
-// Access state
+// Read state
 final messages = provider.record;
 final isConnected = provider.isConnected;
+final agent = provider.currentAgent;
 
-// Send messages
-provider.sendMessage('Hello!');
+// Send a message
+await provider.sendMessage('Hello!');
+
+// Request live agent handover
+provider.initiateHandover(message: 'I need help with billing');
+
+// Listen to events
+provider.on(SocketEvents.botResponse, (data) {
+  // Handle bot response
+});
 ```
 
-Build your own UI from scratch.
+### 3. Mix and Match
 
-### 3. Mix & Match
+Combine pre-built widgets with your own components:
 
 ```dart
 Column(
@@ -132,131 +152,164 @@ Column(
 )
 ```
 
-Use our widgets where you want, custom where you need.
+Individual widgets available: `ChatHeader`, `MessageList`, `MessageBubble`, `ChatInput`, `TypingIndicator`, `ConnectionStatus`, `OfflineIndicator`, `Avatar`, and more.
+
+## Configuration
+
+### ConferBotConfig
+
+Pass a `ConferBotConfig` to customize SDK behavior:
+
+```dart
+ConferBotProvider(
+  apiKey: 'YOUR_API_KEY',
+  botId: 'YOUR_BOT_ID',
+  config: ConferBotConfig(
+    enableNotifications: true,
+    enableOfflineMode: true,
+    enablePersistence: true,
+    enablePagination: true,
+    enableAnalytics: true,
+    autoConnect: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+    analyticsFlushInterval: Duration(seconds: 30),
+  ),
+)
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enableNotifications` | `bool` | `false` | Enable push notification support |
+| `enableOfflineMode` | `bool` | `false` | Queue messages when offline |
+| `enablePersistence` | `bool` | `false` | Persist chat history across app restarts |
+| `enablePagination` | `bool` | `false` | Paginate large message histories |
+| `enableAnalytics` | `bool` | `false` | Track session and event analytics |
+| `autoConnect` | `bool` | `true` | Connect to socket automatically |
+| `reconnectionAttempts` | `int?` | `5` | Max socket reconnection attempts |
+| `reconnectionDelay` | `int?` | `1000` | Delay between reconnection attempts (ms) |
 
 ## Theming
 
-### Use Default Themes
+### Built-in Themes
 
 ```dart
-import 'package:conferbot_flutter/conferbot_flutter.dart';
-
-// Use default light theme
+// Light theme (default)
 ChatWidget(theme: defaultTheme);
 
-// Use dark theme
+// Dark theme
 ChatWidget(theme: darkTheme);
 ```
 
 ### Custom Theme
 
 ```dart
-final myTheme = ConferBotTheme(
+final customTheme = ConferBotTheme(
   brightness: Brightness.light,
   colors: ConferBotColors(
-    primary: Color(0xFFFF6B6B),
-    userBubble: Color(0xFFFF6B6B),
-    // ... other colors
+    primary: Color(0xFF6366F1),
+    userBubble: Color(0xFF6366F1),
+    botBubble: Color(0xFFF3F4F6),
+    background: Color(0xFFFFFFFF),
+    text: Color(0xFF111827),
   ),
-  // ... other settings
 );
 
-ChatWidget(theme: myTheme);
+ChatWidget(theme: customTheme);
+```
+
+## Push Notifications
+
+Register a device token (from Firebase, APNs, or any provider) to receive messages when the app is in the background:
+
+```dart
+final provider = context.read<ConferBotProvider>();
+await provider.registerPushToken(deviceToken);
+```
+
+## Offline Support
+
+When `enableOfflineMode` is set to `true`, the SDK automatically queues outgoing messages during network interruptions and delivers them when connectivity is restored. The `OfflineIndicator` widget provides visual feedback to users.
+
+## Knowledge Base
+
+Display a searchable help center within your app:
+
+```dart
+KnowledgeBaseScreen()
+```
+
+The knowledge base supports category filtering, full-text search, and article detail views.
+
+## Voice Messages
+
+Voice recording and playback are built in. The `VoiceInputWidget` handles microphone permissions, recording, and sending. The `VoicePlayer` widget renders playback controls for received voice messages.
+
+```dart
+VoiceInputWidget(onSend: (audioPath) {
+  // Send voice message
+})
+```
+
+## Analytics
+
+When `enableAnalytics` is `true`, the SDK tracks session events and batches them for upload at configurable intervals. Access analytics data through the `AnalyticsProvider`.
+
+## Socket Events
+
+Subscribe to real-time events for fine-grained control:
+
+```dart
+final provider = context.read<ConferBotProvider>();
+
+provider.on(SocketEvents.botResponse, (data) { /* ... */ });
+provider.on(SocketEvents.agentAccepted, (data) { /* ... */ });
+provider.on(SocketEvents.agentMessage, (data) { /* ... */ });
+provider.on(SocketEvents.agentLeft, (data) { /* ... */ });
+provider.on(SocketEvents.agentTypingStatus, (data) { /* ... */ });
+provider.on(SocketEvents.chatEnded, (data) { /* ... */ });
 ```
 
 ## API Reference
 
-### ConferBotProvider
+Full API documentation is available in the [docs/](docs/) directory:
 
-#### State Properties
+- [API Reference](docs/API.md) -- Provider methods, models, and services
+- [Architecture](docs/ARCHITECTURE.md) -- SDK internals and design decisions
+- [Components](docs/COMPONENTS.md) -- Widget catalog and usage
+- [Examples](docs/EXAMPLES.md) -- Additional integration patterns
+- [Changelog](docs/CHANGELOG.md) -- Version history
 
-- `isInitialized: bool` - SDK initialization status
-- `isConnected: bool` - Socket connection status
-- `isOpen: bool` - Chat widget open/closed state
-- `chatSessionId: String?` - Current chat session ID
-- `record: List<RecordItem>` - Array of chat messages
-- `currentAgent: Agent?` - Current live agent (if in handover)
-- `unreadCount: int` - Number of unread messages
+## Example App
 
-#### Methods
+A complete example application is included in the [example/](example/) directory demonstrating all three usage patterns:
 
-##### `openChat(): Future<void>`
-Opens the chat and initializes a new session if needed.
-
-##### `closeChat(): void`
-Closes the chat interface.
-
-##### `sendMessage(String text): Future<void>`
-Sends a message to the chatbot or live agent.
-
-##### `registerPushToken(String token): Future<void>`
-Registers a push notification token.
-
-##### `initiateHandover({String? message}): void`
-Requests handover to a live agent.
-
-##### `on(String event, Function(dynamic) callback): void`
-Subscribe to socket events.
-
-## Socket Events
-
-```dart
-import 'package:conferbot_flutter/conferbot_flutter.dart';
-
-final provider = context.read<ConferBotProvider>();
-
-provider.on(SocketEvents.botResponse, (data) {
-  print('Bot response: $data');
-});
-
-provider.on(SocketEvents.agentAccepted, (data) {
-  print('Agent joined: ${data['agent']['name']}');
-});
+```bash
+cd example
+flutter run
 ```
-
-### Available Events
-
-- `SocketEvents.botResponse` - Bot sent a message
-- `SocketEvents.agentMessage` - Live agent sent a message
-- `SocketEvents.agentAccepted` - Live agent accepted handover
-- `SocketEvents.agentLeft` - Live agent left the chat
-- `SocketEvents.agentTypingStatus` - Agent typing status changed
-- `SocketEvents.chatEnded` - Chat session ended
-
-## Requirements
-
-- Flutter >= 3.10.0
-- Dart >= 3.0.0
-- iOS >= 12.0
-- Android API Level >= 21
 
 ## Documentation
 
-- **API Reference**: See inline documentation
-- **Examples**: `/example` directory
-- **Architecture**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+For full documentation, guides, and platform setup instructions, visit:
 
-## Publishing to pub.dev
+**[https://docs.conferbot.com/mobile/flutter](https://docs.conferbot.com/mobile/flutter)**
 
-```bash
-# 1. Ensure all tests pass
-flutter test
+## Contributing
 
-# 2. Analyze code
-flutter analyze
+We welcome contributions. Please open an issue first to discuss proposed changes before submitting a pull request.
 
-# 3. Format code
-dart format .
+1. Fork the repository
+2. Create a feature branch
+3. Run `flutter test` and `flutter analyze` before submitting
+4. Open a pull request against `main`
 
-# 4. Publish (dry run first)
-flutter pub publish --dry-run
+## License
 
-# 5. Publish
-flutter pub publish
-```
+This SDK is proprietary software. See [LICENSE](LICENSE) for details.
 
 ## Support
 
-- **GitHub Issues**: https://github.com/conferbot/flutter-sdk/issues
-- **Email**: support@conferbot.com
-- **Docs**: https://docs.conferbot.com
+- GitHub Issues: [https://github.com/conferbot/flutter-sdk/issues](https://github.com/conferbot/flutter-sdk/issues)
+- Email: support@conferbot.com
+- Documentation: [https://docs.conferbot.com](https://docs.conferbot.com)
