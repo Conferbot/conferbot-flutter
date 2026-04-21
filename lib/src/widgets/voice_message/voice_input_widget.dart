@@ -3,6 +3,7 @@ import '../../core/nodes/node_ui_state.dart';
 import '../../services/voice_recording_service.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
+import 'voice_player.dart';
 import 'voice_recorder.dart';
 
 /// Widget for voice input node that allows recording or text fallback
@@ -373,63 +374,14 @@ class VoiceMessageBubble extends StatelessWidget {
     final effectiveTheme = theme ?? defaultTheme;
     final effectivePrimaryColor = primaryColor ?? effectiveTheme.colors.primary;
 
-    // Import and use VoicePlayerWidget here
-    // For now, show a placeholder
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 280),
-      padding: EdgeInsets.all(effectiveTheme.spacing.sm),
-      decoration: BoxDecoration(
-        color: isUserMessage
-            ? effectiveTheme.colors.userBubble
-            : effectiveTheme.colors.botBubble,
-        borderRadius: BorderRadius.circular(effectiveTheme.borderRadius.lg),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.play_circle_filled,
-            color: isUserMessage
-                ? effectiveTheme.colors.userBubbleText
-                : effectivePrimaryColor,
-            size: 32,
-          ),
-          SizedBox(width: effectiveTheme.spacing.sm),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Voice message',
-                  style: TextStyle(
-                    fontSize: effectiveTheme.typography.fontSizeSm,
-                    color: isUserMessage
-                        ? effectiveTheme.colors.userBubbleText
-                        : effectiveTheme.colors.botBubbleText,
-                  ),
-                ),
-                if (duration != null)
-                  Text(
-                    _formatDuration(duration!),
-                    style: TextStyle(
-                      fontSize: effectiveTheme.typography.fontSizeXs,
-                      color: isUserMessage
-                          ? effectiveTheme.colors.userBubbleText.withOpacity(0.7)
-                          : effectiveTheme.colors.textSecondary,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return VoicePlayerWidget(
+      audioSource: audioUrl,
+      isLocalFile: !audioUrl.startsWith('http'),
+      duration: duration,
+      theme: effectiveTheme,
+      primaryColor: effectivePrimaryColor,
+      isUserMessage: isUserMessage,
+      waveformData: waveformData,
     );
-  }
-
-  String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
   }
 }
