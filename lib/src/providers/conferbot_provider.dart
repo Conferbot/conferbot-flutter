@@ -101,6 +101,7 @@ class ConferBotProvider with ChangeNotifier {
   // Chatbot flow data
   List<Map<String, dynamic>> _steps = [];
   List<Map<String, dynamic>> _edges = [];
+  Map<String, dynamic>? _serverCustomizations;
 
   /// Scoped logger for this provider
   static final _logger = ConferBotLogger.scoped('ConferBotProvider');
@@ -153,7 +154,7 @@ class ConferBotProvider with ChangeNotifier {
   NodeFlowEngine get flowEngine => _flowEngine;
 
   /// Current UI state from flow engine
-  NodeUIState? get currentUIState => _flowEngine.currentUIState;
+  dynamic get currentUIState => _flowEngine.currentUIState;
 
   /// Whether the engine is processing a node
   bool get isProcessing => _flowEngine.isProcessing;
@@ -213,9 +214,16 @@ class ConferBotProvider with ChangeNotifier {
       await _initializeSessionPersistence();
     }
 
-    _socketClient.connect();
+    await _socketClient.connect();
+    _logger.debug('Socket connect() returned, registering listeners...');
     _setupSocketListeners();
     _setupFlowEngineListeners();
+
+    // Explicitly request chatbot data after connection setup
+    // (handles race condition where connect event fires before listeners are registered)
+    if (_socketClient.isConnected) {
+      _socketClient.getChatbotData();
+    }
 
     // Initialize pagination if enabled
     if (config.enablePagination) {
@@ -351,8 +359,9 @@ class ConferBotProvider with ChangeNotifier {
 
     // Chatbot data fetched - contains steps and edges for flow
     _socketClient.on(SocketEvents.fetchedChatbotData, (data) {
+      _logger.debug('fetchedChatbotData event received, data type: ${data.runtimeType}');
       if (data != null && data is Map<String, dynamic>) {
-        _logger.debug('Chatbot data received');
+        _logger.debug('Chatbot data received with ${data.keys.length} keys');
         _handleChatbotData(data);
       }
     });
@@ -450,6 +459,22 @@ class ConferBotProvider with ChangeNotifier {
   /// Setup flow engine listeners
   void _setupFlowEngineListeners() {
     _flowEngine.addListener(_onFlowEngineChange);
+
+    // Listen for bot messages from flow engine to add to chat record
+    _flowEngine.botMessageStream.listen((messageData) {
+      final text = messageData['text'] as String? ?? '';
+      final nodeId = messageData['nodeId'] as String? ?? '';
+      if (text.isNotEmpty) {
+        final botMessage = BotMessageRecord(
+          id: 'bot_${nodeId}_${DateTime.now().millisecondsSinceEpoch}',
+          time: DateTime.now(),
+          text: text,
+        );
+        _addMessageToRecord(botMessage);
+        _logger.debug('Added bot message to record: "$text"');
+        notifyListeners();
+      }
+    });
   }
 
   /// Handle flow engine state changes
@@ -461,18 +486,40 @@ class ConferBotProvider with ChangeNotifier {
   void _handleChatbotData(Map<String, dynamic> data) {
     final chatbotData = data['chatbotData'] as Map<String, dynamic>?;
     if (chatbotData != null) {
-      // Extract steps (nodes) and edges from chatbot data
-      final stepsData = chatbotData['steps'] as List<dynamic>?;
-      final edgesData = chatbotData['edges'] as List<dynamic>?;
+      // Server sends: { elements: [{ nodes: [...], edges: [...] }], customizations: {...}, ... }
+      final elements = chatbotData['elements'] as List<dynamic>?;
+      if (elements != null && elements.isNotEmpty) {
+        final firstElement = elements[0] as Map<String, dynamic>;
+        final nodesData = firstElement['nodes'] as List<dynamic>?;
+        final edgesData = firstElement['edges'] as List<dynamic>?;
 
-      if (stepsData != null) {
-        _steps = stepsData.map((s) => Map<String, dynamic>.from(s as Map)).toList();
+        if (nodesData != null) {
+          _steps = nodesData.map((s) => Map<String, dynamic>.from(s as Map)).toList();
+        }
+        if (edgesData != null) {
+          _edges = edgesData.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        }
       }
-      if (edgesData != null) {
-        _edges = edgesData.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      }
+
+      // Parse server customizations (theme colors, bot name, etc.)
+      _serverCustomizations = chatbotData['customizations'] as Map<String, dynamic>?;
 
       _logger.debug('Loaded ${_steps.length} steps and ${_edges.length} edges');
+
+      // Start flow engine if we got steps and have a session
+      if (_steps.isNotEmpty && _chatSessionId != null) {
+        _flowEngine.initialize(
+          chatSessionId: _chatSessionId!,
+          visitorId: _visitorId ?? '',
+          botId: botId,
+          stepsData: _steps,
+          edgesData: _edges,
+        );
+        _flowEngine.start();
+        _logger.debug('Flow engine started with ${_steps.length} nodes');
+      }
+
+      notifyListeners();
     }
   }
 
@@ -541,15 +588,17 @@ class ConferBotProvider with ChangeNotifier {
           }
         }
       } catch (e) {
-        // REST API not available, generate local session ID
+        _logger.debug('API initSession error: $e');
+      }
+
+      // Fallback: generate local session if API failed
+      if (_chatSessionId == null) {
         _chatSessionId = 'mobile_${DateTime.now().millisecondsSinceEpoch}';
         if (_visitorId == null) {
-          // Generate new visitor ID if we don't have one
           _visitorId = await StorageService.instance.getOrCreateVisitorId();
         }
         _logger.debug('Using local session ID: $_chatSessionId');
 
-        // Initialize pagination with empty state
         if (_paginationController != null && _chatSessionId != null) {
           await _paginationController!.initialize(_chatSessionId!);
         }
@@ -562,9 +611,22 @@ class ConferBotProvider with ChangeNotifier {
         botId: botId,
       );
 
+      // Wait for socket connection before emitting
+      if (!_socketClient.isConnected) {
+        for (int i = 0; i < 20; i++) {
+          await Future.delayed(const Duration(milliseconds: 250));
+          if (_socketClient.isConnected) break;
+        }
+      }
+
       // Join chat room via socket
       if (_chatSessionId != null) {
         _socketClient.joinChatRoomVisitor(_chatSessionId!);
+      }
+
+      // Request chatbot data if we don't have steps yet
+      if (_steps.isEmpty) {
+        _socketClient.getChatbotData();
       }
 
       // Initialize and start the flow engine
@@ -851,6 +913,14 @@ class ConferBotProvider with ChangeNotifier {
   void off(String event, [Function(dynamic)? callback]) {
     _socketClient.off(event, callback);
   }
+
+  /// Emit a custom socket event
+  void emit(String event, [dynamic data]) {
+    _socketClient.emit(event, data);
+  }
+
+  /// Current chat session ID
+  String? get chatId => _chatSessionId;
 
   @override
   void dispose() {
