@@ -38,6 +38,9 @@ class NodeHandlerRegistry {
     _register(UserInputNodeHandler());
     _register(UserRangeNodeHandler());
 
+    // Welcome node
+    _register(WelcomeNodeHandler());
+
     // Send response nodes (v2)
     _register(MessageNodeHandler());
     _register(ImageNodeHandler());
