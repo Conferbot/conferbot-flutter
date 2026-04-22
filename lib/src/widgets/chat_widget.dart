@@ -10,6 +10,7 @@ import '../services/message_queue_service.dart';
 import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
 import '../ui/widgets/node_widgets.dart';
+import '../core/nodes/node_ui_state.dart';
 import 'chat_header.dart';
 import 'message_list.dart';
 import 'chat_input.dart';
@@ -1012,8 +1013,4 @@ class _ChatInputWithKBState extends State<ChatInputWithKB> {
   }
 }
 
-// Re-export NodeUIState types for convenience
-export '../core/nodes/node_ui_state.dart';
-
-// Re-export handover widgets for convenience
-export 'handover/handover.dart';
+// Note: Node types and handover widgets re-exported from conferbot_flutter.dart barrel
