@@ -69,6 +69,7 @@ export 'src/widgets/typing_indicator.dart';
 export 'src/widgets/empty_state.dart';
 export 'src/widgets/message_bubble.dart';
 export 'src/widgets/chat_input.dart';
+export 'src/widgets/chat_bottom_bar.dart';
 export 'src/widgets/chat_header.dart';
 export 'src/widgets/message_list.dart';
 export 'src/widgets/chat_widget.dart';
