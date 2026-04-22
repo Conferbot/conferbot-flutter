@@ -99,12 +99,13 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
         ],
       ),
       child: SafeArea(
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // ── Input row ──
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 8, 4),
+              padding: const EdgeInsets.fromLTRB(10, 6, 8, 2),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -112,8 +113,8 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                   Expanded(
                     child: Container(
                       constraints: const BoxConstraints(
-                        minHeight: 44,
-                        maxHeight: 130,
+                        minHeight: 40,
+                        maxHeight: 100,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -147,20 +148,21 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                               onChanged: (_) => setState(() {}),
                               decoration: InputDecoration(
                                 hintText:
-                                    widget.placeholder ?? 'Type a message...',
+                                    widget.placeholder ?? 'Type your message...',
                                 hintStyle: const TextStyle(
-                                  color: Color(0xFF4D4D4D),
-                                  fontSize: 16,
+                                  color: Color(0xFF9E9E9E),
+                                  fontSize: 15,
                                 ),
                                 border: InputBorder.none,
+                                isDense: true,
                                 contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 18,
-                                  vertical: 12,
+                                  horizontal: 16,
+                                  vertical: 10,
                                 ),
                                 counterText: '',
                               ),
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 15,
                                 color: Colors.black,
                               ),
                             ),
@@ -175,8 +177,8 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                   // Themed circular send button
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    width: 44,
-                    height: 44,
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
                       color: canSend
                           ? theme.colors.primary
@@ -218,7 +220,7 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
   Widget _buildFooter(ConferBotTheme theme) {
     if (widget.customBrand != null && widget.customBrand!.isNotEmpty) {
       return Padding(
-        padding: const EdgeInsets.only(top: 2, bottom: 8),
+        padding: const EdgeInsets.only(top: 2, bottom: 4),
         child: Center(
           child: Text(
             widget.customBrand!,
@@ -235,7 +237,7 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
     return GestureDetector(
       onTap: () => _openConferbotUrl(),
       child: Padding(
-        padding: const EdgeInsets.only(top: 2, bottom: 8),
+        padding: const EdgeInsets.only(top: 2, bottom: 4),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
