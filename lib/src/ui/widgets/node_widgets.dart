@@ -868,13 +868,14 @@ class _SingleChoiceNodeWidgetState extends State<SingleChoiceNodeWidget> {
                 style: OutlinedButton.styleFrom(
                   backgroundColor: isSelected
                       ? widget.primaryColor
-                      : widget.theme.colors.surface,
-                  foregroundColor:
-                      isSelected ? Colors.white : widget.theme.colors.text,
+                      : widget.theme.colors.optionBubble.withOpacity(0.85),
+                  foregroundColor: isSelected
+                      ? Colors.white
+                      : widget.theme.colors.optionBubbleText,
                   side: BorderSide(
                     color: isSelected
                         ? widget.primaryColor
-                        : widget.primaryColor.withOpacity(0.5),
+                        : widget.theme.colors.border,
                   ),
                   padding: const EdgeInsets.symmetric(
                     vertical: 8,
@@ -2119,20 +2120,24 @@ class BotMessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(theme.spacing.sm),
+      padding: EdgeInsets.symmetric(
+        horizontal: theme.spacing.bubblePaddingH,
+        vertical: theme.spacing.bubblePaddingV,
+      ),
       decoration: BoxDecoration(
         color: theme.colors.botBubble,
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(theme.borderRadius.lg),
-          topRight: Radius.circular(theme.borderRadius.lg),
-          bottomRight: Radius.circular(theme.borderRadius.lg),
-          bottomLeft: Radius.circular(theme.borderRadius.sm),
+          topLeft: Radius.circular(theme.borderRadius.bubble),
+          topRight: Radius.circular(theme.borderRadius.bubble),
+          bottomRight: Radius.circular(theme.borderRadius.bubble),
+          bottomLeft: Radius.circular(theme.borderRadius.bubbleSmall),
         ),
+        boxShadow: [theme.shadows.sm],
       ),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: theme.typography.fontSizeMd,
+          fontSize: theme.typography.messageSize,
           color: theme.colors.botBubbleText,
           height: theme.typography.lineHeightNormal,
         ),
