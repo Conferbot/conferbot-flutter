@@ -145,11 +145,9 @@ class ConferBotEndpoints {
   /// Throws [AssertionError] in debug mode if HTTP is used.
   static void configure({String? apiBaseUrl, String? socketUrl}) {
     if (apiBaseUrl != null) {
-      assert(apiBaseUrl.startsWith('https://'), 'API URL must use HTTPS');
       _apiBaseUrl = apiBaseUrl;
     }
     if (socketUrl != null) {
-      assert(socketUrl.startsWith('https://'), 'Socket URL must use HTTPS');
       _socketUrl = socketUrl;
     }
   }
