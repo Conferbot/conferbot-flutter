@@ -160,7 +160,7 @@ class ValidationUtils {
 
   /// More comprehensive URL pattern for stricter validation.
   static final RegExp _urlPatternStrict = RegExp(
-    r'^(https?://)?([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(/[\w\-.~:/?#\[\]@!$&'"'"'()*+,;=]*)?$',
+    r"^(https?://)?([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(/[\w\-.~:/?#\[\]@!\$&'()*+,;=]*)?$",
     caseSensitive: false,
   );
 
