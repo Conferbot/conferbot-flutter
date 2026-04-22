@@ -1,5 +1,5 @@
-/// Sealed class representing the possible UI states from a node handler
-sealed class NodeUIState {
+/// Abstract class representing the possible UI states from a node handler
+abstract class NodeUIState {
   final String nodeId;
 
   const NodeUIState({required this.nodeId});
