@@ -127,6 +127,43 @@ class CalendarState extends NodeUIState {
 // DISPLAY NODE HANDLERS
 // ============================================================================
 
+/// Handler for welcome-node
+/// The initial greeting node — emits the welcome text as a bot message
+class WelcomeNodeHandler extends BaseNodeHandler {
+  @override
+  String get nodeType => 'welcome-node';
+
+  @override
+  Future<NodeResult> process(
+    Map<String, dynamic> nodeData,
+    String nodeId,
+  ) async {
+    final text = getString(nodeData, 'text', '');
+
+    if (text.isNotEmpty) {
+      final cleanText = stripHtml(text);
+      state?.addToTranscript('bot', cleanText);
+
+      recordResponse(
+        nodeId: nodeId,
+        shape: 'bot-message',
+        text: cleanText,
+        type: nodeType,
+      );
+
+      return DisplayUI(
+        MessageState(
+          text: cleanText,
+          nodeId: nodeId,
+        ),
+      );
+    }
+
+    // No text — just proceed
+    return const Proceed();
+  }
+}
+
 /// Handler for message-node
 /// Displays a text message from the bot
 class MessageNodeHandler extends BaseNodeHandler {
