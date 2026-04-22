@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/message.dart';
 import '../models/queued_message.dart';
+import '../providers/conferbot_provider.dart';
 import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
 import 'avatar.dart';
@@ -105,7 +107,7 @@ class MessageBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             if (!isUser && !isSystem && showAvatar) ...[
-              _buildAvatar(effectiveTheme),
+              _buildAvatar(context, effectiveTheme),
               const SizedBox(width: 10),
             ],
             Flexible(
@@ -256,17 +258,26 @@ class MessageBubble extends StatelessWidget {
     }
   }
 
-  Widget _buildAvatar(ConferBotTheme theme) {
+  Widget _buildAvatar(BuildContext context, ConferBotTheme theme) {
+    String? imageUrl;
     String? name;
 
     if (message is AgentMessageRecord) {
       final agentMessage = message as AgentMessageRecord;
-      // AgentDetails from embed-server doesn't include avatar
       name = agentMessage.agentDetails.name;
+    } else {
+      // Bot message — use avatar from server customizations
+      try {
+        final provider = Provider.of<ConferBotProvider>(context, listen: false);
+        imageUrl = provider.botAvatarUrl;
+        name = provider.botName;
+      } catch (_) {
+        // Provider not available (e.g. standalone usage)
+      }
     }
 
     return ConferBotAvatar(
-      imageUrl: null, // Avatar not available from agentDetails
+      imageUrl: imageUrl,
       name: name ?? 'Bot',
       size: theme.layout.avatarSize,
       theme: theme,
