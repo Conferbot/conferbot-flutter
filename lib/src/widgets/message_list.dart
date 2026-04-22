@@ -6,6 +6,7 @@ import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
 import 'message_bubble.dart';
 import 'typing_indicator.dart';
+import 'avatar.dart';
 import 'empty_state.dart';
 
 /// Configuration for message list pagination behavior
@@ -449,18 +450,30 @@ class _MessageListState extends State<MessageList> {
         vertical: theme.spacing.sm,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          TypingIndicator(
-            visible: widget.showTypingIndicator,
+          // Bot avatar — matches web widget
+          ConferBotAvatar(
+            size: 32,
+            name: 'Bot',
             theme: theme,
           ),
           SizedBox(width: theme.spacing.sm),
-          Text(
-            'Agent is typing...',
-            style: TextStyle(
-              fontSize: theme.typography.fontSizeSm,
-              color: theme.colors.textSecondary,
-              fontStyle: FontStyle.italic,
+          // Typing dots in a bubble
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: theme.colors.botBubble,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(theme.borderRadius.lg),
+                topRight: Radius.circular(theme.borderRadius.lg),
+                bottomLeft: Radius.zero,
+                bottomRight: Radius.circular(theme.borderRadius.lg),
+              ),
+            ),
+            child: TypingIndicator(
+              visible: widget.showTypingIndicator,
+              theme: theme,
             ),
           ),
         ],
