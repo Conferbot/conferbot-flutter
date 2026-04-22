@@ -376,19 +376,8 @@ class NodeFlowEngine extends ChangeNotifier {
           _sendResponseToServer();
           await _proceedToNextNode(null);
         } else {
-          // Interactive node — set UI state for overlay rendering
+          // Interactive node — set UI state for inline rendering in message list
           _setUIState(uiState as dynamic);
-
-          // Also emit the question text as a bot message for interactive nodes
-          final questionText = _extractInteractiveQuestionText(uiState as dynamic);
-          if (questionText != null && questionText.isNotEmpty) {
-            _botMessageController.add({
-              'text': questionText,
-              'nodeId': _currentNodeId ?? '',
-              'type': 'bot-message',
-            });
-            flowLogger.debug('Emitted interactive question to record: "$questionText"');
-          }
 
           // Track bot message
           if (text != null) {
