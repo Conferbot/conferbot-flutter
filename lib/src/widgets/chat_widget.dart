@@ -371,19 +371,10 @@ class _ChatWidgetState extends State<ChatWidget> {
   Widget _buildChatContent(ConferBotProvider provider, ConferBotTheme theme) {
     return Stack(
       children: [
-        // Message history list with pagination support
+        // Message history list with interactive node rendered inline at bottom
         widget.enablePagination
             ? _buildPaginatedMessageList(provider, theme)
             : _buildSimpleMessageList(provider, theme),
-
-        // Current interactive node overlay (if any)
-        if (provider.currentUIState != null)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildCurrentNode(provider, theme),
-          ),
 
         // Error message overlay
         if (provider.errorMessage != null)
@@ -404,6 +395,50 @@ class _ChatWidgetState extends State<ChatWidget> {
         ? provider.paginatedMessages
         : provider.record;
 
+    // Build the inline interactive node widget (choices, inputs, etc.)
+    Widget? interactiveNode;
+    final uiState = provider.currentUIState;
+    if (uiState != null && uiState is! HumanHandoverUIState) {
+      interactiveNode = Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: theme.spacing.chatContentPadding,
+          vertical: theme.spacing.sm,
+        ),
+        child: NodeRenderer(
+          uiState: uiState,
+          onResponse: (response) {
+            provider.submitResponse(response);
+          },
+          theme: theme,
+          primaryColor: theme.colors.primary,
+        ),
+      );
+    }
+
+    // Handle handover overlay separately (still positioned)
+    if (uiState is HumanHandoverUIState) {
+      return Stack(
+        children: [
+          MessageList(
+            messages: messages,
+            showTypingIndicator: _isAgentTyping || provider.isProcessing,
+            showTimestamps: widget.showTimestamps,
+            showDeliveryStatus: widget.showDeliveryStatus,
+            theme: theme,
+            hasMoreMessages: provider.hasMoreMessages,
+            isLoadingMore: provider.isLoadingMoreMessages,
+            onLoadMore: () => provider.loadMoreMessages(),
+            paginationConfig:
+                widget.paginationConfig ?? const MessageListPaginationConfig(),
+          ),
+          Positioned(
+            left: 0, right: 0, bottom: 0,
+            child: _buildHandoverOverlay(provider, uiState, theme),
+          ),
+        ],
+      );
+    }
+
     return MessageList(
       messages: messages,
       showTypingIndicator: _isAgentTyping || provider.isProcessing,
@@ -412,15 +447,10 @@ class _ChatWidgetState extends State<ChatWidget> {
       theme: theme,
       hasMoreMessages: provider.hasMoreMessages,
       isLoadingMore: provider.isLoadingMoreMessages,
-      onLoadMore: () {
-        provider.loadMoreMessages();
-      },
-      onScrollAwayFromBottom: () {
-        // Optional: Handle when user scrolls away from bottom
-        // e.g., show unread message indicator
-      },
+      onLoadMore: () => provider.loadMoreMessages(),
       paginationConfig:
           widget.paginationConfig ?? const MessageListPaginationConfig(),
+      trailingWidget: interactiveNode,
     );
   }
 
