@@ -4,6 +4,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/nodes/node_ui_state.dart' as ui_state;
+import '../../core/nodes/handlers/display_handlers.dart' as display;
+import '../../core/nodes/handlers/choices/choice_ui_states.dart' as choice;
+import '../../core/nodes/handlers/legacy_handlers.dart' as legacy;
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 import '../../widgets/voice_message/voice_input_widget.dart';
@@ -13,8 +16,9 @@ import '../../widgets/media/video_player_widget.dart';
 import '../../widgets/media/audio_player_widget.dart';
 
 /// Main widget that routes to the correct node component based on UI state
+/// Accepts both canonical (node_ui_state.dart) and legacy handler UI states
 class NodeRenderer extends StatelessWidget {
-  final ui_state.NodeUIState uiState;
+  final dynamic uiState;
   final ValueChanged<dynamic> onResponse;
   final Color? primaryColor;
   final ConferBotTheme? theme;
@@ -31,116 +35,278 @@ class NodeRenderer extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveTheme = theme ?? defaultTheme;
     final effectivePrimaryColor = primaryColor ?? effectiveTheme.colors.primary;
+    final state = uiState;
 
-    return switch (uiState) {
-      ui_state.MessageUIState state => MessageNodeWidget(state: state, theme: effectiveTheme),
-      ui_state.ImageUIState state => ImageNodeWidget(
-          state: state,
-          theme: effectiveTheme,
-          primaryColor: effectivePrimaryColor,
-        ),
-      ui_state.VideoUIState state => VideoNodeWidget(
-          state: state,
-          theme: effectiveTheme,
-          primaryColor: effectivePrimaryColor,
-        ),
-      ui_state.AudioUIState state => AudioNodeWidget(
-          state: state,
-          theme: effectiveTheme,
-          primaryColor: effectivePrimaryColor,
-        ),
-      ui_state.FileUIState state => FileNodeWidget(state: state, theme: effectiveTheme),
-      ui_state.TextInputUIState state => TextInputNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.FileUploadUIState state => FileUploadNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.VoiceInputUIState state => VoiceInputNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.VoiceMessageUIState state => VoiceMessageNodeWidget(
-          state: state,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.SingleChoiceUIState state => SingleChoiceNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.MultipleChoiceUIState state => MultipleChoiceNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.RatingUIState state => RatingNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.DropdownUIState state => DropdownNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.RangeUIState state => RangeNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.CalendarUIState state => CalendarNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.ImageChoiceUIState state => ImageChoiceNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.QuizUIState state => QuizNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.MultipleQuestionsUIState state => MultipleQuestionsNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.HumanHandoverUIState state => HumanHandoverNodeWidget(
-          state: state,
-          onResponse: onResponse,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.HtmlUIState state => HtmlNodeWidget(state: state, theme: effectiveTheme),
-      ui_state.PaymentUIState state => PaymentNodeWidget(
-          state: state,
-          primaryColor: effectivePrimaryColor,
-          theme: effectiveTheme,
-        ),
-      ui_state.RedirectUIState state => RedirectNodeWidget(state: state, theme: effectiveTheme),
-    };
+    // ---- Canonical types (node_ui_state.dart) ----
+    if (state is ui_state.MessageUIState) {
+      return MessageNodeWidget(state: state, theme: effectiveTheme);
+    }
+    if (state is ui_state.ImageUIState) {
+      return ImageNodeWidget(state: state, theme: effectiveTheme, primaryColor: effectivePrimaryColor);
+    }
+    if (state is ui_state.VideoUIState) {
+      return VideoNodeWidget(state: state, theme: effectiveTheme, primaryColor: effectivePrimaryColor);
+    }
+    if (state is ui_state.AudioUIState) {
+      return AudioNodeWidget(state: state, theme: effectiveTheme, primaryColor: effectivePrimaryColor);
+    }
+    if (state is ui_state.FileUIState) {
+      return FileNodeWidget(state: state, theme: effectiveTheme);
+    }
+    if (state is ui_state.TextInputUIState) {
+      return TextInputNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.FileUploadUIState) {
+      return FileUploadNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.VoiceInputUIState) {
+      return VoiceInputNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.VoiceMessageUIState) {
+      return VoiceMessageNodeWidget(state: state, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.SingleChoiceUIState) {
+      return SingleChoiceNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.MultipleChoiceUIState) {
+      return MultipleChoiceNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.RatingUIState) {
+      return RatingNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.DropdownUIState) {
+      return DropdownNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.RangeUIState) {
+      return RangeNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.CalendarUIState) {
+      return CalendarNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.ImageChoiceUIState) {
+      return ImageChoiceNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.QuizUIState) {
+      return QuizNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.MultipleQuestionsUIState) {
+      return MultipleQuestionsNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.HumanHandoverUIState) {
+      return HumanHandoverNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.HtmlUIState) {
+      return HtmlNodeWidget(state: state, theme: effectiveTheme);
+    }
+    if (state is ui_state.PaymentUIState) {
+      return PaymentNodeWidget(state: state, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is ui_state.RedirectUIState) {
+      return RedirectNodeWidget(state: state, theme: effectiveTheme);
+    }
+
+    // ---- Legacy handler types (choice_ui_states.dart, display_handlers.dart, legacy_handlers.dart) ----
+    // These wrap legacy state into the canonical widget by adapting the data.
+
+    if (state is choice.SingleChoiceState) {
+      // Adapt legacy SingleChoiceState -> canonical SingleChoiceUIState
+      return _LegacySingleChoiceAdapter(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is choice.MultipleChoiceState) {
+      return _LegacyMultipleChoiceAdapter(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is display.MessageState) {
+      return MessageNodeWidget(
+        state: ui_state.MessageUIState(text: state.text, nodeId: state.nodeId),
+        theme: effectiveTheme,
+      );
+    }
+    if (state is legacy.TextInputState) {
+      return _LegacyTextInputAdapter(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is legacy.RangeState) {
+      return _LegacyRangeAdapter(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+    if (state is legacy.QuizState) {
+      return _LegacyQuizAdapter(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    }
+
+    return const SizedBox.shrink();
+  }
+}
+
+// ==================== LEGACY STATE ADAPTERS ====================
+
+/// Adapts legacy SingleChoiceState to canonical SingleChoiceNodeWidget
+class _LegacySingleChoiceAdapter extends StatelessWidget {
+  final choice.SingleChoiceState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const _LegacySingleChoiceAdapter({
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final adapted = ui_state.SingleChoiceUIState(
+      questionText: state.questionText,
+      choices: state.choices.map((c) => ui_state.ChoiceOption(
+        id: c.id,
+        text: c.text,
+      )).toList(),
+      nodeId: state.nodeId,
+    );
+    return SingleChoiceNodeWidget(
+      state: adapted,
+      onResponse: (response) {
+        // Map back: include targetPort from original choice
+        if (response is Map) {
+          final id = response['id']?.toString();
+          final original = state.choices.where((c) => c.id == id).firstOrNull;
+          if (original?.targetPort != null) {
+            onResponse({...response, 'targetPort': original!.targetPort});
+            return;
+          }
+        }
+        onResponse(response);
+      },
+      primaryColor: primaryColor,
+      theme: theme,
+    );
+  }
+}
+
+/// Adapts legacy MultipleChoiceState to canonical MultipleChoiceNodeWidget
+class _LegacyMultipleChoiceAdapter extends StatelessWidget {
+  final choice.MultipleChoiceState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const _LegacyMultipleChoiceAdapter({
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final adapted = ui_state.MultipleChoiceUIState(
+      questionText: state.questionText,
+      options: state.options.map((o) => ui_state.SelectOption(
+        id: o.id,
+        text: o.text,
+      )).toList(),
+      nodeId: state.nodeId,
+    );
+    return MultipleChoiceNodeWidget(
+      state: adapted,
+      onResponse: onResponse,
+      primaryColor: primaryColor,
+      theme: theme,
+    );
+  }
+}
+
+/// Adapts legacy TextInputState to canonical TextInputNodeWidget
+class _LegacyTextInputAdapter extends StatelessWidget {
+  final legacy.TextInputState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const _LegacyTextInputAdapter({
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final adapted = ui_state.TextInputUIState(
+      questionText: state.questionText,
+      inputType: state.inputType,
+      placeholder: state.placeholder,
+      validationRegex: state.validationRegex,
+      errorMessage: state.errorMessage,
+      nodeId: state.nodeId,
+    );
+    return TextInputNodeWidget(
+      state: adapted,
+      onResponse: onResponse,
+      primaryColor: primaryColor,
+      theme: theme,
+    );
+  }
+}
+
+/// Adapts legacy RangeState to canonical RangeNodeWidget
+class _LegacyRangeAdapter extends StatelessWidget {
+  final legacy.RangeState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const _LegacyRangeAdapter({
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final adapted = ui_state.RangeUIState(
+      questionText: state.questionText,
+      minValue: state.minValue,
+      maxValue: state.maxValue,
+      defaultValue: state.defaultValue,
+      nodeId: state.nodeId,
+    );
+    return RangeNodeWidget(
+      state: adapted,
+      onResponse: onResponse,
+      primaryColor: primaryColor,
+      theme: theme,
+    );
+  }
+}
+
+/// Adapts legacy QuizState to canonical QuizNodeWidget
+class _LegacyQuizAdapter extends StatelessWidget {
+  final legacy.QuizState state;
+  final ValueChanged<dynamic> onResponse;
+  final Color primaryColor;
+  final ConferBotTheme theme;
+
+  const _LegacyQuizAdapter({
+    required this.state,
+    required this.onResponse,
+    required this.primaryColor,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final adapted = ui_state.QuizUIState(
+      questionText: state.questionText,
+      options: state.options,
+      correctAnswerIndex: state.correctAnswerIndex,
+      nodeId: state.nodeId,
+    );
+    return QuizNodeWidget(
+      state: adapted,
+      onResponse: onResponse,
+      primaryColor: primaryColor,
+      theme: theme,
+    );
   }
 }
 
