@@ -675,44 +675,72 @@ class _SingleChoiceNodeWidgetState extends State<SingleChoiceNodeWidget> {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.state.questionText != null &&
             widget.state.questionText!.isNotEmpty) ...[
           BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
           SizedBox(height: widget.theme.spacing.sm),
         ],
-        ...widget.state.choices.map((choice) {
-          final isSelected = _selectedId == choice.id;
-          return Padding(
-            padding: EdgeInsets.only(bottom: widget.theme.spacing.xs),
-            child: OutlinedButton(
-              onPressed: _selectedId != null
-                  ? null
-                  : () {
-                      setState(() => _selectedId = choice.id);
-                      widget.onResponse({'id': choice.id, 'text': choice.text});
-                    },
-              style: OutlinedButton.styleFrom(
-                backgroundColor:
-                    isSelected ? widget.primaryColor : widget.theme.colors.surface,
-                foregroundColor:
-                    isSelected ? Colors.white : widget.theme.colors.text,
-                side: BorderSide(
-                  color: isSelected ? widget.primaryColor : widget.primaryColor,
+        // Wrap for auto-wrapping choice buttons — matches web widget flex-wrap
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: widget.state.choices.map((choice) {
+            final isSelected = _selectedId == choice.id;
+            final isDisabled = _selectedId != null;
+            return AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: isDisabled && !isSelected ? 0.5 : 1.0,
+              child: OutlinedButton(
+                onPressed: isDisabled
+                    ? null
+                    : () {
+                        setState(() => _selectedId = choice.id);
+                        widget.onResponse({'id': choice.id, 'text': choice.text});
+                      },
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: isSelected
+                      ? widget.primaryColor
+                      : widget.theme.colors.surface,
+                  foregroundColor:
+                      isSelected ? Colors.white : widget.theme.colors.text,
+                  side: BorderSide(
+                    color: isSelected
+                        ? widget.primaryColor
+                        : widget.primaryColor.withOpacity(0.5),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 14,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: isSelected ? 0 : 1,
                 ),
-                padding: EdgeInsets.symmetric(
-                  vertical: widget.theme.spacing.md,
-                  horizontal: widget.theme.spacing.md,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isSelected) ...[
+                      const Icon(Icons.check, size: 16),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      choice.text,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Text(choice.text),
-            ),
-          );
-        }),
+            );
+          }).toList(),
+        ),
       ],
     );
   }
