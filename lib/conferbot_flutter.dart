@@ -13,7 +13,7 @@ export 'src/config/constants.dart';
 
 // ========== Error Handling System ========== //
 export 'src/core/errors/conferbot_exceptions.dart';
-export 'src/core/errors/error_handler.dart';
+export 'src/core/errors/error_handler.dart' hide ErrorResult;
 
 // ========== Node System (All 51 Node Types) ========== //
 export 'src/core/state/chat_state.dart';
@@ -23,11 +23,12 @@ export 'src/core/nodes/node_result.dart';
 export 'src/core/nodes/node_ui_state.dart';
 export 'src/core/nodes/node_handler_registry.dart';
 
-// Node Handlers
-export 'src/core/nodes/handlers/legacy_handlers.dart';
-export 'src/core/nodes/handlers/display_handlers.dart';
+// Node Handlers — hide types that conflict with node_ui_state.dart
+export 'src/core/nodes/handlers/legacy_handlers.dart'
+    hide NodeUIState, CalendarState, ChoiceOption, RatingType;
+export 'src/core/nodes/handlers/display_handlers.dart' hide CalendarState;
 export 'src/core/nodes/handlers/ask_question_handlers.dart';
-export 'src/core/nodes/handlers/choice_handlers.dart';
+export 'src/core/nodes/handlers/choice_handlers.dart' hide ChoiceOption, RatingType;
 export 'src/core/nodes/handlers/logic_handlers.dart';
 export 'src/core/nodes/handlers/integration_handlers.dart';
 export 'src/core/nodes/handlers/special_handlers.dart';
@@ -95,9 +96,8 @@ export 'src/widgets/markdown/markdown_theme.dart';
 export 'src/widgets/markdown/link_handler.dart';
 export 'src/widgets/markdown/code_block.dart';
 
-// Node UI Widgets
+// Node UI Widgets — only export node_widgets (choice_widgets has conflicts)
 export 'src/ui/widgets/node_widgets.dart';
-export 'src/ui/widgets/choice_widgets.dart';
 
 // ========== Knowledge Base ========== //
 export 'src/models/knowledge_base.dart';
