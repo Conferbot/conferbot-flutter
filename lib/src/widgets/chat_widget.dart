@@ -273,8 +273,11 @@ class _ChatWidgetState extends State<ChatWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveTheme = widget.theme ?? defaultTheme;
     final provider = context.watch<ConferBotProvider>();
+    // Use server-themed colors when available, fall back to widget theme or defaults
+    final effectiveTheme = provider.serverCustomizations != null
+        ? provider.serverTheme
+        : (widget.theme ?? defaultTheme);
 
     // Show Knowledge Base screen if active
     if (_showKnowledgeBase && _kbProvider != null) {
@@ -332,9 +335,10 @@ class _ChatWidgetState extends State<ChatWidget> {
     }
 
     return ChatHeaderWithKB(
-      title: widget.title ?? 'Support Chat',
+      title: provider.botName ?? widget.title ?? 'Support Chat',
       subtitle: _getSubtitle(provider),
       agent: provider.currentAgent,
+      botAvatarUrl: provider.botAvatarUrl,
       onClose: () {
         provider.closeChat();
         Navigator.of(context).pop();
@@ -342,7 +346,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       showConnectionStatus: true,
       showKnowledgeBase: widget.showKnowledgeBase,
       onKnowledgeBaseTap: _openKnowledgeBase,
-      theme: theme,
+      theme: provider.serverTheme,
       // Show handover indicator in header
       handoverIndicator: _buildHandoverIndicator(provider, theme),
     );
@@ -619,10 +623,12 @@ class _ChatWidgetState extends State<ChatWidget> {
 }
 
 /// Chat header with Knowledge Base button, offline badge, and handover indicator
+/// Chat header matching Android SDK's ChatHeader — themed background, bot avatar, compact
 class ChatHeaderWithKB extends StatelessWidget {
   final String? title;
   final String? subtitle;
   final dynamic agent;
+  final String? botAvatarUrl;
   final VoidCallback? onClose;
   final bool showConnectionStatus;
   final bool showKnowledgeBase;
@@ -635,6 +641,7 @@ class ChatHeaderWithKB extends StatelessWidget {
     this.title,
     this.subtitle,
     this.agent,
+    this.botAvatarUrl,
     this.onClose,
     this.showConnectionStatus = true,
     this.showKnowledgeBase = true,
@@ -645,74 +652,57 @@ class ChatHeaderWithKB extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveTheme = theme ?? defaultTheme;
+    final t = theme ?? defaultTheme;
     final displayTitle = agent?.name ?? title ?? 'Chat';
     final displaySubtitle = agent?.email ?? subtitle;
 
     return Container(
-      height: effectiveTheme.layout.headerHeight,
-      padding: EdgeInsets.symmetric(
-        horizontal: effectiveTheme.spacing.md,
+      padding: EdgeInsets.only(
+        left: 12,
+        right: 12,
+        top: MediaQuery.of(context).padding.top + 8,
+        bottom: 8,
       ),
       decoration: BoxDecoration(
-        color: effectiveTheme.colors.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: effectiveTheme.colors.border,
-            width: 1,
+        color: t.colors.headerBg,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
-        ),
+        ],
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Row(
+      child: Row(
           children: [
-            if (agent != null) ...[
-              _buildAgentAvatar(effectiveTheme),
-              SizedBox(width: effectiveTheme.spacing.md),
-            ],
+            // Bot avatar (32dp, matching Android)
+            _buildHeaderAvatar(t),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          displayTitle,
-                          style: TextStyle(
-                            fontSize: effectiveTheme.typography.fontSizeLg,
-                            fontWeight: effectiveTheme.typography.fontWeightSemiBold,
-                            color: effectiveTheme.colors.text,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (showConnectionStatus) ...[
-                        SizedBox(width: effectiveTheme.spacing.sm),
-                        OfflineBadge(theme: effectiveTheme),
-                      ],
-                    ],
+                  Text(
+                    displayTitle,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: t.typography.fontWeightSemiBold,
+                      color: t.colors.headerText,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   if (displaySubtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            displaySubtitle,
-                            style: TextStyle(
-                              fontSize: effectiveTheme.typography.fontSizeXs,
-                              color: effectiveTheme.colors.textSecondary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        PendingMessagesIndicator(theme: effectiveTheme),
-                      ],
+                    const SizedBox(height: 1),
+                    Text(
+                      displaySubtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: t.colors.headerText.withOpacity(0.75),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ],
@@ -721,76 +711,56 @@ class ChatHeaderWithKB extends StatelessWidget {
             // Handover indicator
             if (handoverIndicator != null) ...[
               handoverIndicator!,
-              SizedBox(width: effectiveTheme.spacing.sm),
+              const SizedBox(width: 8),
             ],
             if (showKnowledgeBase && onKnowledgeBaseTap != null) ...[
               IconButton(
                 onPressed: onKnowledgeBaseTap,
-                icon: Icon(
-                  Icons.help_outline,
-                  color: effectiveTheme.colors.textSecondary,
-                ),
+                icon: Icon(Icons.help_outline, color: t.colors.headerText),
                 tooltip: 'Help Center',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
-              SizedBox(width: effectiveTheme.spacing.sm),
+              const SizedBox(width: 4),
             ],
             if (onClose != null) ...[
               IconButton(
                 onPressed: onClose,
-                icon: Icon(
-                  Icons.close,
-                  color: effectiveTheme.colors.textSecondary,
-                ),
+                icon: Icon(Icons.close, color: t.colors.headerText),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
             ],
           ],
         ),
-      ),
     );
   }
 
-  Widget _buildAgentAvatar(ConferBotTheme theme) {
-    final hasAvatar = agent?.avatar != null && (agent.avatar as String).isNotEmpty;
-    final name = agent?.name as String? ?? 'A';
+  Widget _buildHeaderAvatar(ConferBotTheme t) {
+    final avatarUrl = botAvatarUrl ??
+        (agent != null && agent?.avatar != null ? agent.avatar as String? : null);
+    final name = agent?.name as String? ?? title ?? 'B';
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'B';
 
-    return Stack(
-      children: [
-        CircleAvatar(
-          radius: 20,
-          backgroundColor: theme.colors.primary.withOpacity(0.1),
-          backgroundImage: hasAvatar ? NetworkImage(agent.avatar as String) : null,
-          child: hasAvatar
-              ? null
-              : Text(
-                  name[0].toUpperCase(),
-                  style: TextStyle(
-                    color: theme.colors.primary,
-                    fontWeight: theme.typography.fontWeightSemiBold,
-                  ),
-                ),
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: 16,
+        backgroundColor: t.colors.headerText.withOpacity(0.2),
+        backgroundImage: NetworkImage(avatarUrl),
+      );
+    }
+
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: t.colors.headerText.withOpacity(0.2),
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: t.colors.headerText,
+          fontWeight: t.typography.fontWeightSemiBold,
+          fontSize: 14,
         ),
-        // Online indicator
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: theme.colors.online,
-              border: Border.all(
-                color: theme.colors.surface,
-                width: 2,
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
