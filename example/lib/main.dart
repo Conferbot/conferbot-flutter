@@ -12,6 +12,12 @@ void main() async {
   // This is REQUIRED for session persistence to work
   await StorageService.init();
 
+  // Configure to use local embed-server (10.0.2.2 = host localhost from Android emulator)
+  ConferBotEndpoints.configure(
+    apiBaseUrl: 'http://10.0.2.2:8001/api/v1/mobile',
+    socketUrl: 'http://10.0.2.2:8001',
+  );
+
   runApp(const MyApp());
 }
 
@@ -22,8 +28,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => ConferBotProvider(
-        apiKey: 'conf_sk_your_api_key_here', // Replace with your API key
-        botId: 'your_bot_id_here', // Replace with your bot ID
+        apiKey: 'test_key', // Replace with your API key
+        botId: '69e8503cf33718a92ea792fe', // Replace with your bot ID
         config: const ConferBotConfig(
           enableNotifications: true,
           enableOfflineMode: true,
