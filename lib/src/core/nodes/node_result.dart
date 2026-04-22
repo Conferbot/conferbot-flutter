@@ -2,7 +2,7 @@
 ///
 /// This is the single source of truth for all node result types.
 /// All handlers (legacy, v2, ask, special, logic) use this class.
-sealed class NodeResult {
+abstract class NodeResult {
   const NodeResult();
 
   /// Factory: proceed to next node (optionally via a specific port)
