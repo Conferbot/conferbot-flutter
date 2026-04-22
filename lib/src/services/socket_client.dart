@@ -228,7 +228,7 @@ class SocketClient with ChangeNotifier {
     _socket = io.io(
       socketUrl,
       io.OptionBuilder()
-          .setTransports(['websocket', 'polling'])
+          .setTransports(['websocket'])
           .enableReconnection()
           .setReconnectionAttempts(config.maxReconnectionAttempts)
           .setReconnectionDelay(config.reconnectionDelay)
@@ -482,6 +482,7 @@ class SocketClient with ChangeNotifier {
 
   /// Get chatbot data (call after connection)
   void getChatbotData() {
+    debugPrint('[Socket][DEBUG] Emitting get-chatbot-data for botId: $botId, connected: ${_socket?.connected}, socketUrl: $socketUrl');
     emit(SocketEvents.getChatbotData, {'botId': botId});
   }
 
