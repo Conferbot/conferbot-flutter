@@ -73,12 +73,30 @@ class MessageBubble extends StatelessWidget {
     final isAgent = message.type == MessageType.agentMessage;
     final isSystem = message.type == MessageType.systemMessage;
 
+    // Asymmetric border radius matching Android SDK:
+    // Bot: squared bottom-left, User: squared bottom-right
+    final r = effectiveTheme.borderRadius.bubble;
+    final rSmall = effectiveTheme.borderRadius.bubbleSmall;
+    final bubbleRadius = isUser
+        ? BorderRadius.only(
+            topLeft: Radius.circular(r),
+            topRight: Radius.circular(r),
+            bottomLeft: Radius.circular(r),
+            bottomRight: Radius.circular(rSmall),
+          )
+        : BorderRadius.only(
+            topLeft: Radius.circular(r),
+            topRight: Radius.circular(r),
+            bottomLeft: Radius.circular(rSmall),
+            bottomRight: Radius.circular(r),
+          );
+
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
-      child: Container(
+      child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: effectiveTheme.spacing.md,
+          horizontal: effectiveTheme.spacing.chatContentPadding,
           vertical: effectiveTheme.spacing.xs,
         ),
         child: Row(
@@ -88,7 +106,7 @@ class MessageBubble extends StatelessWidget {
           children: [
             if (!isUser && !isSystem && showAvatar) ...[
               _buildAvatar(effectiveTheme),
-              SizedBox(width: effectiveTheme.spacing.sm),
+              const SizedBox(width: 10),
             ],
             Flexible(
               child: Column(
@@ -101,14 +119,13 @@ class MessageBubble extends StatelessWidget {
                       maxWidth: effectiveTheme.layout.maxBubbleWidth,
                     ),
                     padding: EdgeInsets.symmetric(
-                      horizontal: effectiveTheme.spacing.md,
-                      vertical: effectiveTheme.spacing.sm,
+                      horizontal: effectiveTheme.spacing.bubblePaddingH,
+                      vertical: effectiveTheme.spacing.bubblePaddingV,
                     ),
                     decoration: BoxDecoration(
                       color: _getBubbleColor(effectiveTheme),
-                      borderRadius: BorderRadius.circular(
-                        effectiveTheme.borderRadius.lg,
-                      ),
+                      borderRadius: bubbleRadius,
+                      boxShadow: [effectiveTheme.shadows.sm],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,8 +137,7 @@ class MessageBubble extends StatelessWidget {
                               fontSize: effectiveTheme.typography.fontSizeXs,
                               fontWeight:
                                   effectiveTheme.typography.fontWeightBold,
-                              color:
-                                  _getTextColor(effectiveTheme).withOpacity(0.8),
+                              color: effectiveTheme.colors.primary,
                             ),
                           ),
                           SizedBox(height: effectiveTheme.spacing.xs),
@@ -139,7 +155,7 @@ class MessageBubble extends StatelessWidget {
               ),
             ),
             if (isUser && showAvatar) ...[
-              SizedBox(width: effectiveTheme.spacing.sm),
+              const SizedBox(width: 10),
               SizedBox(width: effectiveTheme.layout.avatarSize),
             ],
           ],
@@ -160,8 +176,8 @@ class MessageBubble extends StatelessWidget {
             Text(
               _formatTime(message.time),
               style: TextStyle(
-                fontSize: theme.typography.fontSizeXs,
-                color: theme.colors.textSecondary,
+                fontSize: theme.typography.timestampSize,
+                color: theme.colors.textSecondary.withOpacity(0.6),
               ),
             ),
           ],
@@ -288,7 +304,7 @@ class MessageBubble extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontSize: theme.typography.fontSizeMd,
+        fontSize: theme.typography.messageSize,
         color: _getTextColor(theme),
         height: theme.typography.lineHeightNormal,
       ),
