@@ -100,10 +100,10 @@ class MessagePaginationController with ChangeNotifier {
     if (config.enablePersistence && _storageService != null) {
       try {
         // Load total count from storage
-        final totalCount = await _storageService.getMessageCount(chatSessionId);
+        final totalCount = await _storageService!.getMessageCount(chatSessionId);
 
         // Load most recent messages
-        final recentMessages = await _storageService.loadMessages(
+        final recentMessages = await _storageService!.loadMessages(
           chatSessionId: chatSessionId,
           limit: config.pageSize,
           offset: 0,
@@ -150,7 +150,7 @@ class MessagePaginationController with ChangeNotifier {
     // Persist all messages if storage is enabled
     if (config.enablePersistence && _storageService != null && _chatSessionId != null) {
       try {
-        await _storageService.saveMessages(_chatSessionId!, messages);
+        await _storageService!.saveMessages(_chatSessionId!, messages);
       } catch (e) {
         paginationLogger.error('Error saving to storage: $e');
       }
@@ -181,7 +181,7 @@ class MessagePaginationController with ChangeNotifier {
     // Persist to storage
     if (config.enablePersistence && _storageService != null && _chatSessionId != null) {
       try {
-        await _storageService.appendMessage(_chatSessionId!, message);
+        await _storageService!.appendMessage(_chatSessionId!, message);
       } catch (e) {
         paginationLogger.error('Error appending to storage: $e');
       }
@@ -209,7 +209,7 @@ class MessagePaginationController with ChangeNotifier {
     // Persist to storage
     if (config.enablePersistence && _storageService != null && _chatSessionId != null) {
       try {
-        await _storageService.saveMessages(
+        await _storageService!.saveMessages(
           _chatSessionId!,
           messages,
           append: true,
@@ -244,7 +244,7 @@ class MessagePaginationController with ChangeNotifier {
       final nextPage = _state.currentPage + 1;
       final offset = nextPage * config.pageSize;
 
-      final olderMessages = await _storageService.loadMessages(
+      final olderMessages = await _storageService!.loadMessages(
         chatSessionId: _chatSessionId!,
         limit: config.pageSize,
         offset: offset,
@@ -327,7 +327,7 @@ class MessagePaginationController with ChangeNotifier {
       // Update in storage
       if (config.enablePersistence && _storageService != null && _chatSessionId != null) {
         try {
-          await _storageService.updateMessage(_chatSessionId!, updatedMessage);
+          await _storageService!.updateMessage(_chatSessionId!, updatedMessage);
         } catch (e) {
           paginationLogger.error('Error updating message in storage: $e');
         }
@@ -350,7 +350,7 @@ class MessagePaginationController with ChangeNotifier {
       // Delete from storage
       if (config.enablePersistence && _storageService != null && _chatSessionId != null) {
         try {
-          await _storageService.deleteMessage(_chatSessionId!, messageId);
+          await _storageService!.deleteMessage(_chatSessionId!, messageId);
         } catch (e) {
           paginationLogger.error('Error deleting message from storage: $e');
         }
@@ -371,7 +371,7 @@ class MessagePaginationController with ChangeNotifier {
 
     if (config.enablePersistence && _storageService != null && _chatSessionId != null) {
       try {
-        await _storageService.clearMessages(_chatSessionId!);
+        await _storageService!.clearMessages(_chatSessionId!);
       } catch (e) {
         paginationLogger.error('Error clearing storage: $e');
       }
