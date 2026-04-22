@@ -181,6 +181,8 @@ class ConnectivityService with ChangeNotifier {
       case ConnectivityResult.none:
       case ConnectivityResult.other:
         return false;
+      default:
+        return false;
     }
   }
 
@@ -320,6 +322,8 @@ class ConnectivityService with ChangeNotifier {
         return 'No Connection';
       case ConnectivityResult.other:
         return 'Other';
+      default:
+        return 'Unknown';
     }
   }
 
