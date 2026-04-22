@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide TextInputType;
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
