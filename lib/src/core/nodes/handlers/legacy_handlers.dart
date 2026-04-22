@@ -15,7 +15,7 @@ export '../node_ui_state.dart' show TextInputType;
 /// choice_ui_states.dart, and integration_handlers.dart.
 /// v2 handlers use the NodeUIState from node_ui_state.dart instead.
 /// Both variants are accepted by NodeResult.displayUI() / DisplayUIResult.
-sealed class NodeUIState {
+abstract class NodeUIState {
   const NodeUIState();
 }
 
