@@ -1,5 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import '../core/state/chat_state.dart';
+import '../theme/conferbot_theme.dart';
+import '../theme/default_theme.dart';
 import '../models/agent.dart';
 import '../models/message.dart';
 import '../models/socket_events.dart';
@@ -143,6 +146,30 @@ class ConferBotProvider with ChangeNotifier {
   List<RecordItem> get record => List.unmodifiable(_record);
   Agent? get currentAgent => _currentAgent;
   int get unreadCount => _unreadCount;
+
+  /// Server customizations (theme, bot name, avatar, etc.)
+  Map<String, dynamic>? get serverCustomizations => _serverCustomizations;
+
+  /// Bot name from server customizations
+  String? get botName {
+    final name = _serverCustomizations?['botName']?.toString();
+    if (name != null && name.isNotEmpty) return name;
+    final logoText = _serverCustomizations?['logoText']?.toString();
+    if (logoText != null && logoText.isNotEmpty) return logoText;
+    return null;
+  }
+
+  /// Bot avatar URL from server customizations
+  String? get botAvatarUrl {
+    final avatar = _serverCustomizations?['avatar']?.toString();
+    if (avatar != null && avatar.isNotEmpty) return avatar;
+    final logoUrl = _serverCustomizations?['logo']?.toString();
+    if (logoUrl != null && logoUrl.isNotEmpty) return logoUrl;
+    return null;
+  }
+
+  /// Build a ConferBotTheme from server customizations
+  ConferBotTheme get serverTheme => _buildServerTheme();
 
   /// Whether a previous session was restored from persistence
   bool get sessionRestored => _sessionRestored;
@@ -503,6 +530,14 @@ class ConferBotProvider with ChangeNotifier {
 
       // Parse server customizations (theme colors, bot name, etc.)
       _serverCustomizations = chatbotData['customizations'] as Map<String, dynamic>?;
+      if (_serverCustomizations != null) {
+        _logger.debug('Server customizations: ${_serverCustomizations!.keys.toList()}');
+        _logger.debug('headerBgColor: ${_serverCustomizations!['headerBgColor']}');
+        _logger.debug('botName: ${_serverCustomizations!['botName']}');
+        _logger.debug('logoText: ${_serverCustomizations!['logoText']}');
+        _logger.debug('avatar: ${_serverCustomizations!['avatar']}');
+        _logger.debug('botMsgColor: ${_serverCustomizations!['botMsgColor']}');
+      }
 
       _logger.debug('Loaded ${_steps.length} steps and ${_edges.length} edges');
 
@@ -521,6 +556,65 @@ class ConferBotProvider with ChangeNotifier {
 
       notifyListeners();
     }
+  }
+
+  // ========== Server Theme Builder ==========
+
+  /// Parse hex color string to Color, with fallback
+  static Color? _parseHexColor(String? hex) {
+    if (hex == null || hex.isEmpty) return null;
+    hex = hex.replaceFirst('#', '');
+    if (hex.length == 6) hex = 'FF$hex';
+    if (hex.length != 8) return null;
+    final value = int.tryParse(hex, radix: 16);
+    return value != null ? Color(value) : null;
+  }
+
+  /// Build a ConferBotTheme by applying server customizations over defaults
+  ConferBotTheme _buildServerTheme() {
+    final c = _serverCustomizations;
+    if (c == null) return defaultTheme;
+
+    final headerBg = _parseHexColor(c['headerBgColor']?.toString());
+    final headerText = _parseHexColor(c['headerTextColor']?.toString());
+    final botBubble = _parseHexColor(c['botMsgColor']?.toString());
+    final botText = _parseHexColor(c['botTextColor']?.toString());
+    final userBubble = _parseHexColor(c['userMsgColor']?.toString());
+    final userText = _parseHexColor(c['userTextColor']?.toString());
+    final optionBubble = _parseHexColor(c['optionBubbleMsgColor']?.toString());
+    final optionText = _parseHexColor(c['optionBubbleTextColor']?.toString());
+    final chatBgColor = _parseHexColor(c['chatBgColor']?.toString());
+
+    final colors = defaultTheme.colors.copyWith(
+      primary: headerBg,
+      headerBg: headerBg,
+      headerText: headerText,
+      botBubble: botBubble,
+      botBubbleText: botText,
+      userBubble: userBubble,
+      userBubbleText: userText,
+      optionBubble: optionBubble,
+      optionBubbleText: optionText,
+      background: chatBgColor,
+    );
+
+    // Parse font size override
+    final fontSize = c['fontSize'];
+    final parsedFontSize = fontSize is num ? fontSize.toDouble() : null;
+
+    // Parse bubble border radius override
+    final bubbleRadius = c['bubbleBorderRadius'];
+    final parsedBubbleRadius = bubbleRadius is num ? bubbleRadius.toDouble() : null;
+
+    return defaultTheme.copyWith(
+      colors: colors,
+      typography: parsedFontSize != null
+          ? ConferBotTypography(messageSize: parsedFontSize)
+          : null,
+      borderRadius: parsedBubbleRadius != null
+          ? ConferBotBorderRadius(bubble: parsedBubbleRadius)
+          : null,
+    );
   }
 
   /// Open chat and start the flow
