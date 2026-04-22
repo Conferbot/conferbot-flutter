@@ -5,10 +5,12 @@ import 'nodes/node_result.dart';
 import 'nodes/node_ui_state.dart';
 import 'nodes/node_handler_registry.dart';
 import 'nodes/handlers/legacy_handlers.dart' show NodeHandler;
+import 'nodes/handlers/display_handlers.dart' show MessageState, ImageState, VideoState, AudioState, FileState, HtmlState;
+import 'nodes/handlers/choices/choice_ui_states.dart' show SingleChoiceState, MultipleChoiceState;
 import 'nodes/handlers/integrations/other_handlers.dart' show StripeNodeHandler;
 import 'state/chat_state.dart';
 import 'errors/conferbot_exceptions.dart';
-import 'errors/error_handler.dart';
+import 'errors/error_handler.dart' hide ErrorResult;
 import '../services/socket_client.dart';
 import '../providers/analytics_provider.dart';
 import '../models/analytics.dart';
@@ -46,8 +48,8 @@ class NodeFlowEngine extends ChangeNotifier {
   // ========== State Fields ==========
 
   /// Current UI state to render
-  NodeUIState? _currentUIState;
-  NodeUIState? get currentUIState => _currentUIState;
+  dynamic _currentUIState;
+  dynamic get currentUIState => _currentUIState;
 
   /// Loading state for typing indicator
   bool _isProcessing = false;
@@ -85,9 +87,14 @@ class NodeFlowEngine extends ChangeNotifier {
   // ========== Streams for Reactive Updates ==========
 
   /// Stream controller for UI state changes
-  final StreamController<NodeUIState?> _uiStateController =
-      StreamController<NodeUIState?>.broadcast();
-  Stream<NodeUIState?> get currentUIStateStream => _uiStateController.stream;
+  final StreamController<dynamic> _uiStateController =
+      StreamController<dynamic>.broadcast();
+  Stream<dynamic> get currentUIStateStream => _uiStateController.stream;
+
+  /// Stream controller for bot messages to add to chat record
+  final StreamController<Map<String, dynamic>> _botMessageController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get botMessageStream => _botMessageController.stream;
 
   /// Stream controller for processing state
   final StreamController<bool> _processingController =
@@ -172,7 +179,9 @@ class NodeFlowEngine extends ChangeNotifier {
 
   /// Process node at given index
   Future<void> _processNodeAtIndex(int index) async {
+    flowLogger.debug('_processNodeAtIndex($index) called, total steps: ${_steps.length}');
     if (index < 0 || index >= _steps.length) {
+      flowLogger.debug('Index $index out of bounds, marking flow complete');
       _setFlowComplete(true);
       return;
     }
@@ -203,6 +212,8 @@ class NodeFlowEngine extends ChangeNotifier {
 
     final nodeData = node['data'] as Map<String, dynamic>? ?? {};
     final nodeType = nodeData['type']?.toString() ?? node['type']?.toString();
+
+    flowLogger.debug('Node[$index] id=$nodeId type=$nodeType dataKeys=${nodeData.keys.toList()}');
 
     if (nodeType == null) {
       flowLogger.debug('Node $nodeId has no type, skipping');
@@ -238,15 +249,13 @@ class NodeFlowEngine extends ChangeNotifier {
     final handler = _handlerRegistry.getHandler(nodeType);
 
     if (handler == null) {
-      flowLogger.debug('No handler for node type: $nodeType, skipping');
+      flowLogger.debug('No handler for node type: $nodeType (nodeId: $nodeId), skipping to next');
       _setProcessing(false);
 
       // Track node exit with skip
       _analytics.trackNodeExit(exitType: NodeExitType.skipped);
 
-      // Set a typed error for debugging (but allow proceeding)
-      _setTypedError(NodeProcessingException.handlerNotFound(nodeType));
-
+      // For welcome-node, just proceed — it's a start marker
       await _proceedToNextNode(null);
       return;
     }
@@ -334,23 +343,57 @@ class NodeFlowEngine extends ChangeNotifier {
     switch (result) {
       case DisplayUIResult():
         _setProcessing(false);
-        _setUIState(result.uiState);
+        // uiState can be either canonical NodeUIState or legacy NodeUIState
+        final uiState = result.uiState;
+        flowLogger.debug('DisplayUIResult: setting UI state type=${uiState.runtimeType}');
 
-        // Track bot message for display nodes
-        final text = _extractDisplayText(result.uiState);
-        if (text != null) {
-          _analytics.trackMessage(sender: 'bot', text: text);
-        }
+        // Extract text for message-only nodes
+        final text = _extractDisplayText(uiState as dynamic);
 
-        // For message-only nodes, auto-proceed after delay
-        if (_isMessageOnlyUI(result.uiState)) {
-          await Future.delayed(const Duration(seconds: 1));
+        // For message-only nodes, add to chat record and auto-proceed
+        if (_isMessageOnlyUI(uiState as dynamic)) {
+          // Emit bot message to be added to provider's record
+          if (text != null && text.isNotEmpty) {
+            _botMessageController.add({
+              'text': text,
+              'nodeId': _currentNodeId ?? '',
+              'type': 'bot-message',
+            });
+            flowLogger.debug('Emitted bot message to record: "$text"');
+          }
+
+          // Track bot message
+          if (text != null) {
+            _analytics.trackMessage(sender: 'bot', text: text);
+          }
+
+          // Brief delay to show typing, then auto-proceed
+          await Future.delayed(const Duration(milliseconds: 800));
 
           // Track node exit
           _analytics.trackNodeExit(exitType: NodeExitType.proceeded);
 
           _sendResponseToServer();
           await _proceedToNextNode(null);
+        } else {
+          // Interactive node — set UI state for overlay rendering
+          _setUIState(uiState as dynamic);
+
+          // Also emit the question text as a bot message for interactive nodes
+          final questionText = _extractInteractiveQuestionText(uiState as dynamic);
+          if (questionText != null && questionText.isNotEmpty) {
+            _botMessageController.add({
+              'text': questionText,
+              'nodeId': _currentNodeId ?? '',
+              'type': 'bot-message',
+            });
+            flowLogger.debug('Emitted interactive question to record: "$questionText"');
+          }
+
+          // Track bot message
+          if (text != null) {
+            _analytics.trackMessage(sender: 'bot', text: text);
+          }
         }
 
       case ProceedResult():
@@ -418,26 +461,45 @@ class NodeFlowEngine extends ChangeNotifier {
   }
 
   /// Extract display text from UI state for analytics
-  String? _extractDisplayText(NodeUIState uiState) {
+  String? _extractDisplayText(dynamic uiState) {
     if (uiState is MessageUIState) {
+      return uiState.text;
+    } else if (uiState is MessageState) {
       return uiState.text;
     } else if (uiState is TextInputUIState) {
       return uiState.questionText;
     } else if (uiState is MultipleChoiceUIState) {
       return uiState.questionText;
     }
-    // Add more cases as needed
+    return null;
+  }
+
+  /// Extract question text from interactive node states
+  /// Used to add the question as a bot message in the chat record
+  String? _extractInteractiveQuestionText(dynamic uiState) {
+    if (uiState is SingleChoiceUIState) return uiState.questionText;
+    if (uiState is SingleChoiceState) return uiState.questionText;
+    if (uiState is MultipleChoiceUIState) return uiState.questionText;
+    if (uiState is MultipleChoiceState) return uiState.questionText;
+    if (uiState is TextInputUIState) return uiState.questionText;
     return null;
   }
 
   /// Check if UI state is message-only (auto-proceeds)
-  bool _isMessageOnlyUI(NodeUIState uiState) {
+  bool _isMessageOnlyUI(dynamic uiState) {
+    // Check both canonical (node_ui_state.dart) and legacy (display_handlers.dart) types
     return uiState is MessageUIState ||
+        uiState is MessageState ||
         uiState is ImageUIState ||
+        uiState is ImageState ||
         uiState is VideoUIState ||
+        uiState is VideoState ||
         uiState is AudioUIState ||
+        uiState is AudioState ||
         uiState is FileUIState ||
-        uiState is HtmlUIState;
+        uiState is FileState ||
+        uiState is HtmlUIState ||
+        uiState is HtmlState;
   }
 
   // ========== User Response Handling ==========
@@ -553,7 +615,9 @@ class NodeFlowEngine extends ChangeNotifier {
   /// Proceed to the next node in the flow
   Future<void> _proceedToNextNode(String? targetPort) async {
     final currentId = _currentNodeId;
+    flowLogger.debug('_proceedToNextNode called: currentId=$currentId, targetPort=$targetPort');
     if (currentId == null) {
+      flowLogger.debug('No currentId, marking flow complete');
       _setFlowComplete(true);
       return;
     }
@@ -566,22 +630,26 @@ class NodeFlowEngine extends ChangeNotifier {
       nextNodeId = _findNextNodeByDefaultEdge(currentId);
     }
 
+    flowLogger.debug('Edge lookup result: nextNodeId=$nextNodeId');
+
     if (nextNodeId != null) {
       final nextIndex = _steps.indexWhere((step) => step['id'] == nextNodeId);
       if (nextIndex >= 0) {
+        flowLogger.debug('Found next node at index $nextIndex, processing...');
         await _processNodeAtIndex(nextIndex);
         return;
       } else {
-        // HIGH FIX 5: Log when edge target node doesn't exist in steps
         flowLogger.warning('Edge target node $nextNodeId not found in steps, falling back to sequential');
       }
     }
 
     // Try sequential fallback
     final currentIndex = _chatState.currentIndex;
+    flowLogger.debug('Sequential fallback: currentIndex=$currentIndex, totalSteps=${_steps.length}');
     if (currentIndex + 1 < _steps.length) {
       await _processNodeAtIndex(currentIndex + 1);
     } else {
+      flowLogger.debug('No more steps, marking flow complete');
       _setFlowComplete(true);
     }
   }
@@ -627,6 +695,8 @@ class NodeFlowEngine extends ChangeNotifier {
   /// Find next node using default edge (any edge from source)
   /// HIGH FIX 5: Edge routing validation with logging
   String? _findNextNodeByDefaultEdge(String sourceId) {
+    flowLogger.debug('Looking for default edge from node: $sourceId');
+    flowLogger.debug('Available edges: ${_edges.map((e) => '${e['source']}->${e['target']}').toList()}');
     final edge = _edges.firstWhere(
       (edge) => edge['source'] == sourceId,
       orElse: () => <String, dynamic>{},
@@ -635,6 +705,8 @@ class NodeFlowEngine extends ChangeNotifier {
     final target = edge['target']?.toString();
     if (target == null) {
       flowLogger.warning('No default edge found for node: $sourceId');
+    } else {
+      flowLogger.debug('Found edge: $sourceId -> $target');
     }
     return target;
   }
@@ -720,7 +792,7 @@ class NodeFlowEngine extends ChangeNotifier {
 
       // Notify handler if it supports agent events
       if (handler is AgentEventHandler) {
-        handler.onAgentAccepted(nodeId, agentName);
+        (handler as AgentEventHandler).onAgentAccepted(nodeId, agentName);
       }
 
       _setUIState(HumanHandoverUIState(
@@ -748,7 +820,7 @@ class NodeFlowEngine extends ChangeNotifier {
       final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
 
       if (handler is AgentEventHandler) {
-        _handleNoAgentsAsync(handler, nodeId, nodeData);
+        _handleNoAgentsAsync(handler as AgentEventHandler, nodeId, nodeData);
       } else {
         // Default behavior: show no agents available state
         _setUIState(HumanHandoverUIState(
@@ -787,7 +859,7 @@ class NodeFlowEngine extends ChangeNotifier {
       final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
 
       if (handler is AgentEventHandler) {
-        _handleChatEndedAsync(handler, nodeId, nodeData);
+        _handleChatEndedAsync(handler as AgentEventHandler, nodeId, nodeData);
       }
     }
   }
@@ -805,7 +877,7 @@ class NodeFlowEngine extends ChangeNotifier {
 
   // ========== State Setters (with notifications) ==========
 
-  void _setUIState(NodeUIState? state) {
+  void _setUIState(dynamic state) {
     _currentUIState = state;
     _uiStateController.add(state);
     notifyListeners();
@@ -873,6 +945,7 @@ class NodeFlowEngine extends ChangeNotifier {
     _analytics.endSession();
 
     _uiStateController.close();
+    _botMessageController.close();
     _processingController.close();
     _errorController.close();
     _typedErrorController.close();
