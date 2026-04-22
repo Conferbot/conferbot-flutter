@@ -192,8 +192,14 @@ class NChoicesNodeHandler extends BaseNodeHandler {
       Map<String, dynamic> nodeData, String nodeId) async {
     final choicesData = getList<Map<String, dynamic>>(nodeData, 'choices');
     final answerKey = getString(nodeData, 'answerVariable', nodeId);
+    final choicePrompt = nodeData['choicePrompt']?.toString();
 
     state?.addAnswerVariable(nodeId, answerKey);
+
+    // Add choice prompt to transcript if present
+    if (choicePrompt != null && choicePrompt.isNotEmpty) {
+      state?.addToTranscript('bot', stripHtml(choicePrompt));
+    }
 
     final choices = choicesData.map((choice) {
       final id = choice['id']?.toString() ?? '';
@@ -208,7 +214,7 @@ class NChoicesNodeHandler extends BaseNodeHandler {
 
     return DisplayUI(
       SingleChoiceState(
-        questionText: null,
+        questionText: choicePrompt != null ? stripHtml(choicePrompt) : null,
         choices: choices,
         nodeId: nodeId,
         answerKey: answerKey,
