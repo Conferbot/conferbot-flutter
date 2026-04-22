@@ -13,6 +13,7 @@ import '../ui/widgets/node_widgets.dart';
 import 'chat_header.dart';
 import 'message_list.dart';
 import 'chat_input.dart';
+import 'chat_bottom_bar.dart';
 import 'typing_indicator.dart';
 import 'offline_indicator.dart';
 import 'knowledge_base/knowledge_base_screen.dart';
@@ -541,13 +542,15 @@ class _ChatWidgetState extends State<ChatWidget> {
         ? 'Offline - messages will be queued'
         : widget.placeholder ?? 'Type a message...';
 
-    return ChatInputWithKB(
+    // Unified bottom bar: input + "Powered by" footer
+    return ChatBottomBar(
       onSend: (text) async {
         await provider.sendMessage(text);
       },
       placeholder: placeholder,
       disabled: provider.isProcessing,
       enableAttachments: widget.enableAttachments,
+      onAttachmentPress: null,
       showKnowledgeBase: widget.showKnowledgeBase,
       onKnowledgeBaseTap: _openKnowledgeBase,
       showOfflineIndicator: isOffline,
