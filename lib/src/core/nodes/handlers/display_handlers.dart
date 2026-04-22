@@ -175,8 +175,9 @@ class MessageNodeHandler extends BaseNodeHandler {
     Map<String, dynamic> nodeData,
     String nodeId,
   ) async {
-    final text = getString(nodeData, 'text');
-    final message = getString(nodeData, 'message', text);
+    final rawText = getString(nodeData, 'text');
+    final rawMessage = getString(nodeData, 'message', rawText);
+    final message = stripHtml(rawMessage);
 
     // Add to transcript
     state?.addToTranscript('bot', message);
