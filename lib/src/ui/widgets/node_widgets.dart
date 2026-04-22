@@ -3,11 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 import '../../core/nodes/node_ui_state.dart' as ui_state;
 import '../../core/nodes/handlers/display_handlers.dart' as display;
 import '../../core/nodes/handlers/choices/choice_ui_states.dart' as choice;
 import '../../core/nodes/handlers/legacy_handlers.dart' as legacy;
+import '../../providers/conferbot_provider.dart';
 import '../../theme/conferbot_theme.dart';
+import '../../widgets/avatar.dart';
 import '../../theme/default_theme.dart';
 import '../../widgets/voice_message/voice_input_widget.dart';
 import '../../widgets/voice_message/voice_player.dart';
@@ -840,73 +843,102 @@ class _SingleChoiceNodeWidgetState extends State<SingleChoiceNodeWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // Get bot avatar from provider (server customizations)
+    final provider = context.read<ConferBotProvider>();
+    final avatarUrl = provider.botAvatarUrl;
+    final botName = provider.botName ?? 'Bot';
+    final avatarSize = widget.theme.layout.avatarSize;
+    // Indent = avatar + gap so choices align with the bubble
+    final indent = avatarSize + 10;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Question text with bot avatar
         if (widget.state.questionText != null &&
             widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
-          SizedBox(height: widget.theme.spacing.sm),
-        ],
-        // Wrap for auto-wrapping choice buttons — matches web widget flex-wrap
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: widget.state.choices.map((choice) {
-            final isSelected = _selectedId == choice.id;
-            final isDisabled = _selectedId != null;
-            return AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              opacity: isDisabled && !isSelected ? 0.5 : 1.0,
-              child: OutlinedButton(
-                onPressed: isDisabled
-                    ? null
-                    : () {
-                        setState(() => _selectedId = choice.id);
-                        widget.onResponse({'id': choice.id, 'text': choice.text});
-                      },
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: isSelected
-                      ? widget.primaryColor
-                      : widget.theme.colors.optionBubble.withOpacity(0.85),
-                  foregroundColor: isSelected
-                      ? Colors.white
-                      : widget.theme.colors.optionBubbleText,
-                  side: BorderSide(
-                    color: isSelected
-                        ? widget.primaryColor
-                        : widget.theme.colors.border,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 14,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: isSelected ? 0 : 1,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isSelected) ...[
-                      const Icon(Icons.check, size: 16),
-                      const SizedBox(width: 4),
-                    ],
-                    Text(
-                      choice.text,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                      ),
-                    ),
-                  ],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              ConferBotAvatar(
+                imageUrl: avatarUrl,
+                name: botName,
+                size: avatarSize,
+                theme: widget.theme,
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: BotMessageBubble(
+                  text: widget.state.questionText!,
+                  theme: widget.theme,
                 ),
               ),
-            );
-          }).toList(),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+        // Choice buttons indented to align with bubble (after avatar)
+        Padding(
+          padding: EdgeInsets.only(left: indent),
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: widget.state.choices.map((choice) {
+              final isSelected = _selectedId == choice.id;
+              final isDisabled = _selectedId != null;
+              return AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: isDisabled && !isSelected ? 0.5 : 1.0,
+                child: OutlinedButton(
+                  onPressed: isDisabled
+                      ? null
+                      : () {
+                          setState(() => _selectedId = choice.id);
+                          widget.onResponse({'id': choice.id, 'text': choice.text});
+                        },
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: isSelected
+                        ? widget.primaryColor
+                        : widget.theme.colors.optionBubble.withOpacity(0.85),
+                    foregroundColor: isSelected
+                        ? Colors.white
+                        : widget.theme.colors.optionBubbleText,
+                    side: BorderSide(
+                      color: isSelected
+                          ? widget.primaryColor
+                          : widget.theme.colors.border,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 14,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: isSelected ? 0 : 1,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isSelected) ...[
+                        const Icon(Icons.check, size: 16),
+                        const SizedBox(width: 4),
+                      ],
+                      Text(
+                        choice.text,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
         ),
       ],
     );
@@ -2107,6 +2139,8 @@ class RedirectNodeWidget extends StatelessWidget {
 // ==================== HELPER COMPONENTS ====================
 
 /// Bot message bubble widget
+/// Bot message bubble — just the bubble (no avatar).
+/// Use inside a Row with ConferBotAvatar for full layout.
 class BotMessageBubble extends StatelessWidget {
   final String text;
   final ConferBotTheme theme;
@@ -2142,6 +2176,42 @@ class BotMessageBubble extends StatelessWidget {
           height: theme.typography.lineHeightNormal,
         ),
       ),
+    );
+  }
+}
+
+/// Bot message bubble with avatar from server customizations.
+/// Reads avatar URL from ConferBotProvider automatically.
+class BotMessageBubbleWithAvatar extends StatelessWidget {
+  final String text;
+  final ConferBotTheme theme;
+
+  const BotMessageBubbleWithAvatar({
+    super.key,
+    required this.text,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.read<ConferBotProvider>();
+    final avatarUrl = provider.botAvatarUrl;
+    final botName = provider.botName ?? 'Bot';
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        ConferBotAvatar(
+          imageUrl: avatarUrl,
+          name: botName,
+          size: theme.layout.avatarSize,
+          theme: theme,
+        ),
+        const SizedBox(width: 10),
+        Flexible(
+          child: BotMessageBubble(text: text, theme: theme),
+        ),
+      ],
     );
   }
 }
