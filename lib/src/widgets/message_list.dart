@@ -67,6 +67,9 @@ class MessageList extends StatefulWidget {
   /// Pagination configuration
   final MessageListPaginationConfig paginationConfig;
 
+  /// Optional widget rendered inline at the bottom of the list (e.g. choice buttons)
+  final Widget? trailingWidget;
+
   const MessageList({
     super.key,
     required this.messages,
@@ -82,6 +85,7 @@ class MessageList extends StatefulWidget {
     this.onScrollAwayFromBottom,
     this.onRetryMessage,
     this.paginationConfig = const MessageListPaginationConfig(),
+    this.trailingWidget,
   });
 
   @override
@@ -309,6 +313,11 @@ class _MessageListState extends State<MessageList> {
       count += 1; // For the load more indicator/trigger at top
     }
 
+    // Add trailing widget (interactive node like choices) at bottom
+    if (widget.trailingWidget != null) {
+      count += 1;
+    }
+
     // Add typing indicator at bottom
     if (widget.showTypingIndicator) {
       count += 1;
@@ -320,16 +329,21 @@ class _MessageListState extends State<MessageList> {
   Widget _buildItem(BuildContext context, int index, ConferBotTheme theme) {
     final hasLoadMoreIndicator = widget.isLoadingMore || widget.hasMoreMessages;
     final messageStartIndex = hasLoadMoreIndicator ? 1 : 0;
-    final messageEndIndex = messageStartIndex + widget.messages.length;
 
     // Load more indicator at top (index 0 when loading)
     if (hasLoadMoreIndicator && index == 0) {
       return _buildLoadMoreIndicator(theme);
     }
 
-    // Typing indicator at bottom
+    // Typing indicator at very bottom
     if (widget.showTypingIndicator && index == _calculateItemCount() - 1) {
       return _buildTypingIndicator(theme);
+    }
+
+    // Trailing widget (interactive node) after messages, before typing indicator
+    final trailingIndex = messageStartIndex + widget.messages.length;
+    if (widget.trailingWidget != null && index == trailingIndex) {
+      return widget.trailingWidget!;
     }
 
     // Message item
