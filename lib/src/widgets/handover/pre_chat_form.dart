@@ -315,7 +315,7 @@ class _PreChatFormWidgetState extends State<PreChatFormWidget> {
         }
         break;
       case 'url':
-        if (!Uri.tryParse(trimmedValue)?.hasAbsolutePath ?? true) {
+        if (!(Uri.tryParse(trimmedValue)?.hasAbsolutePath ?? false)) {
           return 'Please enter a valid URL';
         }
         break;
