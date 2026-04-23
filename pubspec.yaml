@@ -5,6 +5,13 @@ homepage: https://docs.conferbot.com/mobile/flutter
 repository: https://github.com/conferbot/flutter-sdk
 # No license field - proprietary
 
+topics:
+  - chatbot
+  - chat
+  - ai
+  - customer-support
+  - messaging
+
 environment:
   sdk: '>=3.0.0 <4.0.0'
   flutter: '>=3.10.0'
