@@ -3,9 +3,15 @@
 [![pub package](https://img.shields.io/pub/v/conferbot_flutter.svg)](https://pub.dev/packages/conferbot_flutter)
 [![Flutter](https://img.shields.io/badge/Flutter-%3E%3D3.10-blue.svg)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-%3E%3D3.0-blue.svg)](https://dart.dev)
-[![License](https://img.shields.io/badge/license-proprietary-lightgrey.svg)](https://conferbot.com/terms)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 Native Flutter SDK for embedding Conferbot AI chatbots into iOS and Android applications.
+
+<p align="center">
+  <img src="docs/screenshots/chat-widget.png" width="280" alt="Chat Widget" />
+  <img src="docs/screenshots/choice-node.png" width="280" alt="Choice Node" />
+  <img src="docs/screenshots/themed-chat.png" width="280" alt="Themed Chat" />
+</p>
 
 ---
 
@@ -49,6 +55,15 @@ Then run:
 ```bash
 flutter pub get
 ```
+
+## Getting Your API Key and Bot ID
+
+You need two credentials to use the SDK:
+
+1. **Log in** to [Conferbot Dashboard](https://app.conferbot.com)
+2. **Create or select a bot** from the dashboard
+3. **Find your Bot ID**: Go to **Bot Settings** > **General** -- the Bot ID is displayed at the top
+4. **Find your API Key**: Go to **Workspace Settings** > **API Keys** -- copy the key starting with `conf_`
 
 ## Quick Start
 
@@ -282,12 +297,40 @@ Full API documentation is available in the [docs/](docs/) directory:
 
 ## Example App
 
-A complete example application is included in the [example/](example/) directory demonstrating all three usage patterns:
+A fully working example application is included in the [example/](example/) directory.
+
+### Running the Example
 
 ```bash
+# 1. Clone the repo
+git clone https://github.com/conferbot/flutter-sdk.git
+cd flutter-sdk
+
+# 2. Install dependencies
+flutter pub get
+
+# 3. Configure your bot credentials
+#    Open example/lib/main.dart and replace:
+#      apiKey: 'test_key'
+#      botId: '69e8503cf33718a92ea792fe'
+#    with your own credentials from the Conferbot dashboard.
+
+# 4. (Optional) Point to production server
+#    Remove the ConferBotEndpoints.configure() call in main.dart.
+#    By default, the SDK connects to https://embed.conferbot.com
+
+# 5. Run on a connected device or emulator
 cd example
 flutter run
 ```
+
+### What the Example Shows
+
+| Screen | Pattern | Description |
+|--------|---------|-------------|
+| **Chat Widget** | Drop-in | Full chat UI in a bottom sheet -- one widget, zero config |
+| **Headless** | Provider-based | Custom UI with `ConferBotProvider` and `Consumer` for full control |
+| **Custom** | Mix & match | Pre-built widgets (`MessageList`, `ChatInput`) in a custom layout |
 
 ## Documentation
 
@@ -306,7 +349,7 @@ We welcome contributions. Please open an issue first to discuss proposed changes
 
 ## License
 
-This SDK is proprietary software. See [LICENSE](LICENSE) for details.
+Apache 2.0 -- see [LICENSE](LICENSE) for details.
 
 ## Support
 
