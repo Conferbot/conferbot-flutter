@@ -96,6 +96,11 @@ class NodeFlowEngine extends ChangeNotifier {
       StreamController<Map<String, dynamic>>.broadcast();
   Stream<Map<String, dynamic>> get botMessageStream => _botMessageController.stream;
 
+  /// Stream controller for user messages to add to chat record
+  final StreamController<Map<String, dynamic>> _userMessageController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get userMessageStream => _userMessageController.stream;
+
   /// Stream controller for processing state
   final StreamController<bool> _processingController =
       StreamController<bool>.broadcast();
@@ -544,6 +549,9 @@ class NodeFlowEngine extends ChangeNotifier {
     }
 
     try {
+      // Snapshot transcript length before handling to detect new user entries
+      final transcriptBefore = _chatState.transcript.length;
+
       // HIGH FIX 1: Timeout for response handling
       final result = await handler.handleResponse(response, nodeData, nodeId).timeout(
         _nodeProcessingTimeout,
@@ -555,6 +563,20 @@ class NodeFlowEngine extends ChangeNotifier {
           );
         },
       );
+
+      // Emit any new user messages added by the handler to the transcript
+      final transcriptAfter = _chatState.transcript;
+      for (var i = transcriptBefore; i < transcriptAfter.length; i++) {
+        final entry = transcriptAfter[i];
+        if (entry.by == 'user' && entry.message.isNotEmpty) {
+          _userMessageController.add({
+            'text': entry.message,
+            'nodeId': nodeId,
+            'type': 'user-message',
+          });
+        }
+      }
+
       await _handleNodeResult(result, nodeData);
     } on TimeoutException catch (e, stackTrace) {
       // HIGH FIX 6: Specific timeout exception handling
@@ -935,6 +957,7 @@ class NodeFlowEngine extends ChangeNotifier {
 
     _uiStateController.close();
     _botMessageController.close();
+    _userMessageController.close();
     _processingController.close();
     _errorController.close();
     _typedErrorController.close();
