@@ -185,14 +185,23 @@ class RecordEntry {
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final json = <String, dynamic>{
+      '_id': id,
       'id': id,
-      'shape': shape,
       'type': type,
-      'text': text,
       'time': time,
-      ...data,
     };
+    // For user responses, keep flat shape/text format
+    if (shape.startsWith('user-')) {
+      json['shape'] = shape;
+      json['text'] = text;
+    } else {
+      // For bot messages, nest data as sub-object (web widget format)
+      final dataMap = Map<String, dynamic>.from(data);
+      if (text != null) dataMap['text'] = text;
+      json['data'] = dataMap;
+    }
+    return json;
   }
 
   factory RecordEntry.fromJson(Map<String, dynamic> json) {
@@ -1051,6 +1060,7 @@ class ChatState extends ChangeNotifier {
       'record': getRecordForServer(),
       'answerVariables': _answerVariables.map((v) => v.toJson()).toList(),
       'workspaceId': _workspaceId,
+      'channel': 'mobile',
     };
   }
 
