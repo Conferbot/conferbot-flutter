@@ -502,6 +502,22 @@ class ConferBotProvider with ChangeNotifier {
         notifyListeners();
       }
     });
+
+    // Listen for user messages from flow engine (choice selections, form inputs, etc.)
+    _flowEngine.userMessageStream.listen((messageData) {
+      final text = messageData['text'] as String? ?? '';
+      final nodeId = messageData['nodeId'] as String? ?? '';
+      if (text.isNotEmpty) {
+        final userMessage = UserInputResponseRecord(
+          id: 'user_${nodeId}_${DateTime.now().millisecondsSinceEpoch}',
+          time: DateTime.now(),
+          text: text,
+        );
+        _addMessageToRecord(userMessage);
+        _logger.debug('Added user message to record: "$text"');
+        notifyListeners();
+      }
+    });
   }
 
   /// Handle flow engine state changes
