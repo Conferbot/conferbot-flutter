@@ -555,6 +555,9 @@ class ConferBotProvider with ChangeNotifier {
         _logger.debug('botMsgColor: ${_serverCustomizations!['botMsgColor']}');
       }
 
+      // Extract workspaceId from server chatbot data
+      final serverWorkspaceId = chatbotData['workspaceId']?.toString();
+
       _logger.debug('Loaded ${_steps.length} steps and ${_edges.length} edges');
 
       // Start flow engine if we got steps and have a session
@@ -563,9 +566,19 @@ class ConferBotProvider with ChangeNotifier {
           chatSessionId: _chatSessionId!,
           visitorId: _visitorId ?? '',
           botId: botId,
+          workspaceId: serverWorkspaceId,
           stepsData: _steps,
           edgesData: _edges,
         );
+
+        // Set _botName variable for handover handler
+        final resolvedBotName = _serverCustomizations?['botName']?.toString()
+            ?? _serverCustomizations?['logoText']?.toString()
+            ?? '';
+        if (resolvedBotName.isNotEmpty) {
+          ChatState().setVariable('_botName', resolvedBotName);
+        }
+
         _flowEngine.start();
         _logger.debug('Flow engine started with ${_steps.length} nodes');
       }
