@@ -12,6 +12,7 @@ import 'state/chat_state.dart';
 import 'errors/conferbot_exceptions.dart';
 import 'errors/error_handler.dart' hide ErrorResult;
 import '../services/socket_client.dart';
+import '../models/socket_events.dart';
 import '../providers/analytics_provider.dart';
 import '../models/analytics.dart';
 import '../utils/logger.dart';
@@ -355,6 +356,22 @@ class NodeFlowEngine extends ChangeNotifier {
         // Extract text for message-only nodes
         final text = _extractDisplayText(uiState as dynamic);
 
+        // Push bot message to record (matching web widget format)
+        final nodeId = _currentNodeId;
+        final nodeType = nodeData['type']?.toString();
+        if (nodeId != null && nodeType != null) {
+          final nodeDataSub = (nodeData['data'] as Map<String, dynamic>?) ?? {};
+          final recordData = Map<String, dynamic>.from(nodeDataSub);
+          if (text != null) recordData['text'] = text;
+          _chatState.pushToRecord(RecordEntry(
+            id: nodeId,
+            shape: nodeType,
+            type: nodeType,
+            text: text,
+            data: recordData,
+          ));
+        }
+
         // For message-only nodes, add to chat record and auto-proceed
         if (_isMessageOnlyUI(uiState as dynamic)) {
           // Emit bot message to be added to provider's record
@@ -383,6 +400,13 @@ class NodeFlowEngine extends ChangeNotifier {
         } else {
           // Interactive node — set UI state for inline rendering in message list
           _setUIState(uiState as dynamic);
+
+          // For human handover waiting state, emit initiate-handover socket event
+          // matching the web widget's payload format
+          if (uiState is HumanHandoverUIState &&
+              (uiState as HumanHandoverUIState).state == HandoverState.waitingForAgent) {
+            _emitInitiateHandover(nodeData);
+          }
 
           // Track bot message
           if (text != null) {
@@ -529,6 +553,14 @@ class NodeFlowEngine extends ChangeNotifier {
     // Track user message
     final responseText = response is String ? response : response.toString();
     _analytics.trackMessage(sender: 'user', text: responseText);
+
+    // Push user response to record (matching web widget format)
+    _chatState.pushToRecord(RecordEntry(
+      id: nodeId,
+      shape: 'user-input-response',
+      type: nodeData['type']?.toString(),
+      text: responseText,
+    ));
 
     // Track node exit with user input
     String? selectedOption;
@@ -947,6 +979,62 @@ class NodeFlowEngine extends ChangeNotifier {
     _chatState.reset();
 
     notifyListeners();
+  }
+
+  /// Emit initiate-handover socket event matching web widget payload format.
+  /// Called when handover handler returns waitingForAgent UI state.
+  void _emitInitiateHandover(Map<String, dynamic> nodeData) {
+    final chatSessionId = _chatState.chatSessionId;
+    final botId = _chatState.botId ?? '';
+    final workspaceId = _chatState.workspaceId ?? '';
+    final botName = _chatState.getVariable('_botName')?.toString() ?? '';
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    // Build chatMetaData matching web widget format exactly
+    final chatMetaData = {
+      'version': 'v2',
+      'workspaceId': workspaceId,
+      'chatSessionId': chatSessionId,
+      'botId': botId,
+      'botName': botName,
+      'chatDate': now,
+      'deviceInfo': 'Flutter/${_chatState.buildResponseData()['deviceInfo'] ?? 'unknown'}',
+      'location': DateTime.now().timeZoneName,
+      'record': _chatState.getRecordForServer(),
+      'answerVariables': _chatState.getAnswerVariablesMap(),
+      'transcript': _chatState.getTranscriptForGPT(),
+    };
+
+    // Build visitor metaData
+    final metaData = {
+      'visitorId': chatSessionId ?? '',
+      'chatDate': now,
+      'deviceInfo': chatMetaData['deviceInfo'],
+      'location': chatMetaData['location'],
+    };
+
+    // Extract handover config from nodeData
+    final maxWaitTime = nodeData['maxWaitTime'] is num
+        ? (nodeData['maxWaitTime'] as num).toInt()
+        : 2;
+
+    final payload = {
+      'workspaceId': workspaceId,
+      'chatbotId': botId,
+      'chatbotName': botName,
+      'chatSessionId': chatSessionId,
+      'chatMetaData': chatMetaData,
+      'metaData': metaData,
+      'priority': nodeData['priority']?.toString() ?? 'normal',
+      'maxWaitTime': maxWaitTime,
+      'assignmentType': nodeData['assignmentType']?.toString() ?? 'auto',
+      'assignmentStrategy': nodeData['agentAssignmentStrategy']?.toString() ?? '',
+      'assignedAgents': nodeData['assignedAgents'] ?? [],
+      'assignedAIAgents': nodeData['assignedAIAgents'] ?? [],
+    };
+
+    _socketClient.emit(SocketEvents.initiateHandover, payload);
+    flowLogger.debug('Emitted initiate-handover to server');
   }
 
   /// Clean up resources
