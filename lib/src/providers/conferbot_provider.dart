@@ -101,6 +101,10 @@ class ConferBotProvider with ChangeNotifier {
   bool _sessionRestored = false;
   bool _isPersistenceReady = false;
 
+  // Live chat state
+  bool _isLiveChatMode = false;
+  bool _agentTyping = false;
+
   // Chatbot flow data
   List<Map<String, dynamic>> _steps = [];
   List<Map<String, dynamic>> _edges = [];
@@ -170,6 +174,12 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Build a ConferBotTheme from server customizations
   ConferBotTheme get serverTheme => _buildServerTheme();
+
+  /// Whether the conversation is in live chat mode (agent connected)
+  bool get isLiveChatMode => _isLiveChatMode;
+
+  /// Whether the connected agent is currently typing
+  bool get agentTyping => _agentTyping;
 
   /// Whether a previous session was restored from persistence
   bool get sessionRestored => _sessionRestored;
@@ -410,18 +420,80 @@ class ConferBotProvider with ChangeNotifier {
     });
 
     // Agent message
+    // Server sends: { message, agentDetails, isFileInput, isAudioInput, agentMessageId }
     _socketClient.on(SocketEvents.agentMessage, (data) {
       if (data != null && data is Map<String, dynamic>) {
-        final message = RecordItem.fromJson(data);
-        _addMessageToRecord(message);
+        final agentDetailsRaw = data['agentDetails'] as Map<String, dynamic>?;
+        // Strip HTML tags from agent messages (admin sends via rich text editor with <p> tags)
+        final rawMessageText = data['message']?.toString() ?? '';
+        final messageText = rawMessageText
+            .replaceAll(RegExp(r'<[^>]+>'), '')
+            .replaceAll('&nbsp;', ' ')
+            .replaceAll('&amp;', '&')
+            .trim();
+        final isFileInput = data['isFileInput'] as bool? ?? false;
+        final isAudioInput = data['isAudioInput'] as bool? ?? false;
+        final agentMessageId = data['agentMessageId']?.toString()
+            ?? 'agent_msg_${DateTime.now().millisecondsSinceEpoch}';
 
-        // Track agent message in analytics
-        if (message is AgentMessageRecord) {
-          _analyticsProvider?.trackMessage(
-            sender: 'agent',
-            text: message.text,
+        final agentDetails = agentDetailsRaw != null
+            ? AgentDetails.fromJson(agentDetailsRaw)
+            : AgentDetails(
+                id: _currentAgent?.id ?? '',
+                name: _currentAgent?.name ?? 'Agent',
+                email: _currentAgent?.email ?? '',
+              );
+
+        RecordItem message;
+        if (isFileInput) {
+          message = AgentMessageFileRecord(
+            id: agentMessageId,
+            time: DateTime.now(),
+            file: messageText,
+            agentDetails: agentDetails,
+          );
+        } else if (isAudioInput) {
+          message = AgentMessageAudioRecord(
+            id: agentMessageId,
+            time: DateTime.now(),
+            url: messageText,
+            agentDetails: agentDetails,
+          );
+        } else {
+          message = AgentMessageRecord(
+            id: agentMessageId,
+            time: DateTime.now(),
+            text: messageText,
+            agentDetails: agentDetails,
           );
         }
+
+        _addMessageToRecord(message);
+
+        // Add to record in ChatState
+        ChatState.instance.pushToRecord(RecordEntry(
+          id: agentMessageId,
+          shape: 'agent-message',
+          type: 'agent-message',
+          text: messageText,
+          data: {
+            'agentDetails': agentDetailsRaw ?? agentDetails.toJson(),
+            if (isFileInput) 'isFileInput': true,
+            if (isAudioInput) 'isAudioInput': true,
+          },
+        ));
+
+        // Add to transcript
+        ChatState.instance.addToTranscript('agent', messageText);
+
+        // Clear agent typing indicator
+        _agentTyping = false;
+
+        // Track agent message in analytics
+        _analyticsProvider?.trackMessage(
+          sender: 'agent',
+          text: messageText,
+        );
 
         notifyListeners();
       }
@@ -432,13 +504,42 @@ class ConferBotProvider with ChangeNotifier {
       if (data != null && data is Map<String, dynamic>) {
         final agentDetails = data['agentDetails'] as Map<String, dynamic>?;
         if (agentDetails != null) {
+          final agentName = agentDetails['name']?.toString() ?? 'Agent';
           _currentAgent = Agent(
-            id: agentDetails['_id'] as String,
-            name: agentDetails['name'] as String,
+            id: agentDetails['_id']?.toString() ?? '',
+            name: agentName,
             email: agentDetails['email'] as String?,
           );
+
+          // Set live chat mode
+          _isLiveChatMode = true;
+          ChatState.instance.setLiveChatMode(true);
+
+          // Add system message "{agent name} has joined the chat"
+          final joinMessageId = 'agent_joined_${DateTime.now().millisecondsSinceEpoch}';
+          final systemMessage = SystemMessageRecord(
+            id: joinMessageId,
+            time: DateTime.now(),
+            text: '$agentName has joined the chat',
+          );
+          _addMessageToRecord(systemMessage);
+
+          // Add to ChatState record
+          ChatState.instance.pushToRecord(RecordEntry(
+            id: joinMessageId,
+            shape: 'agent-joined-message',
+            type: 'agent-joined-message',
+            data: {
+              'name': agentName,
+              'agentDetails': agentDetails,
+            },
+          ));
+
+          // Add to transcript
+          ChatState.instance.addToTranscript('bot', '$agentName has joined the chat');
+
           // Notify flow engine of agent acceptance
-          _flowEngine.handleAgentAccepted(_currentAgent!.name);
+          _flowEngine.handleAgentAccepted(agentName);
           notifyListeners();
         }
       }
@@ -446,21 +547,95 @@ class ConferBotProvider with ChangeNotifier {
 
     // No agents available
     _socketClient.on(SocketEvents.noAgentsAvailable, (_) {
+      // Add system message
+      final msgId = 'no_agents_${DateTime.now().millisecondsSinceEpoch}';
+      final systemMessage = SystemMessageRecord(
+        id: msgId,
+        time: DateTime.now(),
+        text: 'No agents are available at the moment. Please try again later.',
+      );
+      _addMessageToRecord(systemMessage);
+
+      // Add to ChatState record
+      ChatState.instance.pushToRecord(RecordEntry(
+        id: msgId,
+        shape: 'system-message',
+        type: 'no-agents-available',
+        text: 'No agents are available at the moment. Please try again later.',
+      ));
+
       _flowEngine.handleNoAgentsAvailable();
       notifyListeners();
     });
 
     // Agent left
-    _socketClient.on(SocketEvents.agentLeft, (_) {
+    _socketClient.on(SocketEvents.agentLeft, (data) {
+      final agentName = _currentAgent?.name ?? 'Agent';
+
+      // Add system message "{agent name} has left the chat"
+      final msgId = 'agent_left_${DateTime.now().millisecondsSinceEpoch}';
+      final systemMessage = SystemMessageRecord(
+        id: msgId,
+        time: DateTime.now(),
+        text: '$agentName has left the chat',
+      );
+      _addMessageToRecord(systemMessage);
+
+      // Add to ChatState record
+      ChatState.instance.pushToRecord(RecordEntry(
+        id: msgId,
+        shape: 'agent-left-chat',
+        type: 'agent-left-chat',
+        text: '$agentName has left the chat',
+      ));
+
+      // Add to transcript
+      ChatState.instance.addToTranscript('bot', '$agentName has left the chat');
+
       _currentAgent = null;
+      _agentTyping = false;
       notifyListeners();
     });
 
     // Chat ended
     _socketClient.on(SocketEvents.chatEnded, (_) {
+      // Add system message "Chat has ended"
+      final msgId = 'chat_ended_${DateTime.now().millisecondsSinceEpoch}';
+      final systemMessage = SystemMessageRecord(
+        id: msgId,
+        time: DateTime.now(),
+        text: 'Chat has ended',
+      );
+      _addMessageToRecord(systemMessage);
+
+      // Add to ChatState record
+      ChatState.instance.pushToRecord(RecordEntry(
+        id: msgId,
+        shape: 'system-message',
+        type: 'chat-ended',
+        text: 'Chat has ended',
+      ));
+
+      // Add to transcript
+      ChatState.instance.addToTranscript('bot', 'Chat has ended');
+
+      // Clear agent state and live chat mode
       _currentAgent = null;
+      _isLiveChatMode = false;
+      _agentTyping = false;
+      ChatState.instance.setLiveChatMode(false);
+
       _flowEngine.handleChatEnded();
       notifyListeners();
+    });
+
+    // Agent typing status
+    _socketClient.on(SocketEvents.agentTypingStatus, (data) {
+      if (data != null && data is Map<String, dynamic>) {
+        _agentTyping = data['isTyping'] as bool? ?? false;
+        ChatState.instance.setAgentTyping(_agentTyping);
+        notifyListeners();
+      }
     });
   }
 
@@ -792,9 +967,17 @@ class ConferBotProvider with ChangeNotifier {
     _flowEngine.submitResponse(response);
   }
 
-  /// Send text message (legacy fallback for simple text input)
+  /// Send text message
+  /// In live chat mode, sends as a visitor live message to the agent.
+  /// Otherwise, submits as a flow response or direct socket message.
   Future<void> sendMessage(String text) async {
     if (_chatSessionId == null || text.trim().isEmpty) {
+      return;
+    }
+
+    // Live chat mode: send as visitor message to agent
+    if (_isLiveChatMode) {
+      await _sendLiveChatMessage(text);
       return;
     }
 
@@ -818,6 +1001,59 @@ class ConferBotProvider with ChangeNotifier {
       chatSessionId: _chatSessionId!,
       record: _record.map((r) => r.toJson()).toList(),
       answerVariables: [],
+    );
+  }
+
+  /// Send a message during live chat (agent handover) mode
+  Future<void> _sendLiveChatMessage(String text) async {
+    final msgId = 'user_live_${DateTime.now().millisecondsSinceEpoch}';
+
+    // Add user message to display record
+    final userMessage = UserMessageRecord(
+      id: msgId,
+      time: DateTime.now(),
+      text: text,
+    );
+    _addMessageToRecord(userMessage);
+
+    // Push to ChatState record with user-live-message shape
+    ChatState.instance.pushToRecord(RecordEntry(
+      id: msgId,
+      shape: 'user-live-message',
+      type: 'user-live-message',
+      text: text,
+    ));
+
+    // Add to transcript
+    ChatState.instance.addToTranscript('user', text);
+
+    // Track in analytics
+    _analyticsProvider?.trackMessage(
+      sender: 'user',
+      text: text,
+    );
+
+    // Send via response-record socket event with full state
+    _socketClient.sendResponseRecord(
+      chatSessionId: _chatSessionId!,
+      record: ChatState.instance.buildResponseData(),
+      answerVariables: ChatState.instance.answerVariables
+          .map((v) => v.toJson())
+          .toList(),
+    );
+
+    // Stop visitor typing indicator
+    sendTypingStatus(false);
+
+    notifyListeners();
+  }
+
+  /// Send visitor typing status during live chat
+  void sendLiveChatTyping(bool isTyping) {
+    if (_chatSessionId == null || !_isLiveChatMode) return;
+    _socketClient.sendTypingStatus(
+      chatSessionId: _chatSessionId!,
+      isTyping: isTyping,
     );
   }
 
@@ -1018,6 +1254,8 @@ class ConferBotProvider with ChangeNotifier {
     _record.clear();
     _chatSessionId = null;
     _currentAgent = null;
+    _isLiveChatMode = false;
+    _agentTyping = false;
     _sessionRestored = false;
     _paginationController?.reset();
 
