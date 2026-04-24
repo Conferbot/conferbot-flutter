@@ -300,3 +300,6 @@ final voiceLogger = ConferBotLogger.scoped('Voice');
 
 /// Logger for error handling
 final errorLogger = ConferBotLogger.scoped('Error');
+
+/// Logger for display node handlers
+final displayLogger = ConferBotLogger.scoped('Display');
