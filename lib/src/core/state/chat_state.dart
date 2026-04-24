@@ -304,6 +304,16 @@ class ChatState extends ChangeNotifier {
   String? _currentNodeId;
   String? get currentNodeId => _currentNodeId;
 
+  // ========== Live Chat (Agent Handover) State ==========
+
+  /// Whether the conversation is currently in live chat mode (agent connected)
+  bool _isLiveChatMode = false;
+  bool get isLiveChatMode => _isLiveChatMode;
+
+  /// Whether the agent is currently typing
+  bool _agentTyping = false;
+  bool get agentTyping => _agentTyping;
+
   // ========== Session Persistence State ==========
 
   /// Whether persistence is enabled
@@ -598,6 +608,21 @@ class ChatState extends ChangeNotifier {
     }
   }
 
+  // ========== Live Chat State Methods ==========
+
+  /// Set live chat mode (agent handover active)
+  void setLiveChatMode(bool value) {
+    _isLiveChatMode = value;
+    notifyListeners();
+    _schedulePersist();
+  }
+
+  /// Set agent typing status
+  void setAgentTyping(bool value) {
+    _agentTyping = value;
+    notifyListeners();
+  }
+
   // ========== Initialization ==========
 
   /// Initialize chat state with session info
@@ -797,25 +822,42 @@ class ChatState extends ChangeNotifier {
     return _variables[name];
   }
 
-  /// Resolve a value that might be a variable reference
-  /// Format: {{variableName}} or ${variableName}
+  /// Resolve a value that might contain variable references
+  /// Supports three formats (matching web widget regex /\$?\{(\w+)\}/g):
+  /// 1. {{variableName}} — legacy double-brace
+  /// 2. ${variableName} — web widget standard
+  /// 3. {variableName}  — web widget legacy single-brace
+  ///
+  /// Resolution order: answer variables -> temp variables -> user metadata
   dynamic resolveValue(String value) {
-    // Check if it's a variable reference
-    final variablePattern = RegExp(r'\{\{(.+?)\}\}|\$\{(.+?)\}');
-    final match = variablePattern.firstMatch(value);
+    // Pattern matches all three formats:
+    //   {{var}} — group(1) captures via double-brace
+    //   ${var}  — group(2) captures via dollar-brace
+    //   {var}   — group(3) captures via single-brace (must not start with $)
+    final variablePattern = RegExp(r'\{\{(\w+?)\}\}|\$\{(\w+?)\}|\{(\w+?)\}');
 
-    if (match != null) {
-      final varName = match.group(1)?.isNotEmpty == true
-          ? match.group(1)!
-          : match.group(2)!;
-      // First check answer variables
+    // Replace all occurrences in the string
+    final resolved = value.replaceAllMapped(variablePattern, (match) {
+      final varName = match.group(1) ?? match.group(2) ?? match.group(3) ?? '';
+      if (varName.isEmpty) return match.group(0)!;
+
+      // 1. Check answer variables first
       final answerValue = getAnswerVariableValue(varName);
-      if (answerValue != null) return answerValue;
-      // Then check temp variables
-      return getVariable(varName) ?? value;
-    }
+      if (answerValue != null) return answerValue.toString();
 
-    return value;
+      // 2. Then check temp variables
+      final tempValue = getVariable(varName);
+      if (tempValue != null) return tempValue.toString();
+
+      // 3. Then check user metadata
+      final metaValue = getUserMetadata(varName);
+      if (metaValue != null) return metaValue;
+
+      // No resolution found — keep original placeholder
+      return match.group(0)!;
+    });
+
+    return resolved;
   }
 
   // ========== User Metadata ==========
@@ -1110,6 +1152,8 @@ class ChatState extends ChangeNotifier {
     _workspaceId = null;
     _sessionRestored = false;
     _lastActivityAt = null;
+    _isLiveChatMode = false;
+    _agentTyping = false;
     _paginationController?.reset();
 
     notifyListeners();
