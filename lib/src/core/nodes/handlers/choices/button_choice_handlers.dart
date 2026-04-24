@@ -77,6 +77,7 @@ class TwoChoicesNodeHandler extends BaseNodeHandler {
     final cleanText = stripHtml(choiceText);
 
     state?.setAnswerVariable(nodeId, cleanText);
+    state?.setVariable('_lastUserChoice', cleanText);
     state?.addToTranscript('user', cleanText);
 
     recordResponse(
@@ -166,6 +167,7 @@ class ThreeChoicesNodeHandler extends BaseNodeHandler {
     final cleanText = stripHtml(choiceText);
 
     state?.setAnswerVariable(nodeId, cleanText);
+    state?.setVariable('_lastUserChoice', cleanText);
     state?.addToTranscript('user', cleanText);
 
     recordResponse(
@@ -241,6 +243,7 @@ class NChoicesNodeHandler extends BaseNodeHandler {
     final cleanText = stripHtml(choiceText);
 
     state?.setAnswerVariable(nodeId, cleanText);
+    state?.setVariable('_lastUserChoice', cleanText);
     state?.addToTranscript('user', cleanText);
 
     recordResponse(
@@ -313,6 +316,7 @@ class YesOrNoChoiceNodeHandler extends BaseNodeHandler {
     final label = responseMap['text']?.toString() ?? optionId;
 
     state?.setAnswerVariable(nodeId, label);
+    state?.setVariable('_lastUserChoice', label);
     state?.addToTranscript('user', label);
 
     recordResponse(
