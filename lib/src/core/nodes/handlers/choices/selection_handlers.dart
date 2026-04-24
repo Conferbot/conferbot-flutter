@@ -68,6 +68,7 @@ class SelectOptionNodeHandler extends BaseNodeHandler {
     final cleanText = stripHtml(optionText);
 
     state?.setAnswerVariable(nodeId, cleanText);
+    state?.setVariable('_lastUserChoice', cleanText);
     state?.addToTranscript('user', cleanText);
 
     recordResponse(
@@ -77,7 +78,9 @@ class SelectOptionNodeHandler extends BaseNodeHandler {
       type: nodeType,
     );
 
-    return const DelayedProceed(delayMs: 600);
+    // Use __targetPort from response for port-based edge resolution
+    final targetPort = responseMap['__targetPort']?.toString();
+    return DelayedProceed(delayMs: 600, targetPort: targetPort);
   }
 }
 
@@ -129,6 +132,7 @@ class NSelectOptionNodeHandler extends BaseNodeHandler {
     final cleanText = stripHtml(optionText);
 
     state?.setAnswerVariable(nodeId, cleanText);
+    state?.setVariable('_lastUserChoice', cleanText);
     state?.addToTranscript('user', cleanText);
 
     recordResponse(
@@ -138,7 +142,9 @@ class NSelectOptionNodeHandler extends BaseNodeHandler {
       type: nodeType,
     );
 
-    return const DelayedProceed(delayMs: 600);
+    // Use __targetPort from response for port-based edge resolution
+    final targetPort = responseMap['__targetPort']?.toString();
+    return DelayedProceed(delayMs: 600, targetPort: targetPort);
   }
 }
 
@@ -179,9 +185,20 @@ class NCheckOptionsNodeHandler extends BaseNodeHandler {
     Map<String, dynamic> nodeData,
     String nodeId,
   ) async {
-    // Response should be list of selected options
+    // Response should be list of selected options or a map with selections
     List<String> selectedOptions;
-    if (response is List) {
+    String? targetPort;
+
+    if (response is Map) {
+      final responseMap = Map<String, dynamic>.from(response);
+      targetPort = responseMap['__targetPort']?.toString();
+      final selections = responseMap['selections'];
+      if (selections is List) {
+        selectedOptions = selections.whereType<String>().toList();
+      } else {
+        selectedOptions = [responseMap['text']?.toString() ?? response.toString()];
+      }
+    } else if (response is List) {
       selectedOptions = response.whereType<String>().toList();
     } else if (response is String) {
       selectedOptions = response.split(',').map((s) => s.trim()).toList();
@@ -192,6 +209,7 @@ class NCheckOptionsNodeHandler extends BaseNodeHandler {
     final combinedText = selectedOptions.join(', ');
 
     state?.setAnswerVariable(nodeId, combinedText);
+    state?.setVariable('_lastUserChoice', combinedText);
     state?.addToTranscript('user', combinedText);
 
     recordResponse(
@@ -202,7 +220,8 @@ class NCheckOptionsNodeHandler extends BaseNodeHandler {
       additionalData: {'selectedOptions': selectedOptions},
     );
 
-    return const Proceed();
+    // Use __targetPort from response for port-based edge resolution
+    return Proceed(targetPort: targetPort);
   }
 }
 
@@ -256,6 +275,7 @@ class ImageChoiceNodeHandler extends BaseNodeHandler {
     final label = responseMap['label']?.toString() ?? '';
 
     state?.setAnswerVariable(nodeId, label);
+    state?.setVariable('_lastUserChoice', label);
     state?.addToTranscript('user', label);
 
     recordResponse(
