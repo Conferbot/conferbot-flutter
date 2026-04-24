@@ -12,6 +12,7 @@
 library;
 
 import '../node_types.dart';
+import '../../../utils/logger.dart';
 import 'legacy_handlers.dart';
 
 // ============================================================================
@@ -179,21 +180,42 @@ class MessageNodeHandler extends BaseNodeHandler {
     final rawMessage = getString(nodeData, 'message', rawText);
     final message = stripHtml(rawMessage);
 
+    // Resolve any variable references in the message text
+    final resolvedMessage = state?.resolveValue(message)?.toString() ?? message;
+
+    // Skip message-nodes that just echo the user's last choice selection
+    final lastChoice = state?.getVariable('_lastUserChoice');
+    displayLogger.debug(
+      '[MessageNode] lastChoice="$lastChoice", resolvedMessage="$resolvedMessage"',
+    );
+    if (lastChoice != null &&
+        resolvedMessage.trim() == lastChoice.toString().trim()) {
+      displayLogger.debug('[MessageNode] Skipping echo of user choice');
+      state?.setVariable('_lastUserChoice', null);
+      return const Proceed(); // Skip — no transcript, no record, no display
+    }
+
+    // Clear the last choice marker since this message is different
+    if (lastChoice != null) {
+      displayLogger.debug('[MessageNode] Clearing _lastUserChoice (message differs)');
+      state?.setVariable('_lastUserChoice', null);
+    }
+
     // Add to transcript
-    state?.addToTranscript('bot', message);
+    state?.addToTranscript('bot', resolvedMessage);
 
     // Record the message
     recordResponse(
       nodeId: nodeId,
       shape: 'bot-message',
-      text: message,
+      text: resolvedMessage,
       type: nodeType,
     );
 
     // Return UI state for display
     return DisplayUI(
       MessageState(
-        text: message,
+        text: resolvedMessage,
         nodeId: nodeId,
       ),
     );
