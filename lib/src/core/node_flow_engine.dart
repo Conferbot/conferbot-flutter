@@ -550,8 +550,17 @@ class NodeFlowEngine extends ChangeNotifier {
       return;
     }
 
-    // Track user message
-    final responseText = response is String ? response : response.toString();
+    // Track user message — extract display text from response
+    final String responseText;
+    if (response is String) {
+      responseText = response;
+    } else if (response is Map) {
+      responseText = response['text']?.toString() ??
+          response['label']?.toString() ??
+          response.toString();
+    } else {
+      responseText = response.toString();
+    }
     _analytics.trackMessage(sender: 'user', text: responseText);
 
     // Push user response to record (matching web widget format)
