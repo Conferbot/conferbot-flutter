@@ -405,6 +405,13 @@ class NodeFlowEngine extends ChangeNotifier {
           // matching the web widget's payload format
           if (uiState is HumanHandoverUIState &&
               (uiState as HumanHandoverUIState).state == HandoverState.waitingForAgent) {
+            // Send response-record before handover so the server has the
+            // Response document when creating the ticket/notification
+            _sendResponseToServer();
+            // Re-join room to ensure socket is in the correct room
+            if (_chatState.chatSessionId != null) {
+              _socketClient.joinChatRoomVisitor(_chatState.chatSessionId!);
+            }
             _emitInitiateHandover(nodeData);
           }
 
