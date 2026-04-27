@@ -76,6 +76,7 @@ export 'src/widgets/message_list.dart';
 export 'src/widgets/chat_widget.dart';
 export 'src/widgets/error_widget.dart';
 export 'src/widgets/offline_indicator.dart';
+export 'src/widgets/conferbot_fab.dart';
 
 // Voice Message Widgets
 export 'src/widgets/voice_message/voice_message.dart';
