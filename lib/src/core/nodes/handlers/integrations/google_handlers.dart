@@ -7,20 +7,31 @@
 /// - Google Meet (create video meetings)
 /// - Google Drive (upload/download files)
 /// - Google Docs (create/update documents)
+///
+/// All handlers emit 'execute-integration' to the server via socket,
+/// matching the web widget / Android SDK protocol.
 library;
 
 import '../../node_types.dart';
 import '../legacy_handlers.dart';
+import 'integration_base.dart';
 
 /// Handler for google-sheets-node
 /// Reads/writes to Google Sheets
-class GoogleSheetsNodeHandler extends BaseNodeHandler {
+class GoogleSheetsNodeHandler extends IntegrationNodeHandler {
   @override
   String get nodeType => NodeTypes.googleSheets;
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
     final operation = getString(nodeData, 'operation', 'write');
+
+    // Emit execute-integration to server and wait for result
+    // (read operations return data that may be used by subsequent nodes)
+    await emitExecuteIntegration(
+      nodeData: nodeData,
+      nodeId: nodeId,
+    );
 
     recordResponse(
       nodeId: nodeId,
@@ -33,19 +44,24 @@ class GoogleSheetsNodeHandler extends BaseNodeHandler {
       },
     );
 
-    // For read operations, column mappings should be handled via socket response
     return const Proceed();
   }
 }
 
 /// Handler for gmail-node
 /// Sends email via Gmail
-class GmailNodeHandler extends BaseNodeHandler {
+class GmailNodeHandler extends IntegrationNodeHandler {
   @override
   String get nodeType => NodeTypes.gmail;
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
+    await emitExecuteIntegration(
+      nodeData: nodeData,
+      nodeId: nodeId,
+      waitForResult: false,
+    );
+
     recordResponse(
       nodeId: nodeId,
       shape: 'gmail-triggered',
@@ -62,7 +78,7 @@ class GmailNodeHandler extends BaseNodeHandler {
 
 /// Handler for google-calendar-node
 /// Books calendar appointments
-class GoogleCalendarNodeHandler extends BaseNodeHandler {
+class GoogleCalendarNodeHandler extends IntegrationNodeHandler {
   @override
   String get nodeType => NodeTypes.googleCalendar;
 
@@ -75,7 +91,7 @@ class GoogleCalendarNodeHandler extends BaseNodeHandler {
       final timezone = getString(nodeData, 'timeZone', DateTime.now().timeZoneName);
       final answerKey = getString(nodeData, 'answerVariable', 'calendar_booking');
 
-      state?.addAnswerVariable(nodeId, answerKey);
+      state.addAnswerVariable(nodeId, answerKey);
 
       return DisplayUI(
         CalendarState(
@@ -105,8 +121,19 @@ class GoogleCalendarNodeHandler extends BaseNodeHandler {
     final time = responseMap['time']?.toString() ?? '';
     final email = responseMap['email']?.toString();
 
-    state?.setAnswerVariable(nodeId, '$date $time');
-    state?.addToTranscript('user', 'Booked: $date at $time');
+    state.setAnswerVariable(nodeId, '$date $time');
+    state.addToTranscript('user', 'Booked: $date at $time');
+
+    // Emit execute-integration to server with the booking details
+    await emitExecuteIntegration(
+      nodeData: {
+        ...nodeData,
+        'date': date,
+        'time': time,
+        'attendeeEmail': email,
+      },
+      nodeId: nodeId,
+    );
 
     recordResponse(
       nodeId: nodeId,
@@ -127,7 +154,7 @@ class GoogleCalendarNodeHandler extends BaseNodeHandler {
 
 /// Handler for google-meet-node
 /// Creates Google Meet meetings
-class GoogleMeetNodeHandler extends BaseNodeHandler {
+class GoogleMeetNodeHandler extends IntegrationNodeHandler {
   @override
   String get nodeType => NodeTypes.googleMeet;
 
@@ -139,7 +166,7 @@ class GoogleMeetNodeHandler extends BaseNodeHandler {
       final timezone = getString(nodeData, 'timeZone', DateTime.now().timeZoneName);
       final answerKey = getString(nodeData, 'answerVariable', 'meet_booking');
 
-      state?.addAnswerVariable(nodeId, answerKey);
+      state.addAnswerVariable(nodeId, answerKey);
 
       return DisplayUI(
         CalendarState(
@@ -165,6 +192,15 @@ class GoogleMeetNodeHandler extends BaseNodeHandler {
         ? response
         : {'date': response.toString()};
 
+    // Emit execute-integration to server with the meeting details
+    await emitExecuteIntegration(
+      nodeData: {
+        ...nodeData,
+        ...Map<String, dynamic>.from(responseMap),
+      },
+      nodeId: nodeId,
+    );
+
     recordResponse(
       nodeId: nodeId,
       shape: 'google-meet-booking',
@@ -178,13 +214,18 @@ class GoogleMeetNodeHandler extends BaseNodeHandler {
 
 /// Handler for google-drive-node
 /// Uploads/downloads from Google Drive
-class GoogleDriveNodeHandler extends BaseNodeHandler {
+class GoogleDriveNodeHandler extends IntegrationNodeHandler {
   @override
   String get nodeType => NodeTypes.googleDrive;
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
     final operation = getString(nodeData, 'operation', 'upload');
+
+    await emitExecuteIntegration(
+      nodeData: nodeData,
+      nodeId: nodeId,
+    );
 
     recordResponse(
       nodeId: nodeId,
@@ -199,13 +240,18 @@ class GoogleDriveNodeHandler extends BaseNodeHandler {
 
 /// Handler for google-docs-node
 /// Creates/updates Google Docs
-class GoogleDocsNodeHandler extends BaseNodeHandler {
+class GoogleDocsNodeHandler extends IntegrationNodeHandler {
   @override
   String get nodeType => NodeTypes.googleDocs;
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
     final operation = getString(nodeData, 'operation', 'create');
+
+    await emitExecuteIntegration(
+      nodeData: nodeData,
+      nodeId: nodeId,
+    );
 
     recordResponse(
       nodeId: nodeId,
