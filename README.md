@@ -124,7 +124,36 @@ class HomeScreen extends StatelessWidget {
 }
 ```
 
-### 2. Headless SDK (Custom UI)
+### 2. Floating Widget (FAB)
+
+A floating action button that overlays on your app. Tapping opens the chat in a modal bottom sheet. Reads server customizations automatically (color, icon, CTA text, position).
+
+```dart
+import 'package:conferbot_flutter/conferbot_flutter.dart';
+import 'package:provider/provider.dart';
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: ChangeNotifierProvider(
+        create: (_) => ConferBotProvider(
+          apiKey: 'YOUR_API_KEY',
+          botId: 'YOUR_BOT_ID',
+        ),
+        child: ConferBotFAB(
+          child: Scaffold(
+            appBar: AppBar(title: Text('My App')),
+            body: Center(child: Text('Your app content')),
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+### 3. Headless SDK (Custom UI)
 
 Use `ConferBotProvider` directly to build your own chat interface:
 
