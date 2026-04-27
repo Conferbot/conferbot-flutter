@@ -5,6 +5,9 @@
 /// - Airtable (database CRUD operations)
 /// - Notion (page/database management)
 /// - Stripe (payment processing)
+///
+/// All handlers emit 'execute-integration' to the server via socket,
+/// matching the web widget / Android SDK protocol.
 library;
 
 import 'dart:async';
@@ -14,16 +17,22 @@ import '../../node_ui_state.dart';
 import '../legacy_handlers.dart';
 import '../../../../models/socket_events.dart';
 import '../../../../services/socket_client.dart';
+import 'integration_base.dart';
 
 /// Handler for zapier-node
 /// Triggers Zapier webhook (fire-and-forget)
-class ZapierNodeHandler extends BaseNodeHandler {
+class ZapierNodeHandler extends IntegrationNodeHandler {
   @override
   String get nodeType => NodeTypes.zapier;
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    // Zapier trigger is handled server-side
+    await emitExecuteIntegration(
+      nodeData: nodeData,
+      nodeId: nodeId,
+      waitForResult: false,
+    );
+
     recordResponse(
       nodeId: nodeId,
       shape: 'zapier-triggered',
@@ -36,13 +45,18 @@ class ZapierNodeHandler extends BaseNodeHandler {
 
 /// Handler for airtable-node
 /// CRUD operations on Airtable
-class AirtableNodeHandler extends BaseNodeHandler {
+class AirtableNodeHandler extends IntegrationNodeHandler {
   @override
   String get nodeType => NodeTypes.airtable;
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
     final operation = getString(nodeData, 'operation', 'create');
+
+    await emitExecuteIntegration(
+      nodeData: nodeData,
+      nodeId: nodeId,
+    );
 
     recordResponse(
       nodeId: nodeId,
@@ -61,13 +75,18 @@ class AirtableNodeHandler extends BaseNodeHandler {
 
 /// Handler for notion-node
 /// Creates/updates Notion pages
-class NotionNodeHandler extends BaseNodeHandler {
+class NotionNodeHandler extends IntegrationNodeHandler {
   @override
   String get nodeType => NodeTypes.notion;
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
     final operation = getString(nodeData, 'operation', 'createPage');
+
+    await emitExecuteIntegration(
+      nodeData: nodeData,
+      nodeId: nodeId,
+    );
 
     recordResponse(
       nodeId: nodeId,
@@ -89,9 +108,12 @@ class NotionNodeHandler extends BaseNodeHandler {
 /// Emits 'execute-integration' to the server via socket and listens for
 /// 'integration-result' containing the Stripe payment URL, matching the
 /// same protocol used by the web widget.
-class StripeNodeHandler extends BaseNodeHandler {
-  /// Static socket client reference, set by NodeFlowEngine during initialization
-  static SocketClient? socketClient;
+class StripeNodeHandler extends IntegrationNodeHandler {
+  /// Static socket client reference, set by NodeFlowEngine during initialization.
+  /// Kept for backward compatibility; also delegates to IntegrationNodeHandler.socketClient.
+  static set socketClient(SocketClient? client) {
+    IntegrationNodeHandler.socketClient = client;
+  }
 
   @override
   String get nodeType => NodeTypes.stripe;
@@ -119,7 +141,7 @@ class StripeNodeHandler extends BaseNodeHandler {
 
       // Request payment URL from the server via socket
       String paymentUrl = '';
-      final socket = socketClient;
+      final socket = IntegrationNodeHandler.socketClient;
 
       if (socket != null && socket.isConnected) {
         paymentUrl = await _requestPaymentUrl(
