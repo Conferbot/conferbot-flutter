@@ -375,6 +375,12 @@ class ConferBotProvider with ChangeNotifier {
       // Update analytics online status
       _analyticsProvider?.setOnlineStatus(true);
 
+      // Re-join chat room on reconnect (socket.io drops room membership on disconnect)
+      if (_chatSessionId != null) {
+        _socketClient.joinChatRoomVisitor(_chatSessionId!);
+        _logger.debug('Rejoined chat room on reconnect: $_chatSessionId');
+      }
+
       // Request chatbot data on connection
       _socketClient.getChatbotData();
       notifyListeners();
