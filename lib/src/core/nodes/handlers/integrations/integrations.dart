@@ -8,6 +8,7 @@
 /// ```
 library;
 
+export 'integration_base.dart';
 export 'webhook_handler.dart';
 export 'gpt_handler.dart';
 export 'google_handlers.dart';
