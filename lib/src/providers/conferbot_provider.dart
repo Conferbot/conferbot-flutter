@@ -863,6 +863,11 @@ class ConferBotProvider with ChangeNotifier {
 
     // No restored session - start fresh
     if (_chatSessionId == null) {
+      // Ensure we have a persistent visitor ID before starting a new session
+      if (_visitorId == null && StorageService.instance.isInitialized) {
+        _visitorId = await StorageService.instance.getOrCreateVisitorId();
+      }
+
       // Try to initialize session via REST API
       try {
         final response = await _apiClient.initSession(userId: user?.id ?? _visitorId);
@@ -964,6 +969,29 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Submit response for current interactive node
   void submitResponse(dynamic response) {
+    // Show user's selection as a right-aligned user bubble
+    // (matches web widget's _displayUserInputMessage after choice selection)
+    String? displayText;
+    if (response is String) {
+      displayText = response;
+    } else if (response is Map) {
+      displayText = (response['label'] ?? response['text'] ?? response['value'])?.toString();
+    } else if (response is List) {
+      displayText = response.join(', ');
+    } else {
+      displayText = response?.toString();
+    }
+
+    if (displayText != null && displayText.isNotEmpty) {
+      final userMessage = UserInputResponseRecord(
+        id: 'user_choice_${DateTime.now().millisecondsSinceEpoch}',
+        time: DateTime.now(),
+        text: displayText,
+      );
+      _addMessageToRecord(userMessage);
+      notifyListeners();
+    }
+
     _flowEngine.submitResponse(response);
   }
 
