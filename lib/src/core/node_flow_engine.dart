@@ -7,7 +7,7 @@ import 'nodes/node_handler_registry.dart';
 import 'nodes/handlers/legacy_handlers.dart' show NodeHandler;
 import 'nodes/handlers/display_handlers.dart' show MessageState, ImageState, VideoState, AudioState, FileState, HtmlState;
 import 'nodes/handlers/choices/choice_ui_states.dart' show SingleChoiceState, MultipleChoiceState;
-import 'nodes/handlers/integrations/other_handlers.dart' show StripeNodeHandler;
+import 'nodes/handlers/integrations/integration_base.dart' show IntegrationNodeHandler;
 import 'state/chat_state.dart';
 import 'errors/conferbot_exceptions.dart';
 import 'errors/error_handler.dart' hide ErrorResult;
@@ -42,8 +42,10 @@ class NodeFlowEngine extends ChangeNotifier {
   NodeFlowEngine({
     required SocketClient socketClient,
   }) : _socketClient = socketClient {
-    // Inject socket client into handlers that need server communication
-    StripeNodeHandler.socketClient = socketClient;
+    // Inject socket client into all integration handlers that need server communication
+    IntegrationNodeHandler.socketClient = socketClient;
+    // StripeNodeHandler.socketClient setter delegates to IntegrationNodeHandler
+    // for backward compatibility
   }
 
   // ========== State Fields ==========
