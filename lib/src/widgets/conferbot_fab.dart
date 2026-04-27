@@ -925,7 +925,7 @@ class _CtaTooltipState extends State<_CtaTooltip>
     );
     _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(
-      begin: const Offset(0.15, 0),
+      begin: const Offset(0, 0.3),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
 
@@ -942,9 +942,8 @@ class _CtaTooltipState extends State<_CtaTooltip>
   }
 
   Color get _foreground {
-    // Pick black or white for best contrast
-    final luminance = widget.bgColor.computeLuminance();
-    return luminance > 0.4 ? Colors.black87 : Colors.white;
+    // Always white text on CTA, matching web widget
+    return Colors.white;
   }
 
   @override
