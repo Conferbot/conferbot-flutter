@@ -7,6 +7,16 @@
 
 Native Flutter SDK for embedding Conferbot AI chatbots into iOS and Android applications.
 
+## See it in action
+
+The complete flow recorded live on an Android emulator against production: open the widget, bot loads with the flow builder's theme, name question, choice selection, and the next flow node - end to end.
+
+<p align="center">
+  <img src="docs/demo.gif" width="300" alt="Conferbot Flutter SDK - live chat demo on Android" />
+</p>
+
+<p align="center"><a href="docs/demo.mp4">HD video (MP4)</a></p>
+
 <p align="center">
   <img src="docs/screenshots/chat-widget.png" width="280" alt="Chat Widget" />
   <img src="docs/screenshots/choice-node.png" width="280" alt="Choice Node" />
