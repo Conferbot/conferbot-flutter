@@ -13,11 +13,6 @@ void main() async {
   await StorageService.init();
 
   // Configure to use local embed-server (10.0.2.2 = host localhost from Android emulator)
-  ConferBotEndpoints.configure(
-    apiBaseUrl: 'http://10.0.2.2:8001/api/v1/mobile',
-    socketUrl: 'http://10.0.2.2:8001',
-  );
-
   runApp(const MyApp());
 }
 
@@ -29,7 +24,7 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => ConferBotProvider(
         apiKey: 'test_key', // Replace with your API key
-        botId: '69e8503cf33718a92ea792fe', // Replace with your bot ID
+        botId: '691c970890527a0468f9b2c9', // Replace with your bot ID
         config: const ConferBotConfig(
           enableNotifications: true,
           enableOfflineMode: true,
