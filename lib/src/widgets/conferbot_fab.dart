@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/user.dart';
 import '../providers/conferbot_provider.dart';
 import '../theme/conferbot_theme.dart';
 import 'chat_widget.dart';
@@ -1125,8 +1126,8 @@ class _ConferBotFABState extends State<ConferBotFAB>
     final sc = _sc(p);
     final pos = _resolvePosition(p);
     final raw = pos == FabPosition.left
-        ? sc?['widgetOffsetLeft']
-        : sc?['widgetOffsetRight'];
+        ? (sc?['widgetOffsetLeft'])
+        : (sc?['widgetOffsetRight']);
     if (raw == null) return widget.config.offsetX;
     return (raw is num) ? raw.toDouble() : widget.config.offsetX;
   }
