@@ -6,7 +6,7 @@ import '../config/constants.dart';
 
 const String _conferbotUrl = 'https://www.conferbot.com';
 const String _conferbotLogoUrl =
-    'https://prd.media.cdn.conferbot.com/62829a1c49f355163dfdbfb2/conferbot-logo-1710782074234.png';
+    'https://www.conferbot.com/img/logo/conferbot-logo.png';
 
 /// Unified bottom bar: chat input + powered-by footer as one seamless block.
 ///
@@ -148,10 +148,10 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                               onChanged: (_) => setState(() {}),
                               decoration: InputDecoration(
                                 hintText:
-                                    widget.placeholder ?? 'Type your message...',
+                                    widget.placeholder ?? 'Type a message...',
                                 hintStyle: const TextStyle(
-                                  color: Color(0xFF9E9E9E),
-                                  fontSize: 15,
+                                  color: Color(0xFF4D4D4D),
+                                  fontSize: 16,
                                 ),
                                 border: InputBorder.none,
                                 isDense: true,
@@ -162,7 +162,7 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                                 counterText: '',
                               ),
                               style: const TextStyle(
-                                fontSize: 15,
+                                fontSize: 16,
                                 color: Colors.black,
                               ),
                             ),
@@ -177,8 +177,8 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                   // Themed circular send button
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    width: 38,
-                    height: 38,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: canSend
                           ? theme.colors.primary
