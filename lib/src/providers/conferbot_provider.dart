@@ -770,10 +770,27 @@ class ConferBotProvider with ChangeNotifier {
 
   // ========== Server Theme Builder ==========
 
-  /// Parse hex color string to Color, with fallback
-  static Color? _parseHexColor(String? hex) {
-    if (hex == null || hex.isEmpty) return null;
-    hex = hex.replaceFirst('#', '');
+  /// Parse a builder color value: #RGB, #RRGGBB, #RRGGBBAA, rgb(), rgba()
+  static Color? _parseHexColor(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    raw = raw.trim();
+
+    // rgb(r, g, b) / rgba(r, g, b, a) - the flow builder stores both forms
+    final rgb = RegExp(
+            r'rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)')
+        .firstMatch(raw);
+    if (rgb != null) {
+      final a = rgb.group(4) != null
+          ? ((double.tryParse(rgb.group(4)!) ?? 1.0) * 255).round().clamp(0, 255)
+          : 255;
+      return Color.fromARGB(a, int.parse(rgb.group(1)!),
+          int.parse(rgb.group(2)!), int.parse(rgb.group(3)!));
+    }
+
+    var hex = raw.replaceFirst('#', '');
+    if (hex.length == 3) {
+      hex = hex.split('').map((ch) => '$ch$ch').join();
+    }
     if (hex.length == 6) hex = 'FF$hex';
     if (hex.length != 8) return null;
     final value = int.tryParse(hex, radix: 16);
@@ -785,12 +802,22 @@ class ConferBotProvider with ChangeNotifier {
     final c = _serverCustomizations;
     if (c == null) return defaultTheme;
 
+    // Web widget contract defaults (conferbot-widget/src/index.ts): when the
+    // flow builder omits a value the widget renders #1b55f3 bubbles with
+    // white text, so a server-configured bot must fall back the same way.
+    const webBubbleDefault = Color(0xFF1B55F3);
+    const webTextDefault = Color(0xFFFFFFFF);
+
     final headerBg = _parseHexColor(c['headerBgColor']?.toString());
     final headerText = _parseHexColor(c['headerTextColor']?.toString());
-    final botBubble = _parseHexColor(c['botMsgColor']?.toString());
-    final botText = _parseHexColor(c['botTextColor']?.toString());
-    final userBubble = _parseHexColor(c['userMsgColor']?.toString());
-    final userText = _parseHexColor(c['userTextColor']?.toString());
+    final botBubble =
+        _parseHexColor(c['botMsgColor']?.toString()) ?? webBubbleDefault;
+    final botText =
+        _parseHexColor(c['botTextColor']?.toString()) ?? webTextDefault;
+    final userBubble =
+        _parseHexColor(c['userMsgColor']?.toString()) ?? webBubbleDefault;
+    final userText =
+        _parseHexColor(c['userTextColor']?.toString()) ?? webTextDefault;
     final optionBubble = _parseHexColor(c['optionBubbleMsgColor']?.toString());
     final optionText = _parseHexColor(c['optionBubbleTextColor']?.toString());
     final chatBgColor = _parseHexColor(c['chatBgColor']?.toString());
