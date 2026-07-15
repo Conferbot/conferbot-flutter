@@ -234,6 +234,10 @@ class SocketClient with ChangeNotifier {
           .setReconnectionDelay(config.reconnectionDelay)
           .setReconnectionDelayMax(config.reconnectionDelayMax)
           .setTimeout(config.connectionTimeout)
+          // The embed-server handshake requires botId in query or auth,
+          // matching the web widget (headers are not read there).
+          .setQuery({'botId': botId})
+          .setAuth({'botId': botId})
           .setExtraHeaders({
             ConferBotConstants.headerApiKey: apiKey,
             ConferBotConstants.headerBotId: botId,
