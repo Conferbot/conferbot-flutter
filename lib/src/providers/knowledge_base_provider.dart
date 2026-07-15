@@ -54,7 +54,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
         _service = KnowledgeBaseService(
           apiKey: apiKey,
           botId: botId,
-          baseUrl: baseUrl ?? 'https://embed.conferbot.com/api/v1/mobile',
+          baseUrl: baseUrl ?? 'https://wdt.conferbot.com/api/v1/mobile',
         );
 
   // Getters

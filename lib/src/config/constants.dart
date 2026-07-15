@@ -1,8 +1,8 @@
 /// Conferbot SDK constants
 class ConferBotConstants {
   // API Configuration
-  static const String defaultApiBaseUrl = 'https://embed.conferbot.com/api/v1/mobile';
-  static const String defaultSocketUrl = 'https://embed.conferbot.com';
+  static const String defaultApiBaseUrl = 'https://wdt.conferbot.com/api/v1/mobile';
+  static const String defaultSocketUrl = 'https://wdt.conferbot.com';
   static const int apiTimeout = 30000; // 30 seconds
   static const int socketTimeout = 20000; // 20 seconds
 
