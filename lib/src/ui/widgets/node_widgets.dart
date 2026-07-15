@@ -597,7 +597,7 @@ class _TextInputNodeWidgetState extends State<TextInputNodeWidget> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (widget.state.questionText.isNotEmpty) ...[
-          BotMessageBubble(text: widget.state.questionText, theme: widget.theme),
+          BotMessageBubbleWithAvatar(text: widget.state.questionText, theme: widget.theme),
           SizedBox(height: widget.theme.spacing.sm),
         ],
         TextField(
@@ -752,7 +752,7 @@ class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (widget.state.questionText.isNotEmpty) ...[
-          BotMessageBubble(text: widget.state.questionText, theme: widget.theme),
+          BotMessageBubbleWithAvatar(text: widget.state.questionText, theme: widget.theme),
           SizedBox(height: widget.theme.spacing.sm),
         ],
         InkWell(
@@ -976,7 +976,7 @@ class _MultipleChoiceNodeWidgetState extends State<MultipleChoiceNodeWidget> {
       children: [
         if (widget.state.questionText != null &&
             widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          BotMessageBubbleWithAvatar(text: widget.state.questionText!, theme: widget.theme),
           SizedBox(height: widget.theme.spacing.sm),
         ],
         ...widget.state.options.map((option) {
@@ -1095,7 +1095,7 @@ class _ImageChoiceNodeWidgetState extends State<ImageChoiceNodeWidget> {
       children: [
         if (widget.state.questionText != null &&
             widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          BotMessageBubbleWithAvatar(text: widget.state.questionText!, theme: widget.theme),
           SizedBox(height: widget.theme.spacing.sm),
         ],
         GridView.builder(
@@ -1213,7 +1213,7 @@ class _RatingNodeWidgetState extends State<RatingNodeWidget> {
       children: [
         if (widget.state.questionText != null &&
             widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          BotMessageBubbleWithAvatar(text: widget.state.questionText!, theme: widget.theme),
           SizedBox(height: widget.theme.spacing.sm),
         ],
         switch (widget.state.ratingType) {
@@ -1351,7 +1351,7 @@ class _DropdownNodeWidgetState extends State<DropdownNodeWidget> {
       children: [
         if (widget.state.questionText != null &&
             widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          BotMessageBubbleWithAvatar(text: widget.state.questionText!, theme: widget.theme),
           SizedBox(height: widget.theme.spacing.sm),
         ],
         DropdownButtonFormField<ui_state.SelectOption>(
@@ -1431,7 +1431,7 @@ class _RangeNodeWidgetState extends State<RangeNodeWidget> {
       children: [
         if (widget.state.questionText != null &&
             widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          BotMessageBubbleWithAvatar(text: widget.state.questionText!, theme: widget.theme),
           SizedBox(height: widget.theme.spacing.sm),
         ],
         Row(
@@ -1574,7 +1574,7 @@ class _CalendarNodeWidgetState extends State<CalendarNodeWidget> {
       children: [
         if (widget.state.questionText != null &&
             widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubble(text: widget.state.questionText!, theme: widget.theme),
+          BotMessageBubbleWithAvatar(text: widget.state.questionText!, theme: widget.theme),
           SizedBox(height: widget.theme.spacing.sm),
         ],
         Card(
@@ -1697,7 +1697,7 @@ class _QuizNodeWidgetState extends State<QuizNodeWidget> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (widget.state.questionText.isNotEmpty) ...[
-          BotMessageBubble(text: widget.state.questionText, theme: widget.theme),
+          BotMessageBubbleWithAvatar(text: widget.state.questionText, theme: widget.theme),
           SizedBox(height: widget.theme.spacing.sm),
         ],
         ...widget.state.options.asMap().entries.map((entry) {
