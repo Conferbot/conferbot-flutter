@@ -38,6 +38,19 @@ abstract class IntegrationNodeHandler extends BaseNodeHandler {
   /// Timeout for waiting on the server's `integration-result` response.
   static const Duration _integrationTimeout = Duration(seconds: 30);
 
+  /// Build the visitor metadata map sent as `visitorData` on
+  /// execute-integration, matching the web widget payload. Used server-side
+  /// for ${var} resolution of visitor fields.
+  Map<String, dynamic> buildVisitorData() {
+    final meta = state.userMetadata;
+    return {
+      if (meta.name != null && meta.name!.isNotEmpty) 'name': meta.name,
+      if (meta.email != null && meta.email!.isNotEmpty) 'email': meta.email,
+      if (meta.phone != null && meta.phone!.isNotEmpty) 'phone': meta.phone,
+      ...meta.metadata,
+    };
+  }
+
   /// Emit `execute-integration` to the server and optionally wait for the
   /// `integration-result` response.
   ///
@@ -46,24 +59,31 @@ abstract class IntegrationNodeHandler extends BaseNodeHandler {
   ///
   /// If [waitForResult] is `false`, the event is fired and the method returns
   /// immediately with `null` (fire-and-forget).
+  ///
+  /// [overrideNodeType] replaces the handler's [nodeType] in the payload.
+  /// Needed for google-sheets-node, which the server only accepts as
+  /// google-sheets-read-node / google-sheets-write-node.
   Future<Map<String, dynamic>?> emitExecuteIntegration({
     required Map<String, dynamic> nodeData,
     required String nodeId,
     bool waitForResult = true,
+    String? overrideNodeType,
   }) async {
     final socket = socketClient;
     if (socket == null || !socket.isConnected) return null;
 
     final payload = {
-      'nodeType': nodeType,
+      'nodeType': overrideNodeType ?? nodeType,
       'nodeId': nodeId,
       'nodeData': nodeData,
       'chatSessionId': state.chatSessionId,
       'chatbotId': state.botId,
       'workspaceId': state.workspaceId,
+      // Server expects an ARRAY of {key, value} objects for ${var} resolution
       'answerVariables': state.answerVariables
           .map((v) => v.toJson())
           .toList(),
+      'visitorData': buildVisitorData(),
     };
 
     if (!waitForResult) {
@@ -84,6 +104,7 @@ abstract class IntegrationNodeHandler extends BaseNodeHandler {
 
       if (!completer.isCompleted) {
         if (data['success'] == true) {
+          _applyResultVariables(data);
           final resultData = data['data'];
           completer.complete(
             resultData is Map<String, dynamic>
@@ -105,5 +126,28 @@ abstract class IntegrationNodeHandler extends BaseNodeHandler {
     });
 
     return completer.future;
+  }
+
+  /// Apply output variables from a successful integration-result, matching
+  /// the web widget: `answerVariable`/`answerValue` plus each entry in
+  /// `columnMappedValues` (Google Sheets reads with columnVariables) is
+  /// stored as an answer variable keyed by variable name.
+  void _applyResultVariables(Map data) {
+    final answerVariable = data['answerVariable']?.toString();
+    if (answerVariable != null &&
+        answerVariable.isNotEmpty &&
+        data.containsKey('answerValue')) {
+      state.setAnswerVariableByKey(answerVariable, data['answerValue']);
+    }
+
+    final columnMappedValues = data['columnMappedValues'];
+    if (columnMappedValues is Map) {
+      columnMappedValues.forEach((variableName, value) {
+        final name = variableName?.toString();
+        if (name != null && name.isNotEmpty && value != null) {
+          state.setAnswerVariableByKey(name, value);
+        }
+      });
+    }
   }
 }

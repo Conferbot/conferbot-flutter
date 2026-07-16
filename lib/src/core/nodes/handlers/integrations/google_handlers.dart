@@ -24,13 +24,25 @@ class GoogleSheetsNodeHandler extends IntegrationNodeHandler {
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    final operation = getString(nodeData, 'operation', 'write');
+    // Mirror widget logic: operation from nodeData.operation or
+    // nodeData.inputs.operation, defaulting to "read"
+    final inputs = getMap(nodeData, 'inputs');
+    final operation = nodeData['operation']?.toString() ??
+        inputs['operation']?.toString() ??
+        'read';
+
+    // The server dispatcher only accepts google-sheets-read-node /
+    // google-sheets-write-node; a raw "google-sheets-node" is rejected.
+    final serverNodeType = operation == 'write'
+        ? 'google-sheets-write-node'
+        : 'google-sheets-read-node';
 
     // Emit execute-integration to server and wait for result
     // (read operations return data that may be used by subsequent nodes)
     await emitExecuteIntegration(
       nodeData: nodeData,
       nodeId: nodeId,
+      overrideNodeType: serverNodeType,
     );
 
     recordResponse(
