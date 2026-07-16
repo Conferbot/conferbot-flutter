@@ -593,60 +593,15 @@ class _TextInputNodeWidgetState extends State<TextInputNodeWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // Web widget parity: text-family questions show only the bubble; the
+    // visitor answers through the unified bottom bar, which routes typed
+    // text to the active node via ConferBotProvider.sendMessage.
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (widget.state.questionText.isNotEmpty) ...[
-          BotMessageBubbleWithAvatar(text: widget.state.questionText, theme: widget.theme),
-          SizedBox(height: widget.theme.spacing.sm),
-        ],
-        TextField(
-          controller: _controller,
-          focusNode: _focusNode,
-          enabled: !_submitted,
-          keyboardType: _getKeyboardType(),
-          inputFormatters: _getInputFormatters(),
-          textInputAction: TextInputAction.done,
-          onChanged: (_) {
-            if (_hasError) setState(() => _hasError = false);
-          },
-          onSubmitted: (_) => _submit(),
-          decoration: InputDecoration(
-            hintText: widget.state.placeholder ?? 'Type here...',
-            filled: true,
-            fillColor: widget.theme.colors.surface,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
-              borderSide: BorderSide(color: widget.theme.colors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
-              borderSide: BorderSide(color: widget.theme.colors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
-              borderSide: BorderSide(color: widget.primaryColor, width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
-              borderSide: BorderSide(color: widget.theme.colors.error),
-            ),
-            errorText: _hasError ? (widget.state.errorMessage ?? 'Invalid input') : null,
-          ),
-        ),
-        SizedBox(height: widget.theme.spacing.sm),
-        ElevatedButton(
-          onPressed: _submitted ? null : _submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: widget.primaryColor,
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: widget.theme.spacing.md),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
-            ),
-          ),
-          child: const Text('Submit'),
-        ),
+        if (widget.state.questionText.isNotEmpty)
+          BotMessageBubbleWithAvatar(
+              text: widget.state.questionText, theme: widget.theme),
       ],
     );
   }

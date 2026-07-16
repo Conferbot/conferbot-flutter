@@ -605,10 +605,10 @@ class _ChatWidgetState extends State<ChatWidget> {
       return uiState.state != HandoverState.agentConnected;
     }
 
-    return uiState is TextInputUIState ||
-        uiState is FileUploadUIState ||
-        uiState is SingleChoiceUIState ||
-        uiState is MultipleChoiceUIState ||
+    // Web widget parity: the unified bottom bar stays visible for text
+    // questions (answers are typed there) and choice nodes (visible under
+    // the chips). Only nodes with genuinely modal inline UIs hide it.
+    return uiState is FileUploadUIState ||
         uiState is ImageChoiceUIState ||
         uiState is RatingUIState ||
         uiState is DropdownUIState ||
