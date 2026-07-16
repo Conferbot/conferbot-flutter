@@ -357,15 +357,19 @@ class _MessageListState extends State<MessageList> {
         deliveryStatus = _chatState.getDeliveryStatus(message.id);
       }
 
-      return MessageBubble(
+      return buildMessageWithChoices(
         message: message,
-        showAvatar: widget.showAvatars,
-        showTimestamp: widget.showTimestamps,
-        showDeliveryStatus: widget.showDeliveryStatus,
-        deliveryStatus: deliveryStatus,
-        onRetry: deliveryStatus == MessageDeliveryStatus.failed
-            ? () => widget.onRetryMessage?.call(message.id)
-            : null,
+        bubble: MessageBubble(
+          message: message,
+          showAvatar: widget.showAvatars,
+          showTimestamp: widget.showTimestamps,
+          showDeliveryStatus: widget.showDeliveryStatus,
+          deliveryStatus: deliveryStatus,
+          onRetry: deliveryStatus == MessageDeliveryStatus.failed
+              ? () => widget.onRetryMessage?.call(message.id)
+              : null,
+          theme: theme,
+        ),
         theme: theme,
       );
     }
@@ -660,19 +664,76 @@ class _SimpleMessageListState extends State<SimpleMessageList> {
             deliveryStatus = _chatState.getDeliveryStatus(message.id);
           }
 
-          return MessageBubble(
+          return buildMessageWithChoices(
             message: message,
-            showAvatar: widget.showAvatars,
-            showTimestamp: widget.showTimestamps,
-            showDeliveryStatus: widget.showDeliveryStatus,
-            deliveryStatus: deliveryStatus,
-            onRetry: deliveryStatus == MessageDeliveryStatus.failed
-                ? () => widget.onRetryMessage?.call(message.id)
-                : null,
+            bubble: MessageBubble(
+              message: message,
+              showAvatar: widget.showAvatars,
+              showTimestamp: widget.showTimestamps,
+              showDeliveryStatus: widget.showDeliveryStatus,
+              deliveryStatus: deliveryStatus,
+              onRetry: deliveryStatus == MessageDeliveryStatus.failed
+                  ? () => widget.onRetryMessage?.call(message.id)
+                  : null,
+              theme: effectiveTheme,
+            ),
             theme: effectiveTheme,
           );
         },
       ),
     );
   }
+}
+
+/// Wraps a bot message bubble with its answered, disabled choice chips
+/// (web widget behavior: chips stay visible with the selection highlighted).
+Widget buildMessageWithChoices({
+  required RecordItem message,
+  required Widget bubble,
+  required ConferBotTheme theme,
+}) {
+  if (message is! BotMessageRecord) return bubble;
+  final choices = message.nodeData?['choices'];
+  if (choices is! List || choices.isEmpty) return bubble;
+
+  final selected = message.nodeData?['selected']?.toString();
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      bubble,
+      Padding(
+        padding: EdgeInsets.only(
+          left: theme.spacing.chatContentPadding + theme.layout.avatarSize + 10,
+          right: theme.spacing.chatContentPadding,
+          bottom: theme.spacing.xs,
+        ),
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: choices.map<Widget>((c) {
+            final text = (c is Map ? c['text'] : c).toString();
+            final isSelected = text == selected;
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? theme.colors.primary
+                    : theme.colors.optionBubble.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(theme.borderRadius.lg),
+              ),
+              child: Text(
+                text,
+                style: TextStyle(
+                  fontSize: theme.typography.fontSizeSm,
+                  color: isSelected
+                      ? Colors.white
+                      : theme.colors.optionBubbleText.withOpacity(0.6),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    ],
+  );
 }
