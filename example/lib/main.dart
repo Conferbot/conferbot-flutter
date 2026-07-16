@@ -50,6 +50,15 @@ class ExampleHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ConferBotFAB overlays the floating chat bubble (bottom-right, server
+    // customized icon, color and CTA tooltip) over the page - same
+    // experience as the web widget embed.
+    return ConferBotFAB(
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
