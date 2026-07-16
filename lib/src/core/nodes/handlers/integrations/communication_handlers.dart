@@ -14,19 +14,42 @@ import '../legacy_handlers.dart';
 import 'integration_base.dart';
 
 /// Handler for email-node
-/// Sends email (server-side via execute-integration socket event)
+/// Sends email via the server's email-node-trigger socket event
+/// (NOT execute-integration - the dispatcher does not handle email-node).
 class EmailNodeHandler extends IntegrationNodeHandler {
   @override
   String get nodeType => NodeTypes.email;
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    // Emit execute-integration to server (fire-and-forget for email)
-    await emitExecuteIntegration(
-      nodeData: nodeData,
-      nodeId: nodeId,
-      waitForResult: false,
-    );
+    final socket = IntegrationNodeHandler.socketClient;
+
+    if (socket != null && socket.isConnected) {
+      // Build the data object matching the web widget's _handleEmailNode
+      final dataObject = <String, dynamic>{
+        'nodeData': nodeData,
+        'botName': state.getVariable('_botName')?.toString() ?? '',
+        'transcript': state.transcript
+            .map((entry) => {'by': entry.by, 'message': entry.message})
+            .toList(),
+        'visitorName': state.userMetadata.name ?? '',
+        'visitorEmail': state.userMetadata.email ?? '',
+      };
+
+      // Flatten each answer variable as key: value on the data object
+      for (final variable in state.answerVariables) {
+        dataObject[variable.key] = variable.value;
+      }
+
+      // Attach the answer variables array (server expects [{key, value}, ...])
+      dataObject['answerVariables'] =
+          state.answerVariables.map((v) => v.toJson()).toList();
+
+      dataObject['chatDate'] = DateTime.now().toUtc().toIso8601String();
+      dataObject['workspaceId'] = state.workspaceId;
+
+      socket.sendEmailNodeTrigger(dataObject);
+    }
 
     recordResponse(
       nodeId: nodeId,

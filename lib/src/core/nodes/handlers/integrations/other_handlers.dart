@@ -20,18 +20,45 @@ import '../../../../services/socket_client.dart';
 import 'integration_base.dart';
 
 /// Handler for zapier-node
-/// Triggers Zapier webhook (fire-and-forget)
+/// Triggers Zapier via the server's zapier-node-trigger socket event
+/// (NOT execute-integration - the dispatcher does not handle zapier-node).
+/// The webhookURL is looked up from the chatbot's integrationWebhooks; if no
+/// active webhook matches this node, the emit is skipped and the flow proceeds.
 class ZapierNodeHandler extends IntegrationNodeHandler {
   @override
   String get nodeType => NodeTypes.zapier;
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    await emitExecuteIntegration(
-      nodeData: nodeData,
-      nodeId: nodeId,
-      waitForResult: false,
-    );
+    final socket = IntegrationNodeHandler.socketClient;
+
+    if (socket != null && socket.isConnected) {
+      // Flattened { key: value } map of all answer variables (web parity)
+      final payload = state.getAnswerVariablesMap();
+
+      // Find the active webhook registered for this node on this bot
+      final webhookData = state.integrationWebhooks.firstWhere(
+        (webhook) =>
+            webhook['nodeId']?.toString() == nodeId &&
+            webhook['botId']?.toString() == state.botId &&
+            webhook['active'] == true,
+        orElse: () => <String, dynamic>{},
+      );
+
+      final webhookURL = webhookData['webhookURL']?.toString();
+      if (webhookURL != null && webhookURL.isNotEmpty) {
+        socket.sendZapierNodeTrigger({
+          'nodeData': {
+            ...nodeData,
+            'webhookURL': webhookURL,
+          },
+          'payload': payload,
+          'chatSessionId': state.chatSessionId,
+          'workspaceId': state.workspaceId,
+        });
+      }
+      // No matching webhook: skip the emit entirely and just proceed
+    }
 
     recordResponse(
       nodeId: nodeId,
@@ -205,6 +232,7 @@ class StripeNodeHandler extends IntegrationNodeHandler {
       'answerVariables': state.answerVariables
           .map((v) => v.toJson())
           .toList(),
+      'visitorData': buildVisitorData(),
     });
 
     // Timeout after 15 seconds to avoid hanging indefinitely
