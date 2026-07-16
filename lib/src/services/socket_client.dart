@@ -620,6 +620,29 @@ class SocketClient with ChangeNotifier {
     emit(SocketEvents.endChat, {'chatSessionId': chatSessionId});
   }
 
+  /// Trigger the server-side email node sender.
+  /// Payload matches the web widget's email-node-trigger data object:
+  /// { nodeData, botName, transcript, visitorName, visitorEmail,
+  ///   <flattened answer variables>, answerVariables, chatDate, workspaceId }
+  void sendEmailNodeTrigger(Map<String, dynamic> data) {
+    emit(SocketEvents.emailNodeTrigger, data);
+  }
+
+  /// Trigger the server-side Zapier webhook forwarder.
+  /// Payload matches the web widget's zapier-node-trigger emit:
+  /// { nodeData (with webhookURL attached), payload, chatSessionId, workspaceId }
+  void sendZapierNodeTrigger(Map<String, dynamic> data) {
+    emit(SocketEvents.zapierNodeTrigger, data);
+  }
+
+  /// Record a calendar slot selection on the server.
+  /// Payload matches the web widget's calendar-slot-selection-record emit:
+  /// { visitorId, chatbotId, nodeId, selectedDate, botTimeZone,
+  ///   visitorTimeZone, timeSlotSelected, visitorTime }
+  void sendCalendarSlotSelectionRecord(Map<String, dynamic> data) {
+    emit(SocketEvents.calendarSlotSelectionRecord, data);
+  }
+
   /// Emit event with error handling
   void emit(String event, dynamic data) {
     if (_socket == null || !_socket!.connected) {
