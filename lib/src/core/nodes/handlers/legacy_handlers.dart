@@ -162,6 +162,13 @@ abstract class BaseNodeHandler extends NodeHandler {
   /// ChatState singleton provides full state access
   ChatState get state => ChatState.instance;
 
+  /// Resolve ${var} / {var} / {{var}} references in displayed text,
+  /// matching the web widget which substitutes variables in every
+  /// rendered message and option string.
+  String resolveText(String text) {
+    return state.resolveValue(text)?.toString() ?? text;
+  }
+
   /// Record a user response
   void recordResponse({
     required String nodeId,

@@ -30,7 +30,7 @@ class TwoChoicesNodeHandler extends BaseNodeHandler {
     final choices = <Choice>[
       Choice(
         id: '0',
-        text: stripHtml(choice1),
+        text: resolveText(stripHtml(choice1)),
         targetPort: 'source-1',
       ),
     ];
@@ -39,7 +39,7 @@ class TwoChoicesNodeHandler extends BaseNodeHandler {
       choices.add(
         Choice(
           id: '1',
-          text: stripHtml(choice2),
+          text: resolveText(stripHtml(choice2)),
           targetPort: 'source-2',
         ),
       );
@@ -117,9 +117,9 @@ class ThreeChoicesNodeHandler extends BaseNodeHandler {
     state?.addAnswerVariable(nodeId, answerKey);
 
     final choices = [
-      Choice(id: '0', text: stripHtml(choice1), targetPort: 'source-1'),
-      Choice(id: '1', text: stripHtml(choice2), targetPort: 'source-2'),
-      Choice(id: '2', text: stripHtml(choice3), targetPort: 'source-3'),
+      Choice(id: '0', text: resolveText(stripHtml(choice1)), targetPort: 'source-1'),
+      Choice(id: '1', text: resolveText(stripHtml(choice2)), targetPort: 'source-2'),
+      Choice(id: '2', text: resolveText(stripHtml(choice3)), targetPort: 'source-3'),
     ];
 
     return DisplayUI(
@@ -198,9 +198,14 @@ class NChoicesNodeHandler extends BaseNodeHandler {
 
     state?.addAnswerVariable(nodeId, answerKey);
 
+    // Resolve variable references in the prompt text (web widget parity)
+    final resolvedPrompt = choicePrompt != null && choicePrompt.isNotEmpty
+        ? resolveText(stripHtml(choicePrompt))
+        : null;
+
     // Add choice prompt to transcript if present
-    if (choicePrompt != null && choicePrompt.isNotEmpty) {
-      state?.addToTranscript('bot', stripHtml(choicePrompt));
+    if (resolvedPrompt != null && resolvedPrompt.isNotEmpty) {
+      state?.addToTranscript('bot', resolvedPrompt);
     }
 
     final choices = choicesData.map((choice) {
@@ -209,14 +214,14 @@ class NChoicesNodeHandler extends BaseNodeHandler {
           choice['choiceText']?.toString() ?? choice['text']?.toString() ?? '';
       return Choice(
         id: id,
-        text: stripHtml(text),
+        text: resolveText(stripHtml(text)),
         targetPort: 'source-$id',
       );
     }).toList();
 
     return DisplayUI(
       SingleChoiceState(
-        questionText: choicePrompt != null ? stripHtml(choicePrompt) : null,
+        questionText: resolvedPrompt,
         choices: choices,
         nodeId: nodeId,
         answerKey: answerKey,
@@ -277,7 +282,7 @@ class YesOrNoChoiceNodeHandler extends BaseNodeHandler {
       choices = optionsData.map((option) {
         return Choice(
           id: option['id']?.toString() ?? '',
-          text: option['label']?.toString() ?? '',
+          text: resolveText(option['label']?.toString() ?? ''),
           targetPort: 'source-${option['id']}',
         );
       }).toList();

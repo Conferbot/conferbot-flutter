@@ -142,7 +142,9 @@ class WelcomeNodeHandler extends BaseNodeHandler {
     final text = getString(nodeData, 'text', '');
 
     if (text.isNotEmpty) {
-      final cleanText = stripHtml(text);
+      final stripped = stripHtml(text);
+      // Resolve any variable references in the welcome text
+      final cleanText = state.resolveValue(stripped)?.toString() ?? stripped;
       state?.addToTranscript('bot', cleanText);
 
       recordResponse(

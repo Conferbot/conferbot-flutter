@@ -36,7 +36,7 @@ class SelectOptionNodeHandler extends BaseNodeHandler {
       if (optionText != null && optionText.isNotEmpty) {
         options.add(DropdownOption(
           id: (i - 1).toString(),
-          text: stripHtml(optionText),
+          text: resolveText(stripHtml(optionText)),
         ));
       }
     }
@@ -101,7 +101,7 @@ class NSelectOptionNodeHandler extends BaseNodeHandler {
     final options = optionsData.map((option) {
       return DropdownOption(
         id: option['id']?.toString() ?? '',
-        text: stripHtml(option['optionText']?.toString() ?? ''),
+        text: resolveText(stripHtml(option['optionText']?.toString() ?? '')),
       );
     }).toList();
 
@@ -165,7 +165,7 @@ class NCheckOptionsNodeHandler extends BaseNodeHandler {
     final options = optionsData.map((option) {
       return ChoiceOption(
         id: option['id']?.toString() ?? '',
-        text: stripHtml(option['optionText']?.toString() ?? ''),
+        text: resolveText(stripHtml(option['optionText']?.toString() ?? '')),
       );
     }).toList();
 
@@ -243,7 +243,7 @@ class ImageChoiceNodeHandler extends BaseNodeHandler {
       return ImageOption(
         id: image['id']?.toString() ?? '',
         imageUrl: image['image']?.toString() ?? '',
-        label: image['label']?.toString() ?? '',
+        label: resolveText(image['label']?.toString() ?? ''),
         targetPort: 'source-${image['id']}',
       );
     }).toList();
