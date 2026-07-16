@@ -5,11 +5,17 @@
 /// with the NodeHandlerRegistry.
 library;
 
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
 import '../node_types.dart';
 import '../node_result.dart';
 import '../node_ui_state.dart';
 import 'legacy_handlers.dart' hide NodeUIState, TextInputType;
+import 'integrations/integration_base.dart';
 import '../../state/chat_state.dart';
+import '../../../config/constants.dart';
 
 /// Base class for ask question handlers.
 /// Extends BaseNodeHandler to be compatible with NodeHandlerRegistry
@@ -17,7 +23,7 @@ import '../../state/chat_state.dart';
 abstract class BaseAskNodeHandler extends BaseNodeHandler {
   // All utility methods (getString, getInt, getBoolean, getList, getMap,
   // stripHtml, isValidEmail, isValidPhone, isValidUrl, isValidNumber,
-  // recordResponse, state) are inherited from BaseNodeHandler.
+  // recordResponse, resolveText, state) are inherited from BaseNodeHandler.
 }
 
 // ============================================================================
@@ -32,7 +38,8 @@ class AskNameNodeHandler extends BaseAskNodeHandler {
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    final questionText = getString(nodeData, 'questionText', 'What is your name?');
+    final questionText =
+        resolveText(getString(nodeData, 'questionText', 'What is your name?'));
     final answerKey = getString(nodeData, 'answerVariable', 'name');
 
     state.addToTranscript('bot', questionText);
@@ -79,10 +86,8 @@ class AskNameNodeHandler extends BaseAskNodeHandler {
         nodeData['nameGreet']?.toString();
 
     if (greetResponse != null && greetResponse.isNotEmpty) {
-      final greeting = greetResponse
-          .replaceAll('{name}', name)
-          .replaceAll('\${name}', name)
-          .replaceAll('{{name}}', name);
+      // Resolve any ${var}/{var} references (name was just stored above)
+      final greeting = resolveText(greetResponse);
       state.addToTranscript('bot', greeting);
     }
 
@@ -97,7 +102,8 @@ class AskEmailNodeHandler extends BaseAskNodeHandler {
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    final questionText = getString(nodeData, 'questionText', 'What is your email?');
+    final questionText =
+        resolveText(getString(nodeData, 'questionText', 'What is your email?'));
     final answerKey = getString(nodeData, 'answerVariable', 'email');
     final errorMessage = getString(nodeData, 'incorrectEmailResponse', 'Please enter a valid email address');
 
@@ -141,7 +147,8 @@ class AskPhoneNodeHandler extends BaseAskNodeHandler {
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    final questionText = getString(nodeData, 'questionText', 'What is your phone number?');
+    final questionText =
+        resolveText(getString(nodeData, 'questionText', 'What is your phone number?'));
     final answerKey = getString(nodeData, 'answerVariable', 'phone');
     final errorMessage = getString(nodeData, 'incorrectPhoneNumberResponse', 'Please enter a valid phone number');
 
@@ -185,7 +192,8 @@ class AskNumberNodeHandler extends BaseAskNodeHandler {
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    final questionText = getString(nodeData, 'questionText', 'Please enter a number');
+    final questionText =
+        resolveText(getString(nodeData, 'questionText', 'Please enter a number'));
     final answerKey = getString(nodeData, 'answerVariable', 'number');
 
     state.addToTranscript('bot', questionText);
@@ -227,7 +235,8 @@ class AskUrlNodeHandler extends BaseAskNodeHandler {
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    final questionText = getString(nodeData, 'questionText', 'Please enter a URL');
+    final questionText =
+        resolveText(getString(nodeData, 'questionText', 'Please enter a URL'));
     final answerKey = getString(nodeData, 'answerVariable', 'url');
 
     state.addToTranscript('bot', questionText);
@@ -268,7 +277,8 @@ class AskLocationNodeHandler extends BaseAskNodeHandler {
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    final questionText = getString(nodeData, 'questionText', 'What is your location?');
+    final questionText =
+        resolveText(getString(nodeData, 'questionText', 'What is your location?'));
     final answerKey = getString(nodeData, 'answerVariable', 'location');
 
     state.addToTranscript('bot', questionText);
@@ -308,7 +318,8 @@ class AskCustomNodeHandler extends BaseAskNodeHandler {
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    final questionText = getString(nodeData, 'questionText', 'Please answer the question');
+    final questionText =
+        resolveText(getString(nodeData, 'questionText', 'Please answer the question'));
     final answerKey = getString(nodeData, 'answerVariable', nodeId);
 
     state.addToTranscript('bot', questionText);
@@ -348,7 +359,8 @@ class AskFileNodeHandler extends BaseAskNodeHandler {
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    final questionText = getString(nodeData, 'questionText', 'Please upload a file');
+    final questionText =
+        resolveText(getString(nodeData, 'questionText', 'Please upload a file'));
     final answerKey = getString(nodeData, 'answerVariable', 'file');
     final maxSizeMb = getInt(nodeData, 'maxSize', 5);
 
@@ -359,6 +371,9 @@ class AskFileNodeHandler extends BaseAskNodeHandler {
       FileUploadUIState(questionText: questionText, maxSizeMb: maxSizeMb, nodeId: nodeId, answerKey: answerKey),
     );
   }
+
+  /// Maximum upload size accepted by the media endpoint (web widget parity)
+  static const int _maxUploadBytes = 5000000;
 
   @override
   Future<NodeResult> handleResponse(dynamic response, Map<String, dynamic> nodeData, String nodeId) async {
@@ -371,9 +386,32 @@ class AskFileNodeHandler extends BaseAskNodeHandler {
       responseMap = {'url': response.toString()};
     }
 
-    final fileUrl = responseMap['url']?.toString();
+    var fileUrl = responseMap['url']?.toString();
+
+    // If the picker returned raw file info instead of an uploaded URL,
+    // upload it to the media endpoint (mirrors the web widget's multipart
+    // POST to /api/v1/bot/:botId/media)
     if (fileUrl == null || fileUrl.isEmpty) {
-      return const NodeResult.error(message: 'Invalid file upload', shouldProceed: false);
+      final fileSize = responseMap['fileSize'];
+      if (fileSize is num && fileSize > _maxUploadBytes) {
+        return const NodeResult.error(
+          message: 'Please upload a file smaller than 5MB',
+          shouldProceed: false,
+        );
+      }
+
+      try {
+        fileUrl = await _uploadFile(responseMap);
+      } catch (_) {
+        fileUrl = null;
+      }
+
+      if (fileUrl == null || fileUrl.isEmpty) {
+        return const NodeResult.error(
+          message: 'File upload failed. Please try again.',
+          shouldProceed: false,
+        );
+      }
     }
 
     final fileName = responseMap['fileName']?.toString() ?? 'uploaded_file';
@@ -388,6 +426,54 @@ class AskFileNodeHandler extends BaseAskNodeHandler {
       additionalData: {'url': fileUrl, 'fileName': fileName},
     );
     return const NodeResult.proceed();
+  }
+
+  /// Upload the picked file to the embed-server media endpoint.
+  /// Returns the media URL from the response, or null on failure.
+  Future<String?> _uploadFile(Map<String, dynamic> responseMap) async {
+    final botId = state.botId;
+    if (botId == null || botId.isEmpty) return null;
+
+    // The media endpoint lives on the embed-server origin (same host the
+    // socket connects to)
+    var origin = IntegrationNodeHandler.socketClient?.socketUrl ??
+        ConferBotEndpoints.socketUrl;
+    if (origin.endsWith('/')) origin = origin.substring(0, origin.length - 1);
+
+    final uri = Uri.parse('$origin/api/v1/bot/$botId/media').replace(
+      queryParameters: {
+        'chatSessionId': state.chatSessionId ?? '',
+        'visitorId': state.visitorId ?? '',
+      },
+    );
+
+    final request = http.MultipartRequest('POST', uri);
+
+    final filePath = responseMap['filePath']?.toString();
+    final fileName = responseMap['fileName']?.toString() ?? 'uploaded_file';
+    final fileBytes = responseMap['fileBytes'];
+
+    if (filePath != null && filePath.isNotEmpty) {
+      request.files.add(
+        await http.MultipartFile.fromPath('file', filePath, filename: fileName),
+      );
+    } else if (fileBytes is List<int>) {
+      request.files.add(
+        http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
+      );
+    } else {
+      return null;
+    }
+
+    final streamed =
+        await request.send().timeout(const Duration(seconds: 60));
+    final response = await http.Response.fromStream(streamed);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) return null;
+
+    final json = jsonDecode(response.body);
+    if (json is Map) return json['url']?.toString();
+    return null;
   }
 }
 
@@ -416,7 +502,8 @@ class AskMultipleQuestionsNodeHandler extends BaseAskNodeHandler {
     }
 
     final question = questions[currentIndex];
-    final questionText = question['questionText']?.toString() ?? 'Please answer';
+    final questionText =
+        resolveText(question['questionText']?.toString() ?? 'Please answer');
 
     state.addToTranscript('bot', questionText);
     state.addAnswerVariable(nodeId, '${nodeId}_q$currentIndex');
@@ -424,7 +511,7 @@ class AskMultipleQuestionsNodeHandler extends BaseAskNodeHandler {
     return NodeResult.displayUI(
       MultipleQuestionsUIState(
         questions: questions.asMap().entries.map((e) => Question(
-              questionText: e.value['questionText']?.toString() ?? '',
+              questionText: resolveText(e.value['questionText']?.toString() ?? ''),
               answerType: e.value['answerVariable']?.toString() ?? 'text',
               answerKey: '${nodeId}_q${e.key}',
             )).toList(),
@@ -496,7 +583,9 @@ class CalendarNodeHandler extends BaseAskNodeHandler {
 
   @override
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    final questionText = nodeData['questionText']?.toString();
+    final rawQuestionText = nodeData['questionText']?.toString();
+    final questionText =
+        rawQuestionText != null ? resolveText(rawQuestionText) : null;
     final showTimeSelection = getBoolean(nodeData, 'showTimeSelection', false);
     final timezone = nodeData['botTimeZone']?.toString() ?? nodeData['timezone']?.toString();
     final answerKey = getString(nodeData, 'answerVariable', 'calendar_selection');
@@ -529,6 +618,10 @@ class CalendarNodeHandler extends BaseAskNodeHandler {
     state.setAnswerVariable(nodeId, displayText);
     state.addToTranscript('user', displayText);
 
+    final botTimeZone =
+        (nodeData['botTimeZone'] ?? nodeData['timezone'])?.toString();
+    final visitorTimeZone = DateTime.now().timeZoneName;
+
     recordResponse(
       nodeId: nodeId,
       shape: 'user-calendar-selection',
@@ -537,10 +630,28 @@ class CalendarNodeHandler extends BaseAskNodeHandler {
       additionalData: {
         'date': date,
         'time': time,
-        'botTimeZone': nodeData['botTimeZone'] ?? nodeData['timezone'],
-        'visitorTimeZone': DateTime.now().timeZoneName,
+        'botTimeZone': botTimeZone,
+        'visitorTimeZone': visitorTimeZone,
       },
     );
+
+    // Emit calendar-slot-selection-record to the server when a time slot was
+    // selected, matching the web widget payload
+    if (showTimeSelection && time != null && time.isNotEmpty) {
+      final socket = IntegrationNodeHandler.socketClient;
+      if (socket != null && socket.isConnected) {
+        socket.sendCalendarSlotSelectionRecord({
+          'visitorId': state.visitorId,
+          'chatbotId': state.botId,
+          'nodeId': nodeId,
+          'selectedDate': responseMap['selectedDate'] ?? date,
+          'botTimeZone': botTimeZone,
+          'visitorTimeZone': visitorTimeZone,
+          'timeSlotSelected': time,
+          'visitorTime': responseMap['visitorTime'] ?? time,
+        });
+      }
+    }
 
     return const NodeResult.delayedProceed(delay: Duration(milliseconds: 400));
   }
