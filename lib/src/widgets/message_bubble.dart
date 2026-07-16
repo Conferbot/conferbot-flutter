@@ -69,6 +69,43 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveTheme = theme ?? defaultTheme;
+
+    // Standalone image message (welcome GIF, image-node) - rendered as a
+    // rounded image below the text bubble like the web widget, indented
+    // past the avatar column
+    if (message is BotMessageRecord) {
+      final imageUrl =
+          (message as BotMessageRecord).nodeData?['imageUrl']?.toString();
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: effectiveTheme.spacing.chatContentPadding +
+                effectiveTheme.layout.avatarSize +
+                10,
+            right: effectiveTheme.spacing.chatContentPadding,
+            top: effectiveTheme.spacing.xs,
+            bottom: effectiveTheme.spacing.xs,
+          ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: effectiveTheme.layout.maxBubbleWidth * 0.75,
+                ),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.fitWidth,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
     // Include both user-message and user-input-response as user messages
     final isUser = message.type == MessageType.userMessage ||
         message.type == MessageType.userInputResponse;

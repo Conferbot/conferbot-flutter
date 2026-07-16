@@ -672,15 +672,17 @@ class ConferBotProvider with ChangeNotifier {
     // Listen for bot messages from flow engine to add to chat record
     _flowEngine.botMessageStream.listen((messageData) {
       final text = messageData['text'] as String? ?? '';
+      final imageUrl = messageData['imageUrl'] as String? ?? '';
       final nodeId = messageData['nodeId'] as String? ?? '';
-      if (text.isNotEmpty) {
+      if (text.isNotEmpty || imageUrl.isNotEmpty) {
         final botMessage = BotMessageRecord(
           id: 'bot_${nodeId}_${DateTime.now().millisecondsSinceEpoch}',
           time: DateTime.now(),
           text: text,
+          nodeData: imageUrl.isNotEmpty ? {'imageUrl': imageUrl} : null,
         );
         _addMessageToRecord(botMessage);
-        _logger.debug('Added bot message to record: "$text"');
+        _logger.debug('Added bot message to record: "$text" image: "$imageUrl"');
         notifyListeners();
       }
     });

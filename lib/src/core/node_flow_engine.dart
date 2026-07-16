@@ -391,6 +391,33 @@ class NodeFlowEngine extends ChangeNotifier {
             flowLogger.debug('Emitted bot message to record: "$text"');
           }
 
+          // Emit the node's image (welcome GIF, image-node) as a standalone
+          // image entry below the text bubble - web widget parity
+          final dynamic dynUi = uiState;
+          String? imageUrl;
+          if (dynUi is ImageState) {
+            imageUrl = dynUi.url;
+          } else if (dynUi is ImageUIState) {
+            imageUrl = dynUi.url;
+          } else {
+            // nodeData may be the node's data map itself or the full node
+            final dataMap =
+                (nodeData['data'] as Map<String, dynamic>?) ?? nodeData;
+            final nodeImage = dataMap['image']?.toString();
+            final disabled = dataMap['disableImage'] == true;
+            if (!disabled && nodeImage != null && nodeImage.isNotEmpty) {
+              imageUrl = nodeImage;
+            }
+          }
+          if (imageUrl != null && imageUrl.isNotEmpty) {
+            _botMessageController.add({
+              'imageUrl': imageUrl,
+              'nodeId': _currentNodeId ?? '',
+              'type': 'bot-message',
+            });
+            flowLogger.debug('Emitted bot image to record: "$imageUrl"');
+          }
+
           // Track bot message
           if (text != null) {
             _analytics.trackMessage(sender: 'bot', text: text);
