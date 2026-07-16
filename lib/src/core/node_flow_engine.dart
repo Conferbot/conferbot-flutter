@@ -54,6 +54,11 @@ class NodeFlowEngine extends ChangeNotifier {
   dynamic _currentUIState;
   dynamic get currentUIState => _currentUIState;
 
+  /// Question text of the active interactive node, if any. The provider
+  /// persists it into the visible transcript before echoing the answer.
+  String? get currentQuestionText =>
+      _extractInteractiveQuestionText(_currentUIState);
+
   /// Loading state for typing indicator
   bool _isProcessing = false;
   bool get isProcessing => _isProcessing;

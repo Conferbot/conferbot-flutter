@@ -14,6 +14,7 @@ import '../services/socket_client.dart';
 import '../services/storage_service.dart';
 import '../core/node_flow_engine.dart';
 import '../core/nodes/node_ui_state.dart';
+import '../core/nodes/handlers/choices/choice_ui_states.dart';
 import '../core/state/message_pagination_controller.dart';
 import '../core/state/message_storage_service.dart';
 import '../utils/logger.dart';
@@ -1013,6 +1014,51 @@ class ConferBotProvider with ChangeNotifier {
       displayText = response.join(', ');
     } else {
       displayText = response?.toString();
+    }
+
+    // Web widget parity: keep the question (and, for choice nodes, the
+    // disabled choice chips with the selection highlighted) in the
+    // transcript, so nothing vanishes when the node advances.
+    final questionText = _flowEngine.currentQuestionText;
+    final uiState = _flowEngine.currentUIState;
+    Map<String, dynamic>? persistedNodeData;
+    if (uiState is SingleChoiceState) {
+      persistedNodeData = {
+        'choices': uiState.choices
+            .map((c) => {'id': c.id, 'text': c.text})
+            .toList(),
+        'selected': displayText,
+      };
+    } else if (uiState is MultipleChoiceState) {
+      persistedNodeData = {
+        'choices': uiState.options
+            .map((o) => {'id': o.id, 'text': o.text})
+            .toList(),
+        'selected': displayText,
+      };
+    } else if (uiState is SingleChoiceUIState) {
+      persistedNodeData = {
+        'choices': uiState.choices
+            .map((c) => {'id': c.id, 'text': c.text})
+            .toList(),
+        'selected': displayText,
+      };
+    } else if (uiState is MultipleChoiceUIState) {
+      persistedNodeData = {
+        'choices': uiState.options
+            .map((o) => {'id': o.id, 'text': o.text})
+            .toList(),
+        'selected': displayText,
+      };
+    }
+    if ((questionText != null && questionText.isNotEmpty) ||
+        persistedNodeData != null) {
+      _addMessageToRecord(BotMessageRecord(
+        id: 'bot_q_${DateTime.now().millisecondsSinceEpoch}',
+        time: DateTime.now(),
+        text: questionText,
+        nodeData: persistedNodeData,
+      ));
     }
 
     if (displayText != null && displayText.isNotEmpty) {
