@@ -737,6 +737,17 @@ class ConferBotProvider with ChangeNotifier {
         _logger.debug('botMsgColor: ${_serverCustomizations!['botMsgColor']}');
       }
 
+      // Store integration webhooks (Zapier) for the zapier-node handler
+      final webhooksData = chatbotData['integrationWebhooks'] as List<dynamic>?;
+      if (webhooksData != null) {
+        ChatState.instance.setIntegrationWebhooks(
+          webhooksData
+              .whereType<Map>()
+              .map((w) => Map<String, dynamic>.from(w))
+              .toList(),
+        );
+      }
+
       // Extract workspaceId from server chatbot data
       final serverWorkspaceId = chatbotData['workspaceId']?.toString();
 

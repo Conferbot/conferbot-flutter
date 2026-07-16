@@ -284,6 +284,12 @@ class ChatState extends ChangeNotifier {
   List<Map<String, dynamic>> _steps = [];
   List<Map<String, dynamic>> get steps => List.unmodifiable(_steps);
 
+  // Integration webhooks from chatbot data (Zapier etc.)
+  // Entries: { nodeId, botId, webhookURL, active }
+  List<Map<String, dynamic>> _integrationWebhooks = [];
+  List<Map<String, dynamic>> get integrationWebhooks =>
+      List.unmodifiable(_integrationWebhooks);
+
   // Chat session ID
   String? _chatSessionId;
   String? get chatSessionId => _chatSessionId;
@@ -675,6 +681,11 @@ class ChatState extends ChangeNotifier {
   void setSteps(List<Map<String, dynamic>> steps) {
     _steps = List.from(steps);
     notifyListeners();
+  }
+
+  /// Set the integration webhooks from the fetched chatbot data
+  void setIntegrationWebhooks(List<Map<String, dynamic>> webhooks) {
+    _integrationWebhooks = List.from(webhooks);
   }
 
   /// Get current node from steps
@@ -1145,6 +1156,7 @@ class ChatState extends ChangeNotifier {
     _record.clear();
     _currentIndex = 0;
     _steps = [];
+    _integrationWebhooks = [];
     _currentNodeId = null;
     _chatSessionId = null;
     _visitorId = null;
