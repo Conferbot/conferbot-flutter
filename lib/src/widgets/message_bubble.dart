@@ -156,10 +156,8 @@ class MessageBubble extends StatelessWidget {
                 ],
               ),
             ),
-            if (isUser && showAvatar) ...[
-              const SizedBox(width: 10),
-              SizedBox(width: effectiveTheme.layout.avatarSize),
-            ],
+            // Web widget parity: user messages sit flush right, no
+            // phantom avatar slot is reserved on the visitor side.
           ],
         ),
       ),
