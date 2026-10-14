@@ -1,6 +1,7 @@
 import '../node_handler.dart' hide NodeUIState;
 import '../node_types.dart';
 import '../node_ui_state.dart';
+import '../../live_chat/live_chat.dart';
 
 /// Handler for delay-node
 /// Delays before proceeding to next node
@@ -119,7 +120,8 @@ class HumanHandoverNodeHandler extends BaseNodeHandler {
     Map<String, dynamic> nodeData,
     String nodeId,
   ) {
-    final handoverMessage = getString(nodeData, 'handoverMessage', 'Connecting you to an agent...');
+    // The builder writes it as rich text (<p>...</p>).
+    final handoverMessage = LiveChat.plainText(getString(nodeData, 'handoverMessage', 'Connecting you to an agent...'));
     final maxWaitTime = getInt(nodeData, 'maxWaitTime', 5); // minutes
     final priority = getString(nodeData, 'priority', 'normal');
 
@@ -154,7 +156,7 @@ class HumanHandoverNodeHandler extends BaseNodeHandler {
   ) {
     return HumanHandoverUIState(
       state: _handoverState[nodeId] ?? HandoverState.waitingForAgent,
-      handoverMessage: getString(nodeData, 'handoverMessage', ''),
+      handoverMessage: LiveChat.plainText(getString(nodeData, 'handoverMessage', '')),
       maxWaitTime: getInt(nodeData, 'maxWaitTime', 5),
       nodeId: nodeId,
     );
@@ -339,7 +341,7 @@ class HumanHandoverNodeHandler extends BaseNodeHandler {
   /// This should be called from the socket event handler
   NodeResult onNoAgentsAvailable(String nodeId, Map<String, dynamic> nodeData) {
     _handoverState[nodeId] = HandoverState.noAgentsAvailable;
-    final fallbackMessage = getString(nodeData, 'fallbackMessage', 'No agents available at the moment.');
+    final fallbackMessage = LiveChat.plainText(getString(nodeData, 'fallbackMessage', 'No agents available at the moment.'));
     final fallbackAction = getString(nodeData, 'fallbackAction', 'message');
 
     state.addToTranscript('bot', fallbackMessage);
