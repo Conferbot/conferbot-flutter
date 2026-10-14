@@ -27,7 +27,8 @@ class ConferBotAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: _getBackgroundColor(name),
+        // An image (often a transparent logo) sits on nothing; initials on the brand colour.
+        color: imageUrl != null ? Colors.transparent : effectiveTheme.colors.primary,
         borderRadius: _getBorderRadius(),
         image: imageUrl != null
             ? DecorationImage(
@@ -55,10 +56,11 @@ class ConferBotAvatar extends StatelessWidget {
     switch (shape) {
       case AvatarShape.circle:
         return BorderRadius.circular(size / 2);
+      // The web's avatar shapes: square 4, rounded 28%.
       case AvatarShape.square:
-        return null;
+        return BorderRadius.circular(4);
       case AvatarShape.rounded:
-        return BorderRadius.circular(8);
+        return BorderRadius.circular((size * 0.28).roundToDouble());
     }
   }
 
@@ -73,32 +75,6 @@ class ConferBotAvatar extends StatelessWidget {
     }
 
     return (names[0][0] + names[names.length - 1][0]).toUpperCase();
-  }
-
-  Color _getBackgroundColor(String? fullName) {
-    const colors = [
-      Color(0xFF007AFF),
-      Color(0xFF5856D6),
-      Color(0xFFFF2D55),
-      Color(0xFFFF9500),
-      Color(0xFFFFCC00),
-      Color(0xFF34C759),
-      Color(0xFF00C7BE),
-      Color(0xFF32ADE6),
-      Color(0xFF5E5CE6),
-      Color(0xFFAF52DE),
-    ];
-
-    if (fullName == null || fullName.isEmpty) {
-      return colors[0];
-    }
-
-    int hash = 0;
-    for (int i = 0; i < fullName.length; i++) {
-      hash = fullName.codeUnitAt(i) + ((hash << 5) - hash);
-    }
-
-    return colors[hash.abs() % colors.length];
   }
 }
 
