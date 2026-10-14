@@ -853,9 +853,10 @@ class _SingleChoiceNodeWidgetState extends State<SingleChoiceNodeWidget> {
                           widget.onResponse({'id': choice.id, 'text': choice.text});
                         },
                   style: OutlinedButton.styleFrom(
+                    // The owner's option colour at full strength, as the web draws it.
                     backgroundColor: isSelected
                         ? widget.primaryColor
-                        : widget.theme.colors.optionBubble.withOpacity(0.85),
+                        : widget.theme.colors.optionBubble,
                     foregroundColor: isSelected
                         ? Colors.white
                         : widget.theme.colors.optionBubbleText,
@@ -871,7 +872,7 @@ class _SingleChoiceNodeWidgetState extends State<SingleChoiceNodeWidget> {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(_optionRadius(context)),
                     ),
                     elevation: isSelected ? 0 : 1,
                   ),
@@ -2170,5 +2171,15 @@ class BotMessageBubbleWithAvatar extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Choice buttons: the owner's option radius (10 when unset, as the web); 12 before the bot's settings arrive.
+double _optionRadius(BuildContext context) {
+  try {
+    final provider = Provider.of<ConferBotProvider>(context, listen: false);
+    return provider.serverCustomizations != null ? provider.customizations.optionRadius : 12;
+  } catch (_) {
+    return 12;
   }
 }
