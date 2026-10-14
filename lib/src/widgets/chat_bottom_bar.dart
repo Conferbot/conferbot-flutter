@@ -86,9 +86,13 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
     final canSend =
         _controller.text.trim().isNotEmpty && !widget.disabled && !_isSending;
 
+    // The send button in the header colour, with ink that reads on it.
+    final sendColor = theme.colors.headerBg;
+    final sendInk = sendColor.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colors.surface,
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF636363).withOpacity(0.12),
@@ -117,10 +121,10 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                         maxHeight: 100,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: theme.colors.surface,
                         borderRadius: BorderRadius.circular(25),
                         border: Border.all(
-                          color: const Color(0xFFE0E0E0),
+                          color: theme.colors.border,
                           width: 1,
                         ),
                       ),
@@ -149,8 +153,8 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                               decoration: InputDecoration(
                                 hintText:
                                     widget.placeholder ?? 'Type a message...',
-                                hintStyle: const TextStyle(
-                                  color: Color(0xFF4D4D4D),
+                                hintStyle: TextStyle(
+                                  color: theme.colors.textSecondary,
                                   fontSize: 16,
                                 ),
                                 border: InputBorder.none,
@@ -161,9 +165,9 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                                 ),
                                 counterText: '',
                               ),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.black,
+                                color: theme.colors.text,
                               ),
                             ),
                           ),
@@ -189,26 +193,26 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                     height: 44,
                     decoration: BoxDecoration(
                       color: canSend
-                          ? theme.colors.primary
-                          : theme.colors.primary.withOpacity(0.35),
+                          ? sendColor
+                          : sendColor.withOpacity(0.35),
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
                       onPressed: canSend ? _handleSend : null,
                       padding: EdgeInsets.zero,
                       icon: _isSending
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                    AlwaysStoppedAnimation<Color>(sendInk),
                               ),
                             )
-                          : const Icon(
+                          : Icon(
                               Icons.send,
-                              color: Colors.white,
+                              color: sendInk,
                               size: 20,
                             ),
                     ),
@@ -232,10 +236,11 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
         child: Center(
           child: Text(
             widget.customBrand!,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF687882),
+            // The owner's text: weight 600 in the footer grey, as on the web.
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: theme.colors.textSecondary,
             ),
           ),
         ),
