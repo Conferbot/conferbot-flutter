@@ -23,6 +23,8 @@ import '../utils/chat_markdown.dart';
 import '../core/agent/agent_bot.dart';
 import '../core/agent/agent_handover.dart';
 import 'analytics_provider.dart';
+import '../core/live_chat/live_chat.dart';
+import '../core/live_chat/live_chat_extras.dart';
 
 /// ConferBot provider configuration
 class ConferBotConfig {
@@ -84,6 +86,10 @@ class ConferBotProvider with ChangeNotifier {
   late final ApiClient _apiClient;
   late final SocketClient _socketClient;
   late final NodeFlowEngine _flowEngine;
+
+  /// Live chat extras: queue position, leave a message, receipts, locks,
+  /// file requests, the lead card and the post-chat rating.
+  late final LiveChatExtras liveChat;
 
   // Pagination controller
   MessagePaginationController? _paginationController;
@@ -156,6 +162,20 @@ class ConferBotProvider with ChangeNotifier {
     );
 
     _flowEngine = NodeFlowEngine(socketClient: _socketClient);
+
+    // Live chat extras (core/live_chat): queue, leave a message, receipts,
+    // locks, file requests, the lead card and the post-chat rating.
+    liveChat = LiveChatExtras(
+      socket: () => _socketClient,
+      sessionId: () => _chatSessionId,
+      addMessage: (item) {
+        _addMessageToRecord(item);
+        notifyListeners();
+      },
+      sendRecord: _sendRecord,
+      continueFlow: () => _flowEngine.continueAfterHandover(),
+    );
+    liveChat.addListener(notifyListeners);
 
     if (config.autoConnect) {
       _initialize();
@@ -402,6 +422,7 @@ class ConferBotProvider with ChangeNotifier {
   /// Setup socket event listeners
   void _setupSocketListeners() {
     _setupAgentBotListeners();
+    liveChat.setupListeners();
     // Connection events
     _socketClient.on(SocketEvents.connect, (_) {
       _isConnected = true;
@@ -486,6 +507,7 @@ class ConferBotProvider with ChangeNotifier {
                 email: _currentAgent?.email ?? '',
               );
 
+        final translation = LiveChat.agentTranslationOf(data);
         RecordItem message;
         if (isFileInput) {
           message = AgentMessageFileRecord(
@@ -508,6 +530,7 @@ class ConferBotProvider with ChangeNotifier {
             text: messageText,
             agentDetails: agentDetails,
             extras: extras != null && (!extras.isEmpty || extras.isFallback) ? extras : null,
+            translation: translation,
           );
         }
 
@@ -531,6 +554,9 @@ class ConferBotProvider with ChangeNotifier {
 
         // Clear agent typing indicator
         _agentTyping = false;
+
+        // The visitor's delivered / seen receipt for it.
+        liveChat.reportReceipts(chatVisible: _isOpen);
 
         // Track agent message in analytics
         _analyticsProvider?.trackMessage(
@@ -584,8 +610,10 @@ class ConferBotProvider with ChangeNotifier {
           // Add to transcript
           ChatState.instance.addToTranscript('bot', '$agentName has joined the chat');
 
-          // Notify flow engine of agent acceptance
+          // Notify flow engine of agent acceptance; the handover step's
+          // waiting card goes ("{name} has joined" is already a line).
           _flowEngine.handleAgentAccepted(agentName);
+          _flowEngine.clearHandoverUI();
           notifyListeners();
         }
       }
@@ -593,6 +621,30 @@ class ConferBotProvider with ChangeNotifier {
 
     // No agents available
     _socketClient.on(SocketEvents.noAgentsAvailable, (_) {
+      // A flow at its handover step, as the web widget does it: the owner's
+      // fallback as the bot's message, then "Leave a message" (the flow
+      // carries on once it is sent or skipped), or straight on when the
+      // owner turned that off.
+      if (_flowEngine.isAtHandover) {
+        final fallback = LiveChat.plainText(
+          ChatState.instance.resolveValue(_flowEngine.handoverNodeData?['fallbackMessage']?.toString() ?? '').toString(),
+        );
+        _flowEngine.clearHandoverUI();
+        if (fallback.isNotEmpty) {
+          final id = 'agent-declined-${DateTime.now().millisecondsSinceEpoch}';
+          _addMessageToRecord(BotMessageRecord(id: id, time: DateTime.now(), text: fallback));
+          ChatState.instance.pushToRecord(RecordEntry(
+            id: id,
+            shape: 'agent-declined-message',
+            type: 'agent-declined-message',
+            text: fallback,
+            data: {'message': fallback, 'renderedText': fallback},
+          ));
+        }
+        if (_serverCustomizations?['chatLeaveMessage'] == false) _flowEngine.continueAfterHandover();
+        notifyListeners();
+        return;
+      }
       // Add system message
       final msgId = 'no_agents_${DateTime.now().millisecondsSinceEpoch}';
       final systemMessage = SystemMessageRecord(
@@ -1045,6 +1097,15 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Handle flow engine state changes
   void _onFlowEngineChange() {
+    // Where the visitor stands: asked while the handover waits for a person.
+    final ui = _flowEngine.currentUIState;
+    if (ui is HumanHandoverUIState && ui.state == HandoverState.waitingForAgent && !_isLiveChatMode) {
+      liveChat.startQueuePoll();
+      liveChat.startWaitTimer(_flowEngine.handoverNodeData, ChatState.instance.workspaceId);
+    } else {
+      liveChat.stopQueuePoll();
+      liveChat.stopWaitTimer();
+    }
     notifyListeners();
   }
 
@@ -1052,6 +1113,7 @@ class ConferBotProvider with ChangeNotifier {
   void _handleChatbotData(Map<String, dynamic> data) {
     final chatbotData = data['chatbotData'] as Map<String, dynamic>?;
     if (chatbotData != null) {
+      liveChat.setChatbotData(chatbotData);
       // Server sends: { elements: [{ nodes: [...], edges: [...] }], customizations: {...}, ... }
       final elements = chatbotData['elements'] as List<dynamic>?;
       if (elements != null && elements.isNotEmpty) {
@@ -1252,6 +1314,7 @@ class ConferBotProvider with ChangeNotifier {
           chatSessionId: _chatSessionId!,
           visitorId: _visitorId ?? '',
           botId: botId,
+          workspaceId: _serverWorkspaceId,
           stepsData: _steps,
           edgesData: _edges,
         );
@@ -1357,6 +1420,7 @@ class ConferBotProvider with ChangeNotifier {
           chatSessionId: _chatSessionId!,
           visitorId: _visitorId ?? '',
           botId: botId,
+          workspaceId: _serverWorkspaceId,
           stepsData: _steps,
           edgesData: _edges,
         );
@@ -1366,6 +1430,7 @@ class ConferBotProvider with ChangeNotifier {
 
     _isOpen = true;
     _unreadCount = 0;
+    liveChat.reportReceipts(chatVisible: true);
     notifyListeners();
   }
 
@@ -1441,7 +1506,8 @@ class ConferBotProvider with ChangeNotifier {
       _addMessageToRecord(BotMessageRecord(
         id: 'bot_q_${DateTime.now().millisecondsSinceEpoch}',
         time: DateTime.now(),
-        text: questionText,
+        // The builder writes questions as rich text (<p>...</p>).
+        text: questionText == null ? null : LiveChat.plainText(questionText),
         nodeData: persistedNodeData,
       ));
     }
@@ -1538,6 +1604,18 @@ class ConferBotProvider with ChangeNotifier {
     sendTypingStatus(false);
 
     notifyListeners();
+  }
+
+  /// The visitor's file in a live chat: uploaded, then sent as the web
+  /// widget sends it. Returns an error message, or null when it went.
+  Future<String?> sendLiveFile(String filePath, {required String fileName, String? mimeType}) async {
+    final sessionId = _chatSessionId;
+    if (sessionId == null) return 'Not ready';
+    final res = await _apiClient.uploadFile(chatSessionId: sessionId, filePath: filePath, fileName: fileName, mimeType: mimeType);
+    final url = res.data?['url']?.toString() ?? res.data?['fileUrl']?.toString();
+    if (!res.success || url == null || url.isEmpty) return "That file can't be sent. Please try another one.";
+    liveChat.sendLiveFile(url, fileName: fileName, mimeType: mimeType);
+    return null;
   }
 
   /// Send visitor typing status during live chat
@@ -1745,6 +1823,7 @@ class ConferBotProvider with ChangeNotifier {
     _analyticsProvider?.endSession();
 
     _flowEngine.reset();
+    liveChat.reset();
     _record.clear();
     _chatSessionId = null;
     _currentAgent = null;
@@ -1786,6 +1865,8 @@ class ConferBotProvider with ChangeNotifier {
     }
 
     _flowEngine.removeListener(_onFlowEngineChange);
+    liveChat.removeListener(notifyListeners);
+    liveChat.dispose();
     _paginationController?.removeListener(_onPaginationChange);
     _analyticsProvider?.removeListener(_onAnalyticsChange);
 
