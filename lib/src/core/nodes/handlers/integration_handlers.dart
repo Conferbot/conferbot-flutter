@@ -24,7 +24,7 @@ import 'legacy_handlers.dart' show NodeHandler, NodeUIState;
 import 'display_handlers.dart' show CalendarState;
 
 // Re-export CalendarState for Google Calendar/Meet handlers
-export 'display_handlers.dart' show CalendarState;
+export 'legacy_handlers.dart' show CalendarState;
 
 /// Payment/Stripe UI state (kept for backward compatibility)
 class PaymentState extends NodeUIState {
