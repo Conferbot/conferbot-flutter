@@ -195,6 +195,11 @@ class RecordEntry {
     if (shape.startsWith('user-')) {
       json['shape'] = shape;
       json['text'] = text;
+      // A live chat file ({url}) and a message left by email ({via, data})
+      // carry their fields at the top, as the web widget records them.
+      if (shape == 'user-live-message-file' || data.containsKey('via')) {
+        data.forEach((k, v) => json.putIfAbsent(k, () => v));
+      }
     } else {
       // For bot messages, nest data as sub-object (web widget format)
       final dataMap = Map<String, dynamic>.from(data);
