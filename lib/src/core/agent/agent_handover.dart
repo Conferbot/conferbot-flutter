@@ -5,6 +5,7 @@
 library;
 
 import '../state/chat_state.dart';
+import '../live_chat/live_chat.dart';
 
 class AgentHandover {
   AgentHandover._();
@@ -18,7 +19,8 @@ class AgentHandover {
     final now = DateTime.now().toUtc().toIso8601String();
     final device = 'Flutter/${state.buildResponseData()['deviceInfo'] ?? 'unknown'}';
     final location = DateTime.now().timeZoneName;
-    final maxWaitTime = nodeData['maxWaitTime'] is num ? (nodeData['maxWaitTime'] as num).toInt() : 2;
+    // Minutes as the builder wrote them ("0.5" is half a minute).
+    final maxWaitTime = LiveChat.waitMinutes(nodeData['maxWaitTime']);
     return {
       'workspaceId': workspaceId,
       'chatbotId': botId,
