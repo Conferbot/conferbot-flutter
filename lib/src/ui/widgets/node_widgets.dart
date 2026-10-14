@@ -8,6 +8,7 @@ import '../../core/nodes/node_ui_state.dart' as ui_state;
 import '../../core/nodes/handlers/display_handlers.dart' as display;
 import '../../core/nodes/handlers/choices/choice_ui_states.dart' as choice;
 import '../../core/nodes/handlers/legacy_handlers.dart' as legacy;
+import '../../core/live_chat/live_chat.dart';
 import '../../providers/conferbot_provider.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../widgets/avatar.dart';
@@ -2123,8 +2124,9 @@ class BotMessageBubble extends StatelessWidget {
         ),
         boxShadow: [theme.shadows.sm],
       ),
+      // The builder writes questions as rich text (<p>...</p>).
       child: Text(
-        text,
+        LiveChat.plainText(text),
         style: TextStyle(
           fontSize: theme.typography.messageSize,
           color: theme.colors.botBubbleText,
