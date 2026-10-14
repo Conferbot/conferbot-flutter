@@ -13,6 +13,9 @@ import '../ui/widgets/node_widgets.dart';
 import '../core/nodes/node_ui_state.dart';
 import 'chat_header.dart';
 import 'message_list.dart';
+import 'message_bubble.dart';
+import 'agent_reply.dart';
+import '../models/message.dart';
 import 'chat_input.dart';
 import 'chat_bottom_bar.dart';
 import 'typing_indicator.dart';
@@ -421,7 +424,7 @@ class _ChatWidgetState extends State<ChatWidget> {
         children: [
           MessageList(
             messages: messages,
-            showTypingIndicator: _isAgentTyping || provider.isProcessing,
+            showTypingIndicator: _showTyping(provider),
             showTimestamps: widget.showTimestamps,
             showDeliveryStatus: widget.showDeliveryStatus,
             theme: theme,
@@ -441,7 +444,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
     return MessageList(
       messages: messages,
-      showTypingIndicator: _isAgentTyping || provider.isProcessing,
+      showTypingIndicator: _showTyping(provider),
       showTimestamps: widget.showTimestamps,
       showDeliveryStatus: widget.showDeliveryStatus,
       theme: theme,
@@ -450,7 +453,35 @@ class _ChatWidgetState extends State<ChatWidget> {
       onLoadMore: () => provider.loadMoreMessages(),
       paginationConfig:
           widget.paginationConfig ?? const MessageListPaginationConfig(),
-      trailingWidget: interactiveNode,
+      trailingWidget: interactiveNode ?? _agentTrailing(provider, theme),
+    );
+  }
+
+  /// The dots: an agent typing, a node processing, or waiting on an AI
+  /// reply - none once the reply is being written.
+  bool _showTyping(ConferBotProvider provider) =>
+      (_isAgentTyping || provider.isProcessing || provider.awaitingReply) && provider.agentStream == null;
+
+  /// AI agent bots: the reply as it is written, then the one-tap questions.
+  Widget? _agentTrailing(ConferBotProvider provider, ConferBotTheme theme) {
+    final stream = provider.agentStream;
+    final suggestions = provider.awaitingReply ? const <String>[] : provider.suggestions;
+    if (stream == null && suggestions.isEmpty) return null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (stream != null)
+          MessageBubble(
+            message: AgentMessageRecord(
+              id: 'stream-${stream.id}',
+              time: DateTime.now(),
+              text: stream.text,
+              agentDetails: stream.agentDetails,
+            ),
+            theme: theme,
+          ),
+        if (stream == null) SuggestionChips(items: suggestions, theme: theme, onPick: (q) => provider.sendMessage(q)),
+      ],
     );
   }
 
@@ -458,7 +489,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       ConferBotProvider provider, ConferBotTheme theme) {
     return SimpleMessageList(
       messages: provider.record,
-      showTypingIndicator: _isAgentTyping || provider.isProcessing,
+      showTypingIndicator: _showTyping(provider),
       showTimestamps: widget.showTimestamps,
       showDeliveryStatus: widget.showDeliveryStatus,
       theme: theme,
@@ -636,7 +667,8 @@ class _ChatWidgetState extends State<ChatWidget> {
       }
     }
 
-    if (provider.currentAgent != null) {
+    // An AI agent bot's agent is the bot itself: no "Live Agent" under its name.
+    if (provider.currentAgent != null && provider.agentBot == null) {
       return provider.currentAgent!.email ?? 'Live Agent';
     }
     if (!_connectivity.isOnline) {
