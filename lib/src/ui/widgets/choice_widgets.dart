@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart' hide TextInputType;
+// Flutter's keyboard type: the SDK's own TextInputType (node_ui_state.dart)
+// takes the plain name in this file.
+import 'package:flutter/services.dart' as services show TextInputType;
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
@@ -1427,12 +1430,12 @@ class _PreChatQuestionsStateState extends State<_PreChatQuestionsState> {
     );
   }
 
-  TextInputType _getKeyboardType(String answerType) {
+  services.TextInputType _getKeyboardType(String answerType) {
     return switch (answerType.toLowerCase()) {
-      'email' => TextInputType.emailAddress,
-      'phone' || 'mobile' => TextInputType.phone,
-      'number' => TextInputType.number,
-      _ => TextInputType.text,
+      'email' => services.TextInputType.emailAddress,
+      'phone' || 'mobile' => services.TextInputType.phone,
+      'number' => services.TextInputType.number,
+      _ => services.TextInputType.text,
     };
   }
 }
