@@ -32,8 +32,9 @@ library;
 // Base classes and legacy handlers
 export 'legacy_handlers.dart';
 
-// Display handlers
-export 'display_handlers.dart';
+// Display handlers (CalendarState is the legacy handlers' - the Google
+// handlers build that one; exporting both was ambiguous)
+export 'display_handlers.dart' hide CalendarState;
 
 // Choice handlers (split into multiple files)
 export 'choice_handlers.dart';
