@@ -1,3 +1,5 @@
+import '../core/agent/agent_bot.dart';
+
 /// Message types matching embed-server schema
 enum MessageType {
   userMessage('user-message'),
@@ -6,6 +8,7 @@ enum MessageType {
   agentMessage('agent-message'),
   agentMessageFile('agent-message-file'),
   agentMessageAudio('agent-message-audio'),
+  agentMessageRich('agent-message-rich'),
   agentJoinedMessage('agent-joined-message'),
   visitorDisconnectedMessage('visitor-disconnected-message'),
   visitorReconnectedMessage('visitor-reconnected-message'),
@@ -51,6 +54,8 @@ abstract class RecordItem {
         return AgentMessageFileRecord.fromJson(json);
       case MessageType.agentMessageAudio:
         return AgentMessageAudioRecord.fromJson(json);
+      case MessageType.agentMessageRich:
+        return AgentRichMessageRecord.fromJson(json);
       case MessageType.agentJoinedMessage:
         return AgentJoinedMessageRecord.fromJson(json);
       case MessageType.visitorDisconnectedMessage:
@@ -177,18 +182,30 @@ class AgentDetails {
   final String id;
   final String name;
   final String email;
+  final String? avatar;
+
+  /// An AI agent (Agent Studio) rather than a person.
+  final bool isAIAgent;
 
   const AgentDetails({
     required this.id,
     required this.name,
     required this.email,
+    this.avatar,
+    this.isAIAgent = false,
   });
 
+  // An AI agent's details carry no email (and a person's may not): the
+  // strict casts threw on them and the message was dropped.
   factory AgentDetails.fromJson(Map<String, dynamic> json) {
+    final id = json['_id']?.toString() ?? '';
+    final avatar = json['avatar']?.toString();
     return AgentDetails(
-      id: json['_id'] as String,
-      name: json['name'] as String,
-      email: json['email'] as String,
+      id: id,
+      name: json['name']?.toString() ?? 'Agent',
+      email: json['email']?.toString() ?? '',
+      avatar: avatar == null || avatar.isEmpty ? null : avatar,
+      isAIAgent: json['isAIAgent'] == true || id.startsWith('ai-agent-'),
     );
   }
 
@@ -197,8 +214,19 @@ class AgentDetails {
       '_id': id,
       'name': name,
       'email': email,
+      if (avatar != null) 'avatar': avatar,
+      if (isAIAgent) 'isAIAgent': true,
     };
   }
+}
+
+/// The AI reply as it is being written: one live bubble, replaced by the
+/// finished agent-message.
+class AgentStream {
+  final String id;
+  final String text;
+  final AgentDetails agentDetails;
+  const AgentStream({required this.id, required this.text, required this.agentDetails});
 }
 
 /// Agent message record
@@ -206,21 +234,55 @@ class AgentMessageRecord extends RecordItem {
   final String text;
   final AgentDetails agentDetails;
 
+  /// An AI reply's sources, buttons and cards (core/agent/agent_bot.dart).
+  final AIReplyExtras? extras;
+
+  /// The visitor's "Helpful?" vote on an AI reply.
+  final AnswerFeedback? feedback;
+
+  /// The agent edited / unsent it (agent-message-edited / -deleted).
+  final bool edited;
+  final bool deleted;
+
   const AgentMessageRecord({
     required super.id,
     required super.time,
     required this.text,
     required this.agentDetails,
+    this.extras,
+    this.feedback,
+    this.edited = false,
+    this.deleted = false,
   }) : super(type: MessageType.agentMessage);
 
   factory AgentMessageRecord.fromJson(Map<String, dynamic> json) {
+    final agentDetails = json['agentDetails'] is Map
+        ? AgentDetails.fromJson(Map<String, dynamic>.from(json['agentDetails'] as Map))
+        : const AgentDetails(id: '', name: 'Agent', email: '');
+    final extrasRaw = json['extras'];
     return AgentMessageRecord(
       id: json['_id'].toString(),
       time: DateTime.parse(json['time'] as String),
-      text: json['text'] as String,
-      agentDetails: AgentDetails.fromJson(json['agentDetails'] as Map<String, dynamic>),
+      text: json['text']?.toString() ?? '',
+      agentDetails: agentDetails,
+      extras: extrasRaw is Map ? AgentBotParser.aiReplyExtrasOf(Map<String, dynamic>.from(extrasRaw)) : null,
+      feedback: AnswerFeedback.fromJson(json['feedback']),
+      edited: json['edited'] == true,
+      deleted: json['deleted'] == true,
     );
   }
+
+  /// The same message with a change applied (vote, edit, unsend).
+  AgentMessageRecord copyWith({String? text, AnswerFeedback? feedback, bool? edited, bool? deleted}) => AgentMessageRecord(
+        id: id,
+        time: time,
+        text: text ?? this.text,
+        agentDetails: agentDetails,
+        extras: extras,
+        feedback: feedback ?? this.feedback,
+        edited: edited ?? this.edited,
+        deleted: deleted ?? this.deleted,
+      );
 
   @override
   Map<String, dynamic> toJson() {
@@ -230,8 +292,59 @@ class AgentMessageRecord extends RecordItem {
       'time': time.toIso8601String(),
       'text': text,
       'agentDetails': agentDetails.toJson(),
+      if (extras != null) 'extras': extras!.toJson(),
+      if (feedback != null) 'feedback': feedback!.toJson(),
+      if (edited) 'edited': true,
+      if (deleted) 'deleted': true,
     };
   }
+}
+
+/// An agent's article, quick replies or card (agent-message-rich).
+class AgentRichMessageRecord extends RecordItem {
+  final RichEntry rich;
+  final String text;
+  final AgentDetails? agentDetails;
+
+  /// The quick reply the visitor chose.
+  final String? answered;
+
+  const AgentRichMessageRecord({
+    required super.id,
+    required super.time,
+    required this.rich,
+    this.text = '',
+    this.agentDetails,
+    this.answered,
+  }) : super(type: MessageType.agentMessageRich);
+
+  factory AgentRichMessageRecord.fromJson(Map<String, dynamic> json) {
+    final rich = AgentBotParser.safeRich(json['rich']) ?? const RichQuickReplies(text: '', options: []);
+    return AgentRichMessageRecord(
+      id: json['_id'].toString(),
+      time: DateTime.parse(json['time'] as String),
+      rich: rich,
+      text: json['text']?.toString() ?? '',
+      agentDetails: json['agentDetails'] is Map
+          ? AgentDetails.fromJson(Map<String, dynamic>.from(json['agentDetails'] as Map))
+          : null,
+      answered: json['answered']?.toString(),
+    );
+  }
+
+  AgentRichMessageRecord answering(String label) =>
+      AgentRichMessageRecord(id: id, time: time, rich: rich, text: text, agentDetails: agentDetails, answered: label);
+
+  @override
+  Map<String, dynamic> toJson() => {
+        '_id': id,
+        'type': type.value,
+        'time': time.toIso8601String(),
+        'text': text,
+        'rich': AgentBotParser.richToJson(rich),
+        if (agentDetails != null) 'agentDetails': agentDetails!.toJson(),
+        if (answered != null) 'answered': answered,
+      };
 }
 
 /// Agent file message record
