@@ -9,6 +9,8 @@ import 'nodes/handlers/display_handlers.dart' show MessageState, ImageState, Vid
 import 'nodes/handlers/choices/choice_ui_states.dart' show SingleChoiceState, MultipleChoiceState;
 import 'nodes/handlers/integrations/integration_base.dart' show IntegrationNodeHandler;
 import 'state/chat_state.dart';
+import 'live_chat/live_chat.dart';
+import 'nodes/handlers/special_handlers.dart' show HumanHandoverNodeHandler;
 import 'errors/conferbot_exceptions.dart';
 import 'errors/error_handler.dart' hide ErrorResult;
 import '../services/socket_client.dart';
@@ -80,6 +82,9 @@ class NodeFlowEngine extends ChangeNotifier {
 
   Map<String, dynamic>? _currentNodeData;
   Map<String, dynamic>? get currentNodeData => _currentNodeData;
+
+  /// The current node's type (it is on the node, not in its data).
+  String? _currentNodeType;
 
   /// Reference to steps from server
   List<Map<String, dynamic>> _steps = [];
@@ -236,6 +241,7 @@ class NodeFlowEngine extends ChangeNotifier {
 
     _currentNodeId = nodeId;
     _currentNodeData = nodeData;
+    _currentNodeType = nodeType;
 
     // Track node entry in analytics
     final nodeName = nodeData['name']?.toString() ??
@@ -839,6 +845,7 @@ class NodeFlowEngine extends ChangeNotifier {
           message['_id']?.toString() ?? message['id']?.toString() ?? '';
       _currentNodeId = nodeId;
       _currentNodeData = nodeData;
+      _currentNodeType = nodeType;
 
       // Track node entry for server-pushed nodes
       final nodeName = nodeData['name']?.toString() ??
@@ -868,6 +875,25 @@ class NodeFlowEngine extends ChangeNotifier {
 
   // ========== Agent Event Handlers ==========
 
+  /// Waiting on its handover step (for a person, or after nobody came).
+  bool get isAtHandover => (_currentNodeType ?? _currentNodeData?['type']?.toString()) == NodeTypes.humanHandover;
+
+  /// The handover step's data while the flow is on it (its fallbackMessage...).
+  Map<String, dynamic>? get handoverNodeData => isAtHandover ? _currentNodeData : null;
+
+  /// The handover step's card goes (a person joined, or nobody could).
+  void clearHandoverUI() {
+    if (_currentUIState is HumanHandoverUIState) _setUIState(null);
+  }
+
+  /// Nobody came and the visitor left a message or skipped it: the flow
+  /// carries on from the handover step, as the web widget does.
+  void continueAfterHandover() {
+    if (!isAtHandover) return;
+    _setUIState(null);
+    _proceedToNextNode(null);
+  }
+
   /// Handle agent accepted event (human handover)
   void handleAgentAccepted(String agentName) {
     final nodeId = _currentNodeId;
@@ -881,11 +907,14 @@ class NodeFlowEngine extends ChangeNotifier {
       data: {'agentName': agentName},
     );
 
-    if (nodeData['type']?.toString() == NodeTypes.humanHandover) {
+    if ((_currentNodeType ?? nodeData['type']?.toString()) == NodeTypes.humanHandover) {
       final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
 
-      // Notify handler if it supports agent events
-      if (handler is AgentEventHandler) {
+      // The handover step's own handler (it never implemented
+      // AgentEventHandler, so the check below never matched).
+      if (handler is HumanHandoverNodeHandler) {
+        handler.onAgentAccepted(nodeId, agentName);
+      } else if (handler is AgentEventHandler) {
         (handler as AgentEventHandler).onAgentAccepted(nodeId, agentName);
       }
 
@@ -910,7 +939,7 @@ class NodeFlowEngine extends ChangeNotifier {
       data: {},
     );
 
-    if (nodeData['type']?.toString() == NodeTypes.humanHandover) {
+    if ((_currentNodeType ?? nodeData['type']?.toString()) == NodeTypes.humanHandover) {
       final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
 
       if (handler is AgentEventHandler) {
@@ -949,10 +978,14 @@ class NodeFlowEngine extends ChangeNotifier {
       data: {},
     );
 
-    if (nodeData['type']?.toString() == NodeTypes.humanHandover) {
+    if ((_currentNodeType ?? nodeData['type']?.toString()) == NodeTypes.humanHandover) {
       final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
 
-      if (handler is AgentEventHandler) {
+      // The chat ended: a post-chat survey, else the flow carries on from
+      // the handover step, as the web widget does.
+      if (handler is HumanHandoverNodeHandler) {
+        _handleNodeResult(handler.onChatEnded(nodeId, nodeData), nodeData);
+      } else if (handler is AgentEventHandler) {
         _handleChatEndedAsync(handler as AgentEventHandler, nodeId, nodeData);
       }
     }
@@ -1024,6 +1057,7 @@ class NodeFlowEngine extends ChangeNotifier {
     _isFlowComplete = false;
     _currentNodeId = null;
     _currentNodeData = null;
+    _currentNodeType = null;
     _steps = [];
     _edges = [];
     _visitedNodes.clear();
@@ -1058,16 +1092,15 @@ class NodeFlowEngine extends ChangeNotifier {
 
     // Build visitor metaData
     final metaData = {
-      'visitorId': chatSessionId ?? '',
+      'visitorId': ChatState.instance.visitorId ?? chatSessionId ?? '',
       'chatDate': now,
       'deviceInfo': chatMetaData['deviceInfo'],
       'location': chatMetaData['location'],
     };
 
     // Extract handover config from nodeData
-    final maxWaitTime = nodeData['maxWaitTime'] is num
-        ? (nodeData['maxWaitTime'] as num).toInt()
-        : 2;
+    // Minutes as the builder wrote them ("0.5" is half a minute).
+    final maxWaitTime = LiveChat.waitMinutes(nodeData['maxWaitTime']);
 
     final payload = {
       'workspaceId': workspaceId,
