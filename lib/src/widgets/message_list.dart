@@ -343,7 +343,15 @@ class _MessageListState extends State<MessageList> {
     // Trailing widget (interactive node) after messages, before typing indicator
     final trailingIndex = messageStartIndex + widget.messages.length;
     if (widget.trailingWidget != null && index == trailingIndex) {
-      return widget.trailingWidget!;
+      // A step or card that appears or grows (a queue card, a file
+      // request, the rating) stays in view, as a new message does.
+      return NotificationListener<SizeChangedLayoutNotification>(
+        onNotification: (_) {
+          if (_isNearBottom) _scrollToBottom();
+          return true;
+        },
+        child: SizeChangedLayoutNotifier(child: widget.trailingWidget!),
+      );
     }
 
     // Message item
