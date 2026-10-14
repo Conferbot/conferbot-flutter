@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'agent_reply.dart';
 import '../models/message.dart';
 import '../models/queued_message.dart';
 import '../providers/conferbot_provider.dart';
@@ -106,6 +107,15 @@ class MessageBubble extends StatelessWidget {
       }
     }
 
+    // An agent's article, quick replies or card (agent_reply.dart)
+    if (message is AgentRichMessageRecord) {
+      return RichAgentMessage(
+        message: message as AgentRichMessageRecord,
+        theme: effectiveTheme,
+        avatar: _buildAvatar(context, effectiveTheme),
+      );
+    }
+
     // Include both user-message and user-input-response as user messages
     final isUser = message.type == MessageType.userMessage ||
         message.type == MessageType.userInputResponse;
@@ -138,7 +148,10 @@ class MessageBubble extends StatelessWidget {
           horizontal: effectiveTheme.spacing.chatContentPadding,
           vertical: effectiveTheme.spacing.xs,
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+        Row(
           mainAxisAlignment:
               isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -171,12 +184,16 @@ class MessageBubble extends StatelessWidget {
                       children: [
                         if (isAgent && message is AgentMessageRecord) ...[
                           Text(
-                            (message as AgentMessageRecord).agentDetails.name,
+                            (message as AgentMessageRecord).edited
+                                ? '${(message as AgentMessageRecord).agentDetails.name} \u00b7 Edited'
+                                : (message as AgentMessageRecord).agentDetails.name,
                             style: TextStyle(
                               fontSize: effectiveTheme.typography.fontSizeXs,
                               fontWeight:
                                   effectiveTheme.typography.fontWeightBold,
-                              color: effectiveTheme.colors.primary,
+                              // The bubble's own text colour: the primary
+                              // colour is often the bubble's, and vanished.
+                              color: _getTextColor(effectiveTheme).withOpacity(0.85),
                             ),
                           ),
                           SizedBox(height: effectiveTheme.spacing.xs),
@@ -195,6 +212,15 @@ class MessageBubble extends StatelessWidget {
             ),
             // Web widget parity: user messages sit flush right, no
             // phantom avatar slot is reserved on the visitor side.
+          ],
+        ),
+            // An AI reply's sources, buttons, cards and "Helpful?" - below
+            // the bubble, past the avatar, so the avatar stays by the bubble.
+            if (message is AgentMessageRecord)
+              Padding(
+                padding: EdgeInsets.only(left: showAvatar ? effectiveTheme.layout.avatarSize + 10 : 0),
+                child: AgentReplyExtras(message: message as AgentMessageRecord, theme: effectiveTheme),
+              ),
           ],
         ),
       ),
@@ -297,9 +323,18 @@ class MessageBubble extends StatelessWidget {
     String? imageUrl;
     String? name;
 
-    if (message is AgentMessageRecord) {
-      final agentMessage = message as AgentMessageRecord;
-      name = agentMessage.agentDetails.name;
+    if (message is AgentMessageRecord || message is AgentRichMessageRecord) {
+      final details = message is AgentMessageRecord
+          ? (message as AgentMessageRecord).agentDetails
+          : (message as AgentRichMessageRecord).agentDetails;
+      name = details?.name;
+      imageUrl = details?.avatar;
+      // The AI agent is the bot itself: its avatar when it has none.
+      if (imageUrl == null && (details?.isAIAgent ?? false)) {
+        try {
+          imageUrl = Provider.of<ConferBotProvider>(context, listen: false).botAvatarUrl;
+        } catch (_) {}
+      }
     } else {
       // Bot message — use avatar from server customizations
       try {
@@ -329,7 +364,18 @@ class MessageBubble extends StatelessWidget {
     } else if (message is BotMessageRecord) {
       text = (message as BotMessageRecord).text;
     } else if (message is AgentMessageRecord) {
-      text = (message as AgentMessageRecord).text;
+      final agentMessage = message as AgentMessageRecord;
+      if (agentMessage.deleted) {
+        return Text(
+          'This message was deleted',
+          style: TextStyle(
+            fontSize: theme.typography.messageSize,
+            fontStyle: FontStyle.italic,
+            color: _getTextColor(theme).withOpacity(0.7),
+          ),
+        );
+      }
+      text = agentMessage.text;
     } else if (message is SystemMessageRecord) {
       text = (message as SystemMessageRecord).text;
     }
