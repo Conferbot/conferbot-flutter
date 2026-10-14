@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import '../core/state/chat_state.dart';
@@ -18,6 +19,9 @@ import '../core/nodes/handlers/choices/choice_ui_states.dart';
 import '../core/state/message_pagination_controller.dart';
 import '../core/state/message_storage_service.dart';
 import '../utils/logger.dart';
+import '../utils/chat_markdown.dart';
+import '../core/agent/agent_bot.dart';
+import '../core/agent/agent_handover.dart';
 import 'analytics_provider.dart';
 
 /// ConferBot provider configuration
@@ -106,6 +110,22 @@ class ConferBotProvider with ChangeNotifier {
   bool _isLiveChatMode = false;
   bool _agentTyping = false;
 
+  // AI agent bots (Agent Studio): a bot with no flow, answered by an AI
+  // agent from the first message (core/agent/agent_bot.dart). null for
+  // every flow bot.
+  AgentBot? _agentBot;
+  AgentStream? _agentStream;
+  List<String> _suggestions = const [];
+  bool _awaitingReply = false;
+  Timer? _awaitReplyTimer;
+  // The silent handover waits for the visitor to engage (every record sent
+  // becomes a Response - a chat on the customer's plan); live sends wait
+  // for its acceptance.
+  Map<String, dynamic>? _agentPendingHandover;
+  bool _agentHandoverPending = false;
+  String? _agentStartedFor;
+  String? _serverWorkspaceId;
+
   // Chatbot flow data
   List<Map<String, dynamic>> _steps = [];
   List<Map<String, dynamic>> _edges = [];
@@ -154,6 +174,18 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Server customizations (theme, bot name, avatar, etc.)
   Map<String, dynamic>? get serverCustomizations => _serverCustomizations;
+
+  /// The bot's AI agent when it is a no-flow agent bot (Agent Studio), else null.
+  AgentBot? get agentBot => _agentBot;
+
+  /// The AI reply as it is being written (one live bubble), or null.
+  AgentStream? get agentStream => _agentStream;
+
+  /// One-tap questions: the greeting's starters, then each answer's follow-ups.
+  List<String> get suggestions => _suggestions;
+
+  /// Waiting for the AI's reply (the typing dots), at most 45 seconds.
+  bool get awaitingReply => _awaitingReply;
 
   /// Bot name from server customizations
   String? get botName {
@@ -369,6 +401,7 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Setup socket event listeners
   void _setupSocketListeners() {
+    _setupAgentBotListeners();
     // Connection events
     _socketClient.on(SocketEvents.connect, (_) {
       _isConnected = true;
@@ -430,16 +463,18 @@ class ConferBotProvider with ChangeNotifier {
     // Server sends: { message, agentDetails, isFileInput, isAudioInput, agentMessageId }
     _socketClient.on(SocketEvents.agentMessage, (data) {
       if (data != null && data is Map<String, dynamic>) {
-        final agentDetailsRaw = data['agentDetails'] as Map<String, dynamic>?;
-        // Strip HTML tags from agent messages (admin sends via rich text editor with <p> tags)
-        final rawMessageText = data['message']?.toString() ?? '';
-        final messageText = rawMessageText
-            .replaceAll(RegExp(r'<[^>]+>'), '')
-            .replaceAll('&nbsp;', ' ')
-            .replaceAll('&amp;', '&')
-            .trim();
+        final sid = data['chatSessionId']?.toString();
+        if (sid != null && _chatSessionId != null && sid != _chatSessionId) return;
+        final agentDetailsRaw = data['agentDetails'] is Map ? Map<String, dynamic>.from(data['agentDetails'] as Map) : null;
         final isFileInput = data['isFileInput'] as bool? ?? false;
         final isAudioInput = data['isAudioInput'] as bool? ?? false;
+        // A file or voice note's message is its URL; text is the inbox
+        // editor's HTML or the AI's markdown, as one markdown subset.
+        final rawMessageText = data['message']?.toString() ?? '';
+        final messageText = (isFileInput || isAudioInput) ? rawMessageText.trim() : ChatMarkdown.htmlToMarkdown(rawMessageText);
+        // An AI reply's sources, buttons and cards; its follow-ups shown.
+        final extras = AgentBotParser.aiReplyExtrasOf(data);
+        _onAgentBotMessage(data);
         final agentMessageId = data['agentMessageId']?.toString()
             ?? 'agent_msg_${DateTime.now().millisecondsSinceEpoch}';
 
@@ -472,6 +507,7 @@ class ConferBotProvider with ChangeNotifier {
             time: DateTime.now(),
             text: messageText,
             agentDetails: agentDetails,
+            extras: extras != null && (!extras.isEmpty || extras.isFallback) ? extras : null,
           );
         }
 
@@ -508,6 +544,9 @@ class ConferBotProvider with ChangeNotifier {
 
     // Agent accepted handover
     _socketClient.on(SocketEvents.agentAccepted, (data) {
+      // An agent bot's own AI agent taking the chat it already greeted:
+      // nothing to announce, the held messages go out.
+      if (_onAgentBotAccepted(data)) return;
       if (data != null && data is Map<String, dynamic>) {
         final agentDetails = data['agentDetails'] as Map<String, dynamic>?;
         if (agentDetails != null) {
@@ -515,7 +554,7 @@ class ConferBotProvider with ChangeNotifier {
           _currentAgent = Agent(
             id: agentDetails['_id']?.toString() ?? '',
             name: agentName,
-            email: agentDetails['email'] as String?,
+            email: agentDetails['email']?.toString(),
           );
 
           // Set live chat mode
@@ -647,6 +686,306 @@ class ConferBotProvider with ChangeNotifier {
   }
 
   /// Add message to record with pagination support and deduplication
+  // ========== AI Agent Bots (Agent Studio) ==========
+
+  AgentDetails _agentDetailsOf(AgentBot bot) =>
+      AgentDetails(id: bot.agentDetailsId, name: bot.displayName, email: '', avatar: bot.avatar, isAIAgent: true);
+
+  void _setAwaitingReply(bool on) {
+    _awaitReplyTimer?.cancel();
+    _awaitingReply = on;
+    if (on) {
+      _awaitReplyTimer = Timer(const Duration(seconds: 45), () {
+        _awaitingReply = false;
+        notifyListeners();
+      });
+    }
+  }
+
+  /// The record itself, with its answer variables, on response-record.
+  void _sendRecord() {
+    if (_chatSessionId == null) return;
+    final data = ChatState.instance.buildResponseData();
+    _socketClient.sendResponseRecord(
+      chatSessionId: _chatSessionId!,
+      record: data['record'],
+      answerVariables: data['answerVariables'] as List<dynamic>?,
+      extra: data,
+    );
+  }
+
+  /// Open the agent chat for this session on screen: the greeting and the
+  /// starters. Nothing is sent yet - only a person starts a conversation
+  /// (see [engageAgent]). A restored session already has its conversation:
+  /// back in the room only, nothing greeted or handed over again.
+  void _startAgentBotChat() {
+    final bot = _agentBot;
+    final sessionId = _chatSessionId;
+    if (bot == null || sessionId == null || _agentStartedFor == sessionId) return;
+    _agentStartedFor = sessionId;
+    ChatState.instance.setWorkspaceId(_serverWorkspaceId);
+    final details = _agentDetailsOf(bot);
+    _currentAgent = Agent(id: details.id, name: details.name, avatar: bot.avatar);
+    // Visitor messages go the live way from the start.
+    _isLiveChatMode = true;
+    ChatState.instance.setLiveChatMode(true);
+
+    final shown = [..._record, ...paginatedMessages];
+    final resumed = shown.any((m) =>
+        (m is AgentMessageRecord && m.id.startsWith('agent-greeting-')) || m is UserMessageRecord);
+    if (resumed) {
+      _agentPendingHandover = null;
+      _agentHandoverPending = false;
+      return;
+    }
+
+    _agentHandoverPending = true;
+    final greeting = bot.greeting.isEmpty ? AgentBotParser.defaultGreeting : bot.greeting;
+    final shell = AgentBotParser.agentShellNodes(_steps, bot.agentId);
+    final welcomeId = shell.welcome?['id']?.toString() ?? 'agent-welcome';
+    ChatState.instance.pushToRecord(RecordEntry(
+      id: welcomeId,
+      shape: 'welcome-node',
+      type: 'welcome-node',
+      text: greeting,
+      data: {
+        ...?(shell.welcome?['data'] is Map ? Map<String, dynamic>.from(shell.welcome!['data'] as Map) : null),
+        'text': greeting,
+        'disableImage': true,
+        'agentDetails': AgentBotParser.agentDetailsOf(bot),
+      },
+    ));
+    ChatState.instance.addToTranscript('bot', greeting);
+    _addMessageToRecord(AgentMessageRecord(id: 'agent-greeting-$sessionId', time: DateTime.now(), text: greeting, agentDetails: details));
+    _suggestions = bot.starters;
+
+    final shellData = shell.handover?['data'] is Map ? Map<String, dynamic>.from(shell.handover!['data'] as Map) : null;
+    _agentPendingHandover = {
+      'id': shell.handover?['id']?.toString() ?? 'agent-handover',
+      'data': AgentBotParser.agentHandoverData(shellData, bot.agentId),
+    };
+    notifyListeners();
+  }
+
+  /// The visitor is engaging (typing, a suggestion tapped, a message sent):
+  /// create the Response from the record, then the silent handover. Once.
+  void engageAgent() {
+    final step = _agentPendingHandover;
+    if (step == null || !_socketClient.isConnected) return;
+    _agentPendingHandover = null;
+    _sendRecord();
+    final data = Map<String, dynamic>.from(step['data'] as Map);
+    ChatState.instance.pushToRecord(RecordEntry(
+      id: step['id'].toString(),
+      shape: 'human-handover-node',
+      type: 'human-handover-node',
+      data: data,
+    ));
+    final payload = AgentHandover.payload(ChatState.instance, data, extra: const {'silentStart': true});
+    if (payload != null) _socketClient.emit(SocketEvents.initiateHandover, payload);
+  }
+
+  /// agent-accepted for this bot's own AI agent: nothing drawn, held messages sent.
+  bool _onAgentBotAccepted(dynamic data) {
+    if (_agentBot == null || data is! Map) return false;
+    final raw = data['agentDetails'];
+    if (raw is! Map) return false;
+    final details = AgentDetails.fromJson(Map<String, dynamic>.from(raw));
+    if (!details.isAIAgent) return false;
+    final wasPending = _agentHandoverPending;
+    _agentHandoverPending = false;
+    _currentAgent = Agent(id: details.id, name: details.name, avatar: details.avatar);
+    _isLiveChatMode = true;
+    ChatState.instance.setLiveChatMode(true);
+    final hasVisitorWords = ChatState.instance.getRecordForServer().any((r) => r['shape'] == 'user-live-message');
+    if (wasPending && hasVisitorWords) {
+      _sendRecord();
+      _setAwaitingReply(true);
+    }
+    notifyListeners();
+    return true;
+  }
+
+  /// An agent message arrived: the wait and the live bubble end, its follow-ups show.
+  void _onAgentBotMessage(Map<String, dynamic> data) {
+    _setAwaitingReply(false);
+    _agentStream = null;
+    final details = data['agentDetails'] is Map ? Map<String, dynamic>.from(data['agentDetails'] as Map) : null;
+    _suggestions = AgentBotParser.isAIAgent(details) && data['isFallback'] != true
+        ? AgentBotParser.followUpsOf(data['followUps'])
+        : const [];
+  }
+
+  /// The visitor said something: the chips go, the dots wait for the AI.
+  void _noteVisitorMessage() {
+    _suggestions = const [];
+    final types = ChatState.instance.getRecordForServer().map((r) => r['type']?.toString()).toList();
+    if (_agentBot != null && AgentBotParser.isAgentAIActive(types)) _setAwaitingReply(true);
+  }
+
+  void _resetAgentBotChat() {
+    _agentStartedFor = null;
+    _agentPendingHandover = null;
+    _agentHandoverPending = false;
+    _agentStream = null;
+    _suggestions = const [];
+    _setAwaitingReply(false);
+  }
+
+  bool _isOwnSession(dynamic data) {
+    final sid = data is Map ? data['chatSessionId']?.toString() : null;
+    return sid == null || _chatSessionId == null || sid == _chatSessionId;
+  }
+
+  AgentDetails _detailsFrom(dynamic raw) => raw is Map
+      ? AgentDetails.fromJson(Map<String, dynamic>.from(raw))
+      : const AgentDetails(id: '', name: 'Agent', email: '');
+
+  void _setupAgentBotListeners() {
+    // The reply as it is written: one live bubble, replaced by the finished agent-message.
+    _socketClient.on(SocketEvents.agentMessageStream, (data) {
+      if (data is! Map || !_isOwnSession(data)) return;
+      final text = data['text']?.toString() ?? '';
+      final streamId = data['streamId']?.toString() ?? '';
+      if (text.trim().isEmpty || streamId.isEmpty) return;
+      _setAwaitingReply(false);
+      _agentTyping = false;
+      _agentStream = AgentStream(id: streamId, text: ChatMarkdown.htmlToMarkdown(text), agentDetails: _detailsFrom(data['agentDetails']));
+      notifyListeners();
+    });
+
+    // An article, quick replies or a card from the agent.
+    _socketClient.on(SocketEvents.agentMessageRich, (data) {
+      if (data is! Map || !_isOwnSession(data) || data['entry'] is! Map) return;
+      final entry = Map<String, dynamic>.from(data['entry'] as Map);
+      final id = entry['id']?.toString() ?? '';
+      final rich = AgentBotParser.safeRich(entry['rich']);
+      if (id.isEmpty || rich == null || _record.any((m) => m.id == id)) return;
+      _setAwaitingReply(false);
+      _agentStream = null;
+      final text = entry['text']?.toString() ?? '';
+      _addMessageToRecord(AgentRichMessageRecord(
+        id: id,
+        time: DateTime.now(),
+        rich: rich,
+        text: text,
+        agentDetails: entry['agentDetails'] is Map ? _detailsFrom(entry['agentDetails']) : null,
+      ));
+      ChatState.instance.pushToRecord(RecordEntry(
+        id: id,
+        shape: 'agent-message-rich',
+        type: 'agent-message-rich',
+        text: text,
+        data: {'rich': entry['rich'], 'agentDetails': entry['agentDetails']},
+      ));
+      notifyListeners();
+    });
+
+    // An agent edited or unsent a message: the bubble changes in place.
+    void change(dynamic data, bool deleted) {
+      if (data is! Map || !_isOwnSession(data)) return;
+      final newText = (data['text'] ?? data['message'])?.toString();
+      _updateMessage(data['agentMessageId']?.toString(), (m) {
+        if (m is! AgentMessageRecord) return null;
+        return deleted
+            ? m.copyWith(text: '', deleted: true)
+            : m.copyWith(text: newText != null ? ChatMarkdown.htmlToMarkdown(newText) : null, edited: true);
+      });
+    }
+
+    _socketClient.on(SocketEvents.agentMessageEdited, (data) => change(data, false));
+    _socketClient.on(SocketEvents.agentMessageDeleted, (data) => change(data, true));
+
+    // Closed for inactivity; the visitor's next message reopens it.
+    _socketClient.on(SocketEvents.aiAgentInactiveClose, (data) {
+      if (!_isOwnSession(data)) return;
+      _setAwaitingReply(false);
+      _suggestions = const [];
+      ChatState.instance.pushToRecord(RecordEntry(
+        id: 'ai-close-${DateTime.now().millisecondsSinceEpoch}',
+        shape: 'ai-agent-inactive-close',
+        type: 'ai-agent-inactive-close',
+      ));
+      notifyListeners();
+    });
+    _socketClient.on(SocketEvents.aiAgentResumed, (data) {
+      if (!_isOwnSession(data)) return;
+      ChatState.instance.pushToRecord(RecordEntry(
+        id: 'ai-resumed-${DateTime.now().millisecondsSinceEpoch}',
+        shape: 'ai-agent-resumed',
+        type: 'ai-agent-resumed',
+      ));
+      _isLiveChatMode = true;
+      ChatState.instance.setLiveChatMode(true);
+      notifyListeners();
+    });
+  }
+
+  /// "Helpful?" on an AI answer: kept on the message, sent to the server.
+  void sendAnswerFeedback(String agentMessageId, bool helpful, [String? reason]) {
+    final feedback = AnswerFeedback(helpful, helpful ? null : reason);
+    _updateMessage(agentMessageId, (m) => m is AgentMessageRecord ? m.copyWith(feedback: feedback) : null);
+    _socketClient.emitWithAck(SocketEvents.aiAnswerFeedback, {
+      'chatSessionId': _chatSessionId,
+      'agentMessageId': agentMessageId,
+      ...feedback.toJson(),
+    }).catchError((_) => null);
+  }
+
+  /// The visitor's Confirm / Not now on an action the AI is about to take.
+  Future<({bool ok, String? code})> decideAction(String token, bool accept) async {
+    try {
+      final res = await _socketClient.emitWithAck(
+        SocketEvents.aiActionDecision,
+        {'chatSessionId': _chatSessionId, 'token': token, 'accept': accept},
+        timeout: const Duration(seconds: 30),
+      );
+      final map = res is List && res.isNotEmpty ? res.first : res;
+      final ok = map is Map && map['ok'] == true;
+      if (ok && accept) {
+        _setAwaitingReply(true);
+        notifyListeners();
+      }
+      return (ok: ok, code: map is Map ? map['code']?.toString() : null);
+    } catch (_) {
+      return (ok: false, code: null);
+    }
+  }
+
+  /// A tapped answer button or quick action, as a goal.
+  void trackConversion(String goalId, String conversionEvent) {
+    _socketClient.emit(SocketEvents.trackGoalCompletion, {
+      'chatSessionId': _chatSessionId,
+      'goalId': goalId,
+      'conversionEvent': conversionEvent,
+    });
+  }
+
+  /// A quick reply chosen on a rich message: the chips freeze, the label is sent.
+  Future<void> answerRichMessage(String messageId, String label) async {
+    _updateMessage(messageId, (m) => m is AgentRichMessageRecord ? m.answering(label) : null);
+    await sendMessage(label);
+  }
+
+  /// Change one message in place (a vote, an edit, a chosen quick reply):
+  /// in the record and in the paginated list the chat draws.
+  bool _updateMessage(String? id, RecordItem? Function(RecordItem) change) {
+    if (id == null) return false;
+    RecordItem? updated;
+    final index = _record.indexWhere((m) => m.id == id);
+    if (index >= 0) {
+      updated = change(_record[index]);
+      if (updated != null) _record[index] = updated;
+    } else {
+      final shown = paginatedMessages.where((m) => m.id == id);
+      if (shown.isNotEmpty) updated = change(shown.first);
+    }
+    if (updated == null) return false;
+    _paginationController?.updateMessage(updated);
+    notifyListeners();
+    return true;
+  }
+
   void _addMessageToRecord(RecordItem message) {
     // HIGH FIX 4: Deduplication by message ID
     if (_record.any((m) => m.id == message.id)) {
@@ -753,6 +1092,18 @@ class ConferBotProvider with ChangeNotifier {
       // Extract workspaceId from server chatbot data
       final serverWorkspaceId = chatbotData['workspaceId']?.toString();
 
+      // No-flow AI agent bot (Agent Studio)? null for every flow bot.
+      _agentBot = AgentBotParser.parseAgentBot(chatbotData);
+      _serverWorkspaceId = serverWorkspaceId;
+      if (_agentBot != null) {
+        ChatState.instance.setWorkspaceId(serverWorkspaceId);
+        final resolvedName = _serverCustomizations?['botName']?.toString() ?? _serverCustomizations?['logoText']?.toString() ?? '';
+        if (resolvedName.isNotEmpty) ChatState().setVariable('_botName', resolvedName);
+        if (_chatSessionId != null && _isOpen) _startAgentBotChat();
+        notifyListeners();
+        return;
+      }
+
       _logger.debug('Loaded ${_steps.length} steps and ${_edges.length} edges');
 
       // Start flow engine if we got steps and have a session
@@ -842,6 +1193,9 @@ class ConferBotProvider with ChangeNotifier {
       headerText: headerText,
       botBubble: botBubble,
       botBubbleText: botText,
+      // An agent - person or AI - speaks in the bot's colours, as on the web.
+      agentBubble: botBubble,
+      agentBubbleText: botText,
       userBubble: userBubble,
       userBubbleText: userText,
       optionBubble: optionBubble,
@@ -881,6 +1235,15 @@ class ConferBotProvider with ChangeNotifier {
       // Initialize pagination with restored session
       if (_paginationController != null) {
         await _paginationController!.initialize(_chatSessionId!);
+      }
+
+      // An agent bot picks its conversation back up.
+      if (_agentBot != null) {
+        _isOpen = true;
+        _unreadCount = 0;
+        _startAgentBotChat();
+        notifyListeners();
+        return;
       }
 
       // If we have steps, resume the flow engine
@@ -977,6 +1340,15 @@ class ConferBotProvider with ChangeNotifier {
       // Request chatbot data if we don't have steps yet
       if (_steps.isEmpty) {
         _socketClient.getChatbotData();
+      }
+
+      // An agent bot opens into the agent chat, never the shell flow.
+      if (_agentBot != null) {
+        _isOpen = true;
+        _unreadCount = 0;
+        _startAgentBotChat();
+        notifyListeners();
+        return;
       }
 
       // Initialize and start the flow engine
@@ -1126,6 +1498,8 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Send a message during live chat (agent handover) mode
   Future<void> _sendLiveChatMessage(String text) async {
+    // An agent bot's conversation starts with the visitor's first word.
+    engageAgent();
     final msgId = 'user_live_${DateTime.now().millisecondsSinceEpoch}';
 
     // Add user message to display record
@@ -1153,14 +1527,12 @@ class ConferBotProvider with ChangeNotifier {
       text: text,
     );
 
-    // Send via response-record socket event with full state
-    _socketClient.sendResponseRecord(
-      chatSessionId: _chatSessionId!,
-      record: ChatState.instance.buildResponseData(),
-      answerVariables: ChatState.instance.answerVariables
-          .map((v) => v.toJson())
-          .toList(),
-    );
+    // Send via response-record - the record itself (the whole payload was
+    // sent as the record, so the server could not read the message). Held
+    // while an agent bot's handover is being accepted; the acceptance
+    // sends it.
+    if (!_agentHandoverPending) _sendRecord();
+    _noteVisitorMessage();
 
     // Stop visitor typing indicator
     sendTypingStatus(false);
@@ -1342,6 +1714,8 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Send typing status
   void sendTypingStatus(bool isTyping) {
+    // Typing in the composer: a person is here.
+    if (isTyping) engageAgent();
     if (_chatSessionId == null) {
       return;
     }
@@ -1377,6 +1751,7 @@ class ConferBotProvider with ChangeNotifier {
     _isLiveChatMode = false;
     _agentTyping = false;
     _sessionRestored = false;
+    _resetAgentBotChat();
     _paginationController?.reset();
 
     // Reset ChatState (optionally clearing persistence)
