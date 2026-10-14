@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'agent_reply.dart';
+import 'media/audio_player_widget.dart';
+import '../core/live_chat/live_chat.dart';
+import '../config/constants.dart';
 import '../models/message.dart';
 import '../models/queued_message.dart';
 import '../providers/conferbot_provider.dart';
@@ -105,6 +109,12 @@ class MessageBubble extends StatelessWidget {
           ),
         );
       }
+    }
+
+    // A file in a live chat, from the agent or the visitor: the image itself,
+    // or a row with its name; an agent's voice note plays here.
+    if (message is AgentMessageFileRecord || message is UserLiveMessageFileRecord || message is AgentMessageAudioRecord) {
+      return _buildFileMessage(context, effectiveTheme);
     }
 
     // An agent's article, quick replies or card (agent_reply.dart)
@@ -227,6 +237,90 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
+  Widget _buildFileMessage(BuildContext context, ConferBotTheme theme) {
+    final m = message;
+    final isUser = m is UserLiveMessageFileRecord;
+    final origin = Uri.tryParse(ConferBotEndpoints.apiBaseUrl)?.origin ?? '';
+    final raw = m is AgentMessageFileRecord
+        ? m.file
+        : m is UserLiveMessageFileRecord
+            ? m.url
+            : (m as AgentMessageAudioRecord).url;
+    final url = LiveChat.resolveMediaUrl(raw, origin);
+    if (url == null) return const SizedBox.shrink();
+    final mime = m is UserLiveMessageFileRecord ? m.mimeType : null;
+    final name = LiveChat.fileNameOf(m is UserLiveMessageFileRecord ? m.fileName : null, url);
+    final textColor = _getTextColor(theme);
+    void open() => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+
+    final Widget content;
+    if (m is AgentMessageAudioRecord) {
+      content = SizedBox(
+        width: theme.layout.maxBubbleWidth,
+        child: AudioPlayerWidget(audioUrl: url, theme: theme, config: const AudioPlayerConfig(compactMode: true)),
+      );
+    } else if (LiveChat.isImageUrl(url, mime)) {
+      content = GestureDetector(
+        onTap: open,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: theme.layout.maxBubbleWidth * 0.8, maxHeight: 240),
+            child: Image.network(
+              url,
+              fit: BoxFit.cover,
+              semanticLabel: name,
+              errorBuilder: (_, __, ___) => _fileRow(theme, name, textColor, open),
+            ),
+          ),
+        ),
+      );
+    } else {
+      content = _fileRow(theme, name, textColor, open);
+    }
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: theme.spacing.chatContentPadding, vertical: theme.spacing.xs),
+      child: Row(
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isUser && showAvatar) ...[_buildAvatar(context, theme), const SizedBox(width: 10)],
+          Flexible(child: content),
+        ],
+      ),
+    );
+  }
+
+  Widget _fileRow(ConferBotTheme theme, String name, Color textColor, VoidCallback onTap) {
+    return Material(
+      color: _getBaseBubbleColor(theme),
+      borderRadius: BorderRadius.circular(theme.borderRadius.bubble),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(theme.borderRadius.bubble),
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: theme.spacing.bubblePaddingH, vertical: theme.spacing.bubblePaddingV),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.insert_drive_file_outlined, size: 20, color: textColor),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: textColor, fontSize: theme.typography.messageSize, decoration: TextDecoration.underline),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatusRow(ConferBotTheme theme, bool isUser) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: theme.spacing.xs),
@@ -323,10 +417,18 @@ class MessageBubble extends StatelessWidget {
     String? imageUrl;
     String? name;
 
-    if (message is AgentMessageRecord || message is AgentRichMessageRecord) {
-      final details = message is AgentMessageRecord
-          ? (message as AgentMessageRecord).agentDetails
-          : (message as AgentRichMessageRecord).agentDetails;
+    if (message is AgentMessageRecord ||
+        message is AgentRichMessageRecord ||
+        message is AgentMessageFileRecord ||
+        message is AgentMessageAudioRecord) {
+      final m = message;
+      final AgentDetails? details = m is AgentMessageRecord
+          ? m.agentDetails
+          : m is AgentRichMessageRecord
+              ? m.agentDetails
+              : m is AgentMessageFileRecord
+                  ? m.agentDetails
+                  : (m as AgentMessageAudioRecord).agentDetails;
       name = details?.name;
       imageUrl = details?.avatar;
       // The AI agent is the bot itself: its avatar when it has none.
@@ -373,6 +475,15 @@ class MessageBubble extends StatelessWidget {
             fontStyle: FontStyle.italic,
             color: _getTextColor(theme).withOpacity(0.7),
           ),
+        );
+      }
+      if (agentMessage.translation != null) {
+        return _TranslatedText(
+          message: agentMessage,
+          textColor: _getTextColor(theme),
+          builder: (t) => MarkdownDetector.containsMarkdown(t) && enableMarkdown
+              ? _buildMarkdownContent(context, theme, t)
+              : Text(t, style: TextStyle(fontSize: theme.typography.messageSize, color: _getTextColor(theme), height: theme.typography.lineHeightNormal)),
         );
       }
       text = agentMessage.text;
@@ -674,6 +785,51 @@ class RichTextMessage extends StatelessWidget {
     return Text(
       text,
       style: effectiveTextStyle,
+    );
+  }
+}
+
+/// An agent's message translated for the visitor: "See original" shows what
+/// the agent wrote, in the visitor's language.
+class _TranslatedText extends StatefulWidget {
+  final AgentMessageRecord message;
+  final Color textColor;
+  final Widget Function(String text) builder;
+  const _TranslatedText({
+    required this.message,
+    required this.textColor,
+    required this.builder,
+  });
+
+  @override
+  State<_TranslatedText> createState() => _TranslatedTextState();
+}
+
+class _TranslatedTextState extends State<_TranslatedText> {
+  bool _original = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.message.translation!;
+    final labels = LiveChat.translationLabels(t.to);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        widget.builder(_original ? t.original : widget.message.text),
+        const SizedBox(height: 4),
+        GestureDetector(
+          onTap: () => setState(() => _original = !_original),
+          child: Text(
+            _original ? labels[1] : labels[0],
+            style: TextStyle(
+              fontSize: 12,
+              color: widget.textColor.withOpacity(0.75),
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
