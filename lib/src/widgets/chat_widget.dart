@@ -22,6 +22,9 @@ import 'typing_indicator.dart';
 import 'offline_indicator.dart';
 import 'knowledge_base/knowledge_base_screen.dart';
 import 'handover/handover.dart';
+import 'live_chat_cards.dart';
+import '../core/live_chat/live_chat.dart';
+import 'package:file_picker/file_picker.dart';
 
 /// Complete drop-in chat widget with node rendering support
 /// Now includes:
@@ -418,8 +421,18 @@ class _ChatWidgetState extends State<ChatWidget> {
       );
     }
 
+    // The handover step waiting for a person: one card in the conversation,
+    // as on the web widget (where they stand in line, about how long).
+    if (uiState is HumanHandoverUIState && uiState.state == HandoverState.waitingForAgent) {
+      interactiveNode = HandoverWaitCard(
+        liveChat: provider.liveChat,
+        theme: theme,
+        message: uiState.handoverMessage,
+      );
+    }
+
     // Handle handover overlay separately (still positioned)
-    if (uiState is HumanHandoverUIState) {
+    if (uiState is HumanHandoverUIState && uiState.state != HandoverState.waitingForAgent) {
       return Stack(
         children: [
           MessageList(
@@ -453,9 +466,47 @@ class _ChatWidgetState extends State<ChatWidget> {
       onLoadMore: () => provider.loadMoreMessages(),
       paginationConfig:
           widget.paginationConfig ?? const MessageListPaginationConfig(),
-      trailingWidget: interactiveNode ?? _agentTrailing(provider, theme),
+      trailingWidget: _trailing(interactiveNode ?? _agentTrailing(provider, theme), provider, theme),
     );
   }
+
+  /// The step or AI reply at the end of the list, then the live chat's
+  /// receipt and cards (core/live_chat).
+  Widget _trailing(Widget? node, ConferBotProvider provider, ConferBotTheme theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (node != null) node,
+        LiveChatFooter(provider: provider, theme: theme, onUpload: _pickLiveFile),
+      ],
+    );
+  }
+
+  /// The visitor's file for the agent: picked, uploaded, sent.
+  Future<void> _pickLiveFile() async {
+    final provider = context.read<ConferBotProvider>();
+    final picked = await FilePicker.platform.pickFiles(withData: false);
+    final file = picked?.files.single;
+    if (file == null || file.path == null) return;
+    final error = await provider.sendLiveFile(file.path!, fileName: file.name, mimeType: _mimeOf(file.extension));
+    if (error != null && mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(error)));
+    }
+  }
+
+  static String? _mimeOf(String? ext) => switch (ext?.toLowerCase()) {
+        'png' => 'image/png',
+        'jpg' || 'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        'pdf' => 'application/pdf',
+        'txt' => 'text/plain',
+        'csv' => 'text/csv',
+        'doc' => 'application/msword',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        _ => null,
+      };
 
   /// The dots: an agent typing, a node processing, or waiting on an AI
   /// reply - none once the reply is being written.
@@ -608,19 +659,31 @@ class _ChatWidgetState extends State<ChatWidget> {
         ? 'Offline - messages will be queued'
         : widget.placeholder ?? 'Type a message...';
 
+    // A live chat: locked or replies off, and a file for the agent.
+    final live = provider.liveChat;
+    final repliesOff = live.lockedBy != null || !live.visitorInputEnabled;
+    final canAttach = provider.isLiveChatMode &&
+        (LiveChat.visitorUploadsOn(provider.serverCustomizations) || live.fileRequestedBy != null);
+
     // Unified bottom bar: input + "Powered by" footer
-    return ChatBottomBar(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        LiveChatComposerTop(provider: provider, theme: theme),
+        ChatBottomBar(
       onSend: (text) async {
         await provider.sendMessage(text);
       },
-      placeholder: placeholder,
-      disabled: provider.isProcessing,
-      enableAttachments: widget.enableAttachments,
-      onAttachmentPress: null,
+      placeholder: repliesOff ? 'Replies are turned off for now' : placeholder,
+      disabled: provider.isProcessing || repliesOff,
+      enableAttachments: widget.enableAttachments || canAttach,
+      onAttachmentPress: canAttach ? _pickLiveFile : null,
       showKnowledgeBase: widget.showKnowledgeBase,
       onKnowledgeBaseTap: _openKnowledgeBase,
       showOfflineIndicator: isOffline,
       theme: theme,
+        ),
+      ],
     );
   }
 
