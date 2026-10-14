@@ -8,6 +8,9 @@ import 'message_bubble.dart';
 import 'typing_indicator.dart';
 import 'avatar.dart';
 import 'empty_state.dart';
+import '../core/customization/customizations.dart';
+import '../providers/conferbot_provider.dart';
+import 'package:provider/provider.dart';
 
 /// Configuration for message list pagination behavior
 class MessageListPaginationConfig {
@@ -470,6 +473,16 @@ class _MessageListState extends State<MessageList> {
   }
 
   Widget _buildTypingIndicator(ConferBotTheme theme) {
+    // The web's typing bubble once the bot's settings arrived: its avatar,
+    // 18/18/18/6 corners, dots in the bot's text colour (core/customization).
+    ResolvedCustomizations? look;
+    try {
+      final provider = Provider.of<ConferBotProvider>(context, listen: false);
+      look = provider.serverCustomizations != null ? provider.customizations : null;
+    } catch (_) {
+      look = null;
+    }
+    final corners = look?.botBubble;
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: theme.spacing.md,
@@ -479,27 +492,42 @@ class _MessageListState extends State<MessageList> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           // Bot avatar — matches web widget
-          ConferBotAvatar(
-            size: 32,
-            name: 'Bot',
-            theme: theme,
-          ),
-          SizedBox(width: theme.spacing.sm),
+          if (look?.hideAvatar != true) ...[
+            ConferBotAvatar(
+              size: look?.avatarSize ?? 32,
+              imageUrl: look?.avatar,
+              name: 'Bot',
+              shape: switch (look?.avatarShape) {
+                'square' => AvatarShape.square,
+                'rounded' => AvatarShape.rounded,
+                _ => AvatarShape.circle,
+              },
+              theme: theme,
+            ),
+            SizedBox(width: theme.spacing.sm),
+          ],
           // Typing dots in a bubble
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            constraints: look == null ? null : const BoxConstraints(minHeight: 36, minWidth: 54),
+            alignment: look == null ? null : Alignment.center,
+            padding: look == null
+                ? const EdgeInsets.symmetric(horizontal: 16, vertical: 10)
+                : const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: theme.colors.botBubble,
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(theme.borderRadius.lg),
-                topRight: Radius.circular(theme.borderRadius.lg),
-                bottomLeft: Radius.zero,
-                bottomRight: Radius.circular(theme.borderRadius.lg),
+                topLeft: Radius.circular(corners?.topLeft ?? theme.borderRadius.lg),
+                topRight: Radius.circular(corners?.topRight ?? theme.borderRadius.lg),
+                bottomLeft: Radius.circular(corners?.bottomLeft ?? 0),
+                bottomRight: Radius.circular(corners?.bottomRight ?? theme.borderRadius.lg),
               ),
             ),
             child: TypingIndicator(
               visible: widget.showTypingIndicator,
               theme: theme,
+              dotColor: look != null ? theme.colors.botBubbleText : null,
+              dotSize: look != null ? 6 : 8,
+              style: look?.typingStyle ?? 'dots',
             ),
           ),
         ],
