@@ -820,6 +820,7 @@ class NodeFlowEngine extends ChangeNotifier {
       chatSessionId: chatSessionId,
       record: responseData['record'],
       answerVariables: responseData['answerVariables'],
+      extra: responseData,
     );
   }
 
