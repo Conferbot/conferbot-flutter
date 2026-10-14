@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../models/message.dart';
 import '../../utils/logger.dart';
 
@@ -140,15 +143,22 @@ class InMemoryMessageStorage implements MessageStorageService {
 /// Uses JSON serialization to store messages
 /// Note: For production use with large message volumes, consider using Hive or SQLite
 class SharedPreferencesMessageStorage implements MessageStorageService {
-  // This would normally use SharedPreferences, but since it's not in pubspec,
-  // we'll use a file-based approach as a placeholder
+  // A session's messages as JSON under one key, cached in memory. They were
+  // only ever kept in memory (a placeholder), so no conversation survived an
+  // app restart.
   final Map<String, List<Map<String, dynamic>>> _cache = {};
+  SharedPreferences? _prefs;
   bool _isInitialized = false;
 
   @override
   Future<void> initialize() async {
+    try {
+      _prefs = await SharedPreferences.getInstance();
+    } catch (e) {
+      // No platform storage (tests, unsupported platform): memory only.
+      storageLogger.debug('SharedPreferences unavailable, keeping messages in memory: $e');
+    }
     _isInitialized = true;
-    // In production, this would initialize SharedPreferences
     storageLogger.debug('SharedPreferences storage initialized');
   }
 
@@ -160,6 +170,31 @@ class SharedPreferencesMessageStorage implements MessageStorageService {
 
   String _getKey(String chatSessionId) => 'conferbot_messages_$chatSessionId';
 
+  /// The session's messages, read from storage the first time.
+  List<Map<String, dynamic>>? _messagesFor(String key) {
+    if (_cache.containsKey(key)) return _cache[key];
+    final raw = _prefs?.getString(key);
+    if (raw == null) return null;
+    try {
+      final list = (jsonDecode(raw) as List).whereType<Map>().map((m) => Map<String, dynamic>.from(m)).toList();
+      _cache[key] = list;
+      return list;
+    } catch (e) {
+      storageLogger.debug('Unreadable stored messages for $key: $e');
+      return null;
+    }
+  }
+
+  Future<void> _persist(String key) async {
+    final messages = _cache[key];
+    if (_prefs == null) return;
+    if (messages == null) {
+      await _prefs!.remove(key);
+    } else {
+      await _prefs!.setString(key, jsonEncode(messages));
+    }
+  }
+
   @override
   Future<void> saveMessages(
     String chatSessionId,
@@ -170,12 +205,14 @@ class SharedPreferencesMessageStorage implements MessageStorageService {
 
     final key = _getKey(chatSessionId);
     final jsonMessages = messages.map((m) => m.toJson()).toList();
+    final existing = _messagesFor(key);
 
-    if (append && _cache.containsKey(key)) {
-      _cache[key]!.addAll(jsonMessages);
+    if (append && existing != null) {
+      existing.addAll(jsonMessages);
     } else {
       _cache[key] = jsonMessages;
     }
+    await _persist(key);
   }
 
   @override
@@ -183,8 +220,9 @@ class SharedPreferencesMessageStorage implements MessageStorageService {
     _ensureInitialized();
 
     final key = _getKey(chatSessionId);
-    _cache.putIfAbsent(key, () => []);
-    _cache[key]!.add(message.toJson());
+    final messages = _messagesFor(key) ?? (_cache[key] = []);
+    messages.add(message.toJson());
+    await _persist(key);
   }
 
   @override
@@ -195,8 +233,7 @@ class SharedPreferencesMessageStorage implements MessageStorageService {
   }) async {
     _ensureInitialized();
 
-    final key = _getKey(chatSessionId);
-    final jsonMessages = _cache[key];
+    final jsonMessages = _messagesFor(_getKey(chatSessionId));
 
     if (jsonMessages == null || jsonMessages.isEmpty) {
       return [];
@@ -210,16 +247,22 @@ class SharedPreferencesMessageStorage implements MessageStorageService {
     final endIndex = (offset + limit).clamp(0, reversedMessages.length);
     final result = reversedMessages.sublist(offset, endIndex);
 
-    // Return in chronological order
-    return result.reversed.map((json) => RecordItem.fromJson(json)).toList();
+    // Return in chronological order; an entry that no longer parses is skipped.
+    final out = <RecordItem>[];
+    for (final json in result.reversed) {
+      try {
+        out.add(RecordItem.fromJson(json));
+      } catch (e) {
+        storageLogger.debug('Skipping unreadable stored message: $e');
+      }
+    }
+    return out;
   }
 
   @override
   Future<int> getMessageCount(String chatSessionId) async {
     _ensureInitialized();
-
-    final key = _getKey(chatSessionId);
-    return _cache[key]?.length ?? 0;
+    return _messagesFor(_getKey(chatSessionId))?.length ?? 0;
   }
 
   @override
@@ -227,12 +270,13 @@ class SharedPreferencesMessageStorage implements MessageStorageService {
     _ensureInitialized();
 
     final key = _getKey(chatSessionId);
-    final messages = _cache[key];
+    final messages = _messagesFor(key);
     if (messages == null) return;
 
     final index = messages.indexWhere((m) => m['_id'] == message.id);
     if (index != -1) {
       messages[index] = message.toJson();
+      await _persist(key);
     }
   }
 
@@ -241,10 +285,11 @@ class SharedPreferencesMessageStorage implements MessageStorageService {
     _ensureInitialized();
 
     final key = _getKey(chatSessionId);
-    final messages = _cache[key];
+    final messages = _messagesFor(key);
     if (messages == null) return;
 
     messages.removeWhere((m) => m['_id'] == messageId);
+    await _persist(key);
   }
 
   @override
@@ -253,12 +298,17 @@ class SharedPreferencesMessageStorage implements MessageStorageService {
 
     final key = _getKey(chatSessionId);
     _cache.remove(key);
+    await _prefs?.remove(key);
   }
 
   @override
   Future<void> clearAll() async {
     _ensureInitialized();
     _cache.clear();
+    final keys = _prefs?.getKeys().where((k) => k.startsWith('conferbot_messages_')).toList() ?? const [];
+    for (final k in keys) {
+      await _prefs!.remove(k);
+    }
   }
 
   @override
