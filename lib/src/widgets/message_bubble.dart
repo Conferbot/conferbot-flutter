@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'agent_reply.dart';
 import 'media/audio_player_widget.dart';
 import '../core/live_chat/live_chat.dart';
+import '../core/customization/customizations.dart';
 import '../config/constants.dart';
 import '../models/message.dart';
 import '../models/queued_message.dart';
@@ -132,11 +133,20 @@ class MessageBubble extends StatelessWidget {
     final isAgent = message.type == MessageType.agentMessage;
     final isSystem = message.type == MessageType.systemMessage;
 
-    // Asymmetric border radius matching Android SDK:
-    // Bot: squared bottom-left, User: squared bottom-right
+    // The web's bubble corners (18/18/18 with a 6 tail, or the owner's
+    // radius) once the bot's settings arrived; the theme's before that.
+    final look = _look(context);
     final r = effectiveTheme.borderRadius.bubble;
     final rSmall = effectiveTheme.borderRadius.bubbleSmall;
-    final bubbleRadius = isUser
+    final corners = look == null ? null : (isUser ? look.userBubble : look.botBubble);
+    final bubbleRadius = corners != null
+        ? BorderRadius.only(
+            topLeft: Radius.circular(corners.topLeft),
+            topRight: Radius.circular(corners.topRight),
+            bottomLeft: Radius.circular(corners.bottomLeft),
+            bottomRight: Radius.circular(corners.bottomRight),
+          )
+        : isUser
         ? BorderRadius.only(
             topLeft: Radius.circular(r),
             topRight: Radius.circular(r),
@@ -166,7 +176,7 @@ class MessageBubble extends StatelessWidget {
               isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            if (!isUser && !isSystem && showAvatar) ...[
+            if (!isUser && !isSystem && showAvatar && look?.hideAvatar != true) ...[
               _buildAvatar(context, effectiveTheme),
               const SizedBox(width: 10),
             ],
@@ -441,19 +451,35 @@ class MessageBubble extends StatelessWidget {
       // Bot message — use avatar from server customizations
       try {
         final provider = Provider.of<ConferBotProvider>(context, listen: false);
-        imageUrl = provider.botAvatarUrl;
+        imageUrl = provider.serverCustomizations != null ? provider.customizations.avatar : provider.botAvatarUrl;
         name = provider.botName;
       } catch (_) {
         // Provider not available (e.g. standalone usage)
       }
     }
 
+    final look = _look(context);
     return ConferBotAvatar(
       imageUrl: imageUrl,
       name: name ?? 'Bot',
-      size: theme.layout.avatarSize,
+      size: look?.avatarSize ?? theme.layout.avatarSize,
+      shape: switch (look?.avatarShape) {
+        'square' => AvatarShape.square,
+        'rounded' => AvatarShape.rounded,
+        _ => AvatarShape.circle,
+      },
       theme: theme,
     );
+  }
+
+  /// The bot's settings as the web applies them, once they arrived (core/customization).
+  ResolvedCustomizations? _look(BuildContext context) {
+    try {
+      final provider = Provider.of<ConferBotProvider>(context, listen: false);
+      return provider.serverCustomizations != null ? provider.customizations : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Widget _buildMessageContent(BuildContext context, ConferBotTheme theme) {
