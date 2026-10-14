@@ -23,6 +23,7 @@ import 'offline_indicator.dart';
 import 'knowledge_base/knowledge_base_screen.dart';
 import 'handover/handover.dart';
 import 'live_chat_cards.dart';
+import '../core/customization/customizations.dart';
 import '../core/live_chat/live_chat.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -342,6 +343,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
     return ChatHeaderWithKB(
       title: provider.botName ?? widget.title ?? 'Support Chat',
+      look: provider.serverCustomizations != null ? provider.customizations : null,
       subtitle: _getSubtitle(provider),
       agent: provider.currentAgent,
       botAvatarUrl: provider.botAvatarUrl,
@@ -681,6 +683,9 @@ class _ChatWidgetState extends State<ChatWidget> {
       showKnowledgeBase: widget.showKnowledgeBase,
       onKnowledgeBaseTap: _openKnowledgeBase,
       showOfflineIndicator: isOffline,
+      // "Powered by Conferbot", the owner's text, or nothing (plan-gated by the server).
+      hideBrand: provider.serverCustomizations != null && provider.customizations.hideBrand,
+      customBrand: provider.serverCustomizations != null ? provider.customizations.customBrand : null,
       theme: theme,
         ),
       ],
@@ -761,6 +766,9 @@ class ChatHeaderWithKB extends StatelessWidget {
   final ConferBotTheme? theme;
   final Widget? handoverIndicator;
 
+  /// The bot's settings as the web applies them; null keeps the host app's look.
+  final ResolvedCustomizations? look;
+
   const ChatHeaderWithKB({
     super.key,
     this.title,
@@ -773,12 +781,13 @@ class ChatHeaderWithKB extends StatelessWidget {
     this.onKnowledgeBaseTap,
     this.theme,
     this.handoverIndicator,
+    this.look,
   });
 
   @override
   Widget build(BuildContext context) {
     final t = theme ?? defaultTheme;
-    final displayTitle = agent?.name ?? title ?? 'Chat';
+    final displayTitle = agent?.name ?? look?.title ?? title ?? 'Chat';
     final displaySubtitle = agent?.email ?? subtitle;
 
     return Container(
@@ -800,9 +809,11 @@ class ChatHeaderWithKB extends StatelessWidget {
       ),
       child: Row(
           children: [
-            // Bot avatar (32dp, matching Android)
-            _buildHeaderAvatar(t),
-            const SizedBox(width: 10),
+            // The agent's photo, else the bot's logo (none when the owner hid it).
+            if (agent != null || look?.hideLogo != true) ...[
+              _buildHeaderAvatar(t),
+              const SizedBox(width: 10),
+            ],
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -818,6 +829,35 @@ class ChatHeaderWithKB extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  // The web's "Online" line: a 7px green dot with a soft ring (or the tagline).
+                  if (displaySubtitle == null && agent == null && look != null && (look!.tagline != null || look!.showOnline)) ...[
+                    const SizedBox(height: 1),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (look!.tagline == null) ...[
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF22C55E),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.5),
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                        ],
+                        Flexible(
+                          child: Text(
+                            look!.tagline ?? 'Online',
+                            style: TextStyle(fontSize: 12, color: t.colors.headerText.withOpacity(0.85)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   if (displaySubtitle != null) ...[
                     const SizedBox(height: 1),
                     Text(
@@ -862,15 +902,16 @@ class ChatHeaderWithKB extends StatelessWidget {
   }
 
   Widget _buildHeaderAvatar(ConferBotTheme t) {
-    final avatarUrl = botAvatarUrl ??
-        (agent != null && agent?.avatar != null ? agent.avatar as String? : null);
+    final avatarUrl = agent != null
+        ? agent?.avatar as String?
+        : (look?.logo ?? botAvatarUrl);
     final name = agent?.name as String? ?? title ?? 'B';
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'B';
 
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
       return CircleAvatar(
-        radius: 16,
-        backgroundColor: t.colors.headerText.withOpacity(0.2),
+        radius: look != null ? 19 : 16,
+        backgroundColor: look != null ? Colors.transparent : t.colors.headerText.withOpacity(0.2),
         backgroundImage: NetworkImage(avatarUrl),
       );
     }
