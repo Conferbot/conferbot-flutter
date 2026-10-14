@@ -7,6 +7,18 @@ class SocketEvents {
   static const String responseRecord = 'response-record'; // Send visitor message/response
   static const String visitorTyping = 'visitor-typing';
   static const String initiateHandover = 'initiate-handover';
+
+  // AI agent replies and live chat changes (server to client)
+  static const String agentMessageStream = 'agent-message-stream';
+  static const String agentMessageRich = 'agent-message-rich';
+  static const String agentMessageEdited = 'agent-message-edited';
+  static const String agentMessageDeleted = 'agent-message-deleted';
+  static const String aiAgentInactiveClose = 'ai-agent-inactive-close';
+  static const String aiAgentResumed = 'ai-agent-resumed';
+
+  // AI agent answers (client to server, with acknowledgement)
+  static const String aiAnswerFeedback = 'ai-answer-feedback';
+  static const String aiActionDecision = 'ai-action-decision';
   static const String endChat = 'end-chat';
   static const String leaveChat = 'leave-chat';
   static const String toggleVisitorInput = 'toggle-visitor-input';
