@@ -63,8 +63,11 @@ class MockSocketClient extends SocketClient {
     required dynamic record,
     List<dynamic>? answerVariables,
     Map<String, dynamic>? visitorMeta,
+    Map<String, dynamic>? extra,
   }) async {
     emit('response-record', {
+      'channel': 'mobile',
+      ...?extra,
       'chatSessionId': chatSessionId,
       'record': record,
       'answerVariables': answerVariables ?? [],
