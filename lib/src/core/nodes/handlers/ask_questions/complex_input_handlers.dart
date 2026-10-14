@@ -93,12 +93,11 @@ class Question {
 class MultipleQuestionsUIState extends NodeUIState {
   final List<Question> questions;
   final int currentIndex;
-  final String nodeId;
 
   const MultipleQuestionsUIState({
     required this.questions,
     required this.currentIndex,
-    required this.nodeId,
+    required super.nodeId,
   });
 }
 
