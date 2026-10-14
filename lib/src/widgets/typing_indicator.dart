@@ -10,6 +10,9 @@ class TypingIndicator extends StatefulWidget {
   final int animationSpeed;
   final ConferBotTheme? theme;
 
+  /// The owner's typing style (typingStyle): dots, wave or shimmer; pencil and mascot draw dots.
+  final String style;
+
   const TypingIndicator({
     super.key,
     this.visible = true,
@@ -17,6 +20,7 @@ class TypingIndicator extends StatefulWidget {
     this.dotSize = 8.0,
     this.animationSpeed = 600,
     this.theme,
+    this.style = 'dots',
   });
 
   @override
@@ -77,6 +81,32 @@ class _TypingIndicatorState extends State<TypingIndicator>
 
     final effectiveTheme = widget.theme ?? defaultTheme;
     final effectiveColor = widget.dotColor ?? effectiveTheme.colors.textSecondary;
+
+    if (widget.style == 'shimmer') {
+      return FadeTransition(
+        opacity: _animation1,
+        child: Text('Typing...', style: TextStyle(color: effectiveColor, fontSize: 13, fontWeight: FontWeight.w600)),
+      );
+    }
+    if (widget.style == 'wave') {
+      final bars = [_animation1, _animation2, _animation3, _animation2, _animation1];
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < bars.length; i++) ...[
+            if (i > 0) const SizedBox(width: 3),
+            AnimatedBuilder(
+              animation: bars[i],
+              builder: (_, __) => Container(
+                width: 3,
+                height: 16 * bars[i].value,
+                decoration: BoxDecoration(color: effectiveColor.withOpacity(0.85), borderRadius: BorderRadius.circular(3)),
+              ),
+            ),
+          ],
+        ],
+      );
+    }
 
     return Row(
       mainAxisSize: MainAxisSize.min,
