@@ -511,8 +511,14 @@ class SocketClient with ChangeNotifier {
     required dynamic record,
     List<dynamic>? answerVariables,
     Map<String, dynamic>? visitorMeta,
+    Map<String, dynamic>? extra,
   }) async {
     final data = {
+      // The rest of the payload (visitorId, version, workspaceId...) from
+      // ChatState.buildResponseData; without channel the conversation was
+      // stored as a web chat.
+      'channel': 'mobile',
+      ...?extra,
       'chatSessionId': chatSessionId,
       'record': record,
       'answerVariables': answerVariables ?? [],
