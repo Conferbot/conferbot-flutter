@@ -1,4 +1,5 @@
 import '../core/agent/agent_bot.dart';
+import '../core/live_chat/live_chat.dart';
 
 /// Message types matching embed-server schema
 enum MessageType {
@@ -10,6 +11,7 @@ enum MessageType {
   agentMessageAudio('agent-message-audio'),
   agentMessageRich('agent-message-rich'),
   agentJoinedMessage('agent-joined-message'),
+  userLiveMessageFile('user-live-message-file'), // The visitor's file in a live chat
   visitorDisconnectedMessage('visitor-disconnected-message'),
   visitorReconnectedMessage('visitor-reconnected-message'),
   systemMessage('system-message');
@@ -58,6 +60,8 @@ abstract class RecordItem {
         return AgentRichMessageRecord.fromJson(json);
       case MessageType.agentJoinedMessage:
         return AgentJoinedMessageRecord.fromJson(json);
+      case MessageType.userLiveMessageFile:
+        return UserLiveMessageFileRecord.fromJson(json);
       case MessageType.visitorDisconnectedMessage:
       case MessageType.visitorReconnectedMessage:
       case MessageType.systemMessage:
@@ -244,6 +248,9 @@ class AgentMessageRecord extends RecordItem {
   final bool edited;
   final bool deleted;
 
+  /// Sent in the visitor's language: the agent's own words kept (See original).
+  final AgentTranslation? translation;
+
   const AgentMessageRecord({
     required super.id,
     required super.time,
@@ -253,6 +260,7 @@ class AgentMessageRecord extends RecordItem {
     this.feedback,
     this.edited = false,
     this.deleted = false,
+    this.translation,
   }) : super(type: MessageType.agentMessage);
 
   factory AgentMessageRecord.fromJson(Map<String, dynamic> json) {
@@ -269,6 +277,7 @@ class AgentMessageRecord extends RecordItem {
       feedback: AnswerFeedback.fromJson(json['feedback']),
       edited: json['edited'] == true,
       deleted: json['deleted'] == true,
+      translation: AgentTranslation.fromJson(json['translation']),
     );
   }
 
@@ -282,6 +291,7 @@ class AgentMessageRecord extends RecordItem {
         feedback: feedback ?? this.feedback,
         edited: edited ?? this.edited,
         deleted: deleted ?? this.deleted,
+        translation: translation,
       );
 
   @override
@@ -296,6 +306,7 @@ class AgentMessageRecord extends RecordItem {
       if (feedback != null) 'feedback': feedback!.toJson(),
       if (edited) 'edited': true,
       if (deleted) 'deleted': true,
+      if (translation != null) 'translation': translation!.toJson(),
     };
   }
 }
@@ -380,6 +391,39 @@ class AgentMessageFileRecord extends RecordItem {
       if (agentDetails != null) 'agentDetails': agentDetails!.toJson(),
     };
   }
+}
+
+/// The visitor's file in a live chat (user-live-message-file).
+class UserLiveMessageFileRecord extends RecordItem {
+  final String url;
+  final String? fileName;
+  final String? mimeType;
+
+  const UserLiveMessageFileRecord({
+    required super.id,
+    required super.time,
+    required this.url,
+    this.fileName,
+    this.mimeType,
+  }) : super(type: MessageType.userLiveMessageFile);
+
+  factory UserLiveMessageFileRecord.fromJson(Map<String, dynamic> json) => UserLiveMessageFileRecord(
+        id: (json['_id'] ?? json['id']).toString(),
+        time: DateTime.tryParse(json['time']?.toString() ?? '') ?? DateTime.now(),
+        url: json['url']?.toString() ?? '',
+        fileName: json['fileName']?.toString(),
+        mimeType: json['mimeType']?.toString(),
+      );
+
+  @override
+  Map<String, dynamic> toJson() => {
+        '_id': id,
+        'type': type.value,
+        'time': time.toIso8601String(),
+        'url': url,
+        if (fileName != null) 'fileName': fileName,
+        if (mimeType != null) 'mimeType': mimeType,
+      };
 }
 
 /// Agent audio message record
