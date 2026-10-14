@@ -280,7 +280,8 @@ class _MessageListState extends State<MessageList> {
     return Stack(
       children: [
         Container(
-          color: effectiveTheme.colors.background,
+          // See-through over the bot's drawn chat background (chat_widget.dart).
+          color: _hasBotBackground(context) ? Colors.transparent : effectiveTheme.colors.background,
           child: ListView.builder(
             key: _listKey,
             controller: _scrollController,
@@ -772,4 +773,13 @@ Widget buildMessageWithChoices({
       ),
     ],
   );
+}
+
+/// The bot's own chat background is drawn behind the list (chat_widget.dart).
+bool _hasBotBackground(BuildContext context) {
+  try {
+    return Provider.of<ConferBotProvider>(context, listen: false).serverCustomizations != null;
+  } catch (_) {
+    return false;
+  }
 }
