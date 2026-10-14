@@ -24,6 +24,8 @@ import 'knowledge_base/knowledge_base_screen.dart';
 import 'handover/handover.dart';
 import 'live_chat_cards.dart';
 import '../core/customization/customizations.dart';
+import '../core/customization/chat_background.dart';
+import 'chat_background.dart';
 import '../core/live_chat/live_chat.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -379,6 +381,9 @@ class _ChatWidgetState extends State<ChatWidget> {
   Widget _buildChatContent(ConferBotProvider provider, ConferBotTheme theme) {
     return Stack(
       children: [
+        // The bot's chat background (gradient, image, pattern) behind a see-through list.
+        if (provider.serverCustomizations != null)
+          Positioned.fill(child: ChatBackgroundLayer(background: ChatBackgrounds.resolve(provider.serverCustomizations))),
         // Message history list with interactive node rendered inline at bottom
         widget.enablePagination
             ? _buildPaginatedMessageList(provider, theme)
