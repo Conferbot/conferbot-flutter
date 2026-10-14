@@ -25,6 +25,7 @@ import '../core/agent/agent_handover.dart';
 import 'analytics_provider.dart';
 import '../core/live_chat/live_chat.dart';
 import '../core/live_chat/live_chat_extras.dart';
+import '../core/customization/customizations.dart';
 
 /// ConferBot provider configuration
 class ConferBotConfig {
@@ -227,6 +228,9 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Build a ConferBotTheme from server customizations
   ConferBotTheme get serverTheme => _buildServerTheme();
+
+  /// The bot's settings as the web widget applies them (core/customization); defaults until it loads.
+  ResolvedCustomizations get customizations => Customizations.resolve(_serverCustomizations);
 
   /// Whether the conversation is in live chat mode (agent connected)
   bool get isLiveChatMode => _isLiveChatMode;
@@ -1229,24 +1233,18 @@ class ConferBotProvider with ChangeNotifier {
     final c = _serverCustomizations;
     if (c == null) return defaultTheme;
 
-    // Web widget contract defaults (conferbot-widget/src/index.ts): when the
-    // flow builder omits a value the widget renders #1b55f3 bubbles with
-    // white text, so a server-configured bot must fall back the same way.
-    const webBubbleDefault = Color(0xFF1B55F3);
-    const webTextDefault = Color(0xFFFFFFFF);
-
-    final headerBg = _parseHexColor(c['headerBgColor']?.toString());
-    final headerText = _parseHexColor(c['headerTextColor']?.toString());
-    final botBubble =
-        _parseHexColor(c['botMsgColor']?.toString()) ?? webBubbleDefault;
-    final botText =
-        _parseHexColor(c['botTextColor']?.toString()) ?? webTextDefault;
-    final userBubble =
-        _parseHexColor(c['userMsgColor']?.toString()) ?? webBubbleDefault;
-    final userText =
-        _parseHexColor(c['userTextColor']?.toString()) ?? webTextDefault;
-    final optionBubble = _parseHexColor(c['optionBubbleMsgColor']?.toString());
-    final optionText = _parseHexColor(c['optionBubbleTextColor']?.toString());
+    // The web widget's defaults and fallbacks (core/customization): #0b4eb8
+    // bot bubbles with white text, light grey visitor bubbles with dark
+    // text, choices in the option colours else the bot's.
+    final look = Customizations.resolve(c);
+    final headerBg = _parseHexColor(look.headerBg);
+    final headerText = _parseHexColor(look.headerText);
+    final botBubble = _parseHexColor(look.botBubbleColor) ?? const Color(0xFF0B4EB8);
+    final botText = _parseHexColor(look.botTextColor) ?? const Color(0xFFFFFFFF);
+    final userBubble = _parseHexColor(look.userBubbleColor) ?? const Color(0xFFF0F0F0);
+    final userText = _parseHexColor(look.userTextColor) ?? const Color(0xFF000000);
+    final optionBubble = _parseHexColor(look.optionBubbleColor);
+    final optionText = _parseHexColor(look.optionTextColor);
     final chatBgColor = _parseHexColor(c['chatBgColor']?.toString());
 
     final colors = defaultTheme.colors.copyWith(
@@ -1265,22 +1263,11 @@ class ConferBotProvider with ChangeNotifier {
       background: chatBgColor,
     );
 
-    // Parse font size override
-    final fontSize = c['fontSize'];
-    final parsedFontSize = fontSize is num ? fontSize.toDouble() : null;
-
-    // Parse bubble border radius override
-    final bubbleRadius = c['bubbleBorderRadius'];
-    final parsedBubbleRadius = bubbleRadius is num ? bubbleRadius.toDouble() : null;
-
+    // Font size: 14 counts as unset (14.5 on the web). Bubble corners come
+    // from the resolved settings in the bubbles themselves.
     return defaultTheme.copyWith(
       colors: colors,
-      typography: parsedFontSize != null
-          ? ConferBotTypography(messageSize: parsedFontSize)
-          : null,
-      borderRadius: parsedBubbleRadius != null
-          ? ConferBotBorderRadius(bubble: parsedBubbleRadius)
-          : null,
+      typography: ConferBotTypography(messageSize: look.fontSize),
     );
   }
 
