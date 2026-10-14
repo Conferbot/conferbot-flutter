@@ -9,6 +9,7 @@ import '../../core/nodes/handlers/display_handlers.dart' as display;
 import '../../core/nodes/handlers/choices/choice_ui_states.dart' as choice;
 import '../../core/nodes/handlers/legacy_handlers.dart' as legacy;
 import '../../core/live_chat/live_chat.dart';
+import '../../core/customization/customizations.dart';
 import '../../providers/conferbot_provider.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../widgets/avatar.dart';
@@ -2117,11 +2118,12 @@ class BotMessageBubble extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: theme.colors.botBubble,
+        // The web's bot bubble corners once the bot's settings arrived (18/18/18/6 or the owner's).
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(theme.borderRadius.bubble),
-          topRight: Radius.circular(theme.borderRadius.bubble),
-          bottomRight: Radius.circular(theme.borderRadius.bubble),
-          bottomLeft: Radius.circular(theme.borderRadius.bubbleSmall),
+          topLeft: Radius.circular(_botCorners(context)?.topLeft ?? theme.borderRadius.bubble),
+          topRight: Radius.circular(_botCorners(context)?.topRight ?? theme.borderRadius.bubble),
+          bottomRight: Radius.circular(_botCorners(context)?.bottomRight ?? theme.borderRadius.bubble),
+          bottomLeft: Radius.circular(_botCorners(context)?.bottomLeft ?? theme.borderRadius.bubbleSmall),
         ),
         boxShadow: [theme.shadows.sm],
       ),
@@ -2153,19 +2155,28 @@ class BotMessageBubbleWithAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.read<ConferBotProvider>();
-    final avatarUrl = provider.botAvatarUrl;
+    // The bot's avatar, size and shape as the web draws them, once its settings arrived.
+    final look = provider.serverCustomizations != null ? provider.customizations : null;
+    final avatarUrl = look?.avatar ?? provider.botAvatarUrl;
     final botName = provider.botName ?? 'Bot';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        ConferBotAvatar(
-          imageUrl: avatarUrl,
-          name: botName,
-          size: theme.layout.avatarSize,
-          theme: theme,
-        ),
-        const SizedBox(width: 10),
+        if (look?.hideAvatar != true) ...[
+          ConferBotAvatar(
+            imageUrl: avatarUrl,
+            name: botName,
+            size: look?.avatarSize ?? theme.layout.avatarSize,
+            shape: switch (look?.avatarShape) {
+              'square' => AvatarShape.square,
+              'rounded' => AvatarShape.rounded,
+              _ => AvatarShape.circle,
+            },
+            theme: theme,
+          ),
+          const SizedBox(width: 10),
+        ],
         Flexible(
           child: BotMessageBubble(text: text, theme: theme),
         ),
@@ -2181,5 +2192,15 @@ double _optionRadius(BuildContext context) {
     return provider.serverCustomizations != null ? provider.customizations.optionRadius : 12;
   } catch (_) {
     return 12;
+  }
+}
+
+/// The bot bubble's corners from the bot's settings, or null before they arrive.
+BubbleCorners? _botCorners(BuildContext context) {
+  try {
+    final provider = Provider.of<ConferBotProvider>(context, listen: false);
+    return provider.serverCustomizations != null ? provider.customizations.botBubble : null;
+  } catch (_) {
+    return null;
   }
 }
