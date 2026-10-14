@@ -167,6 +167,14 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                               ),
                             ),
                           ),
+                          // A file for the agent, in a live chat.
+                          if (widget.enableAttachments && widget.onAttachmentPress != null && !widget.disabled)
+                            IconButton(
+                              onPressed: widget.onAttachmentPress,
+                              tooltip: 'Attach a file',
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(Icons.attach_file, size: 20, color: Color(0xFF687882)),
+                            ),
                         ],
                       ),
                     ),
