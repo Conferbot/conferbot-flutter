@@ -631,6 +631,12 @@ class ChatState extends ChangeNotifier {
 
   // ========== Initialization ==========
 
+  /// The workspace, once fetched-chatbot-data names it (an agent bot runs no
+  /// flow engine, which is what set it for a flow bot).
+  void setWorkspaceId(String? workspaceId) {
+    if (workspaceId != null && workspaceId.isNotEmpty) _workspaceId = workspaceId;
+  }
+
   /// Initialize chat state with session info
   void initialize({
     required String chatSessionId,
