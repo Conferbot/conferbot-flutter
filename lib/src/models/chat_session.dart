@@ -55,7 +55,8 @@ class ChatSession {
     return ChatSession(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       chatSessionId: json['chatSessionId'] as String,
-      botId: json['botId'] as String,
+      // session/init answers with the session, not the bot it was asked for.
+      botId: json['botId']?.toString() ?? '',
       visitorId: json['visitorId'] as String?,
       record: recordList,
       chatDate: json['chatDate'] != null ? DateTime.parse(json['chatDate'] as String) : null,
