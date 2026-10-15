@@ -4,6 +4,8 @@
 /// what each one turns into on screen. Pure: the widgets read the result.
 library;
 
+import 'widget_theme.dart';
+
 class BubbleCorners {
   final double topLeft;
   final double topRight;
@@ -54,6 +56,15 @@ class ResolvedCustomizations {
   final BubbleCorners userBubble;
   final double optionRadius;
 
+  /// An outline round each bubble, from the theme (cartoon, neo-brutal...), or null.
+  final BubbleBorder? bubbleBorder;
+
+  /// The composer field's corner radius: 25 (a pill) unless the theme has its own.
+  final double fieldRadius;
+
+  /// The chat surface the theme paints when the owner kept the default white, else null.
+  final String? surface;
+
   /// Message text size: 14.5 unless the owner set something other than 14.
   final double fontSize;
 
@@ -69,6 +80,15 @@ class ResolvedCustomizations {
 
   /// dots, wave, shimmer, pencil or mascot (pencil and mascot draw dots until mascots land).
   final String typingStyle;
+
+  /// Send button: the theme palette's accent when it supplied the colours, else the header colour.
+  final String accent;
+
+  /// Ink on the send button: the theme palette's, else null (picked for contrast).
+  final String? accentInk;
+
+  /// The widget theme in force (widget_theme.dart).
+  final ResolvedWidgetTheme theme;
 
   const ResolvedCustomizations({
     this.hideBrand = false,
@@ -86,6 +106,9 @@ class ResolvedCustomizations {
     this.botBubble = const BubbleCorners(18, 18, 18, 6),
     this.userBubble = const BubbleCorners(18, 18, 6, 18),
     this.optionRadius = 10,
+    this.bubbleBorder,
+    this.fieldRadius = 25,
+    this.surface,
     this.fontSize = 14.5,
     this.headerBg = '#0b4eb8',
     this.headerText = '#ffffff',
@@ -96,6 +119,9 @@ class ResolvedCustomizations {
     this.optionBubbleColor = '#0b4eb8',
     this.optionTextColor = '#ffffff',
     this.typingStyle = 'dots',
+    this.accent = '#0b4eb8',
+    this.accentInk,
+    this.theme = const ResolvedWidgetTheme(),
   });
 }
 
@@ -131,8 +157,13 @@ class Customizations {
         _ => size / 2,
       };
 
-  static ResolvedCustomizations resolve(Map<String, dynamic>? raw, {String botName = ''}) {
+  static ResolvedCustomizations resolve(Map<String, dynamic>? raw, {String botName = '', ResolvedWidgetTheme? theme}) {
     final c = raw ?? const <String, dynamic>{};
+    // A theme other than classic brings its own radii; the owner's still win.
+    final themeShape = theme?.shape;
+    final r = themeShape?.rBubble ?? 18.0;
+    final tail = themeShape?.rTail ?? 6.0;
+    final optionSet = _num(c['optionBubbleBorderRadius']);
     final name = [_str(c['logoText']), _str(c['botName']), botName].firstWhere((s) => s.isNotEmpty, orElse: () => 'Chat');
     final tagline = c['enableTagline'] == true && _str(c['tagline']).isNotEmpty ? _str(c['tagline']) : null;
     final avatarSet = _num(c['avatarSize']);
@@ -159,9 +190,12 @@ class Customizations {
       avatarSize: avatarSize,
       avatarShape: shape,
       avatarRadius: avatarRadiusFor(shape, avatarSize),
-      botBubble: ownBubble ? BubbleCorners.all(bubbleSet) : const BubbleCorners(18, 18, 18, 6),
-      userBubble: ownBubble ? BubbleCorners.all(bubbleSet) : const BubbleCorners(18, 18, 6, 18),
-      optionRadius: _num(c['optionBubbleBorderRadius']) ?? 10,
+      botBubble: ownBubble ? BubbleCorners.all(bubbleSet) : BubbleCorners(r, r, r, tail),
+      userBubble: ownBubble ? BubbleCorners.all(bubbleSet) : BubbleCorners(r, r, tail, r),
+      optionRadius: optionSet != null && (optionSet != 10 || themeShape == null) ? optionSet : (themeShape?.rCtl ?? 10),
+      bubbleBorder: themeShape?.bubbleBorder,
+      fieldRadius: themeShape?.rField ?? 25,
+      surface: theme?.tokens != null && !WidgetTheme.ownsChatBackground(c) ? theme!.tokens!.bg : null,
       fontSize: fontSet != null && fontSet > 0 && fontSet != 14 ? fontSet : 14.5,
       headerBg: first([_str(c['headerBgColor'])], '#0b4eb8'),
       headerText: first([_str(c['headerTextColor'])], '#ffffff'),
@@ -174,6 +208,9 @@ class Customizations {
       optionBubbleColor: first([_str(c['optionBubbleMsgColor']), bot], '#e7e4e4'),
       optionTextColor: first([_str(c['optionBubbleTextColor']), botText], '#000000'),
       typingStyle: _typingStyles.contains(c['typingStyle']) ? c['typingStyle'] as String : 'dots',
+      accent: first([_str(c['themeAccent']), _str(c['headerBgColor'])], '#0b4eb8'),
+      accentInk: _str(c['themeOnAccent']).isEmpty ? null : _str(c['themeOnAccent']),
+      theme: theme ?? const ResolvedWidgetTheme(),
     );
   }
 }
