@@ -42,27 +42,41 @@ class KnowledgeBaseArticle {
     this.relatedArticles,
   });
 
+  /// Reads the server's article (`embed-server` knowledgeBaseArticleService):
+  /// `description`, `coverImage`, `readingTime`, `publishedDate`, and
+  /// `category` / `author` either populated (`{_id, name}`) or a bare id, as
+  /// the articles inside a category are sent. `content` is HTML, and is empty
+  /// when the list was sent without bodies (the socket payload): the article
+  /// view fetches it on open.
   factory KnowledgeBaseArticle.fromJson(Map<String, dynamic> json) {
+    final category = json['category'];
+    final author = json['author'];
     return KnowledgeBaseArticle(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       title: json['title'] as String? ?? '',
       content: json['content'] as String? ?? '',
-      summary: json['summary'] as String?,
-      categoryId: json['categoryId']?.toString() ?? json['category']?['_id']?.toString(),
-      categoryName: json['categoryName'] as String? ?? json['category']?['name'] as String?,
+      summary: _string(json['summary']) ?? _string(json['description']) ?? _string(json['snippet']),
+      categoryId: json['categoryId']?.toString() ??
+          (category is Map ? category['_id']?.toString() : category is String ? category : null),
+      categoryName: _string(json['categoryName']) ?? (category is Map ? _string(category['name']) : null),
       tags: _parseStringList(json['tags']),
-      thumbnailUrl: json['thumbnailUrl'] as String? ?? json['thumbnail'] as String?,
-      authorName: json['authorName'] as String? ?? json['author']?['name'] as String?,
+      thumbnailUrl: _string(json['thumbnailUrl']) ?? _string(json['thumbnail']) ?? _string(json['coverImage']),
+      authorName: _string(json['authorName']) ?? (author is Map ? _string(author['name']) : null),
       viewCount: _parseInt(json['viewCount']) ?? _parseInt(json['views']) ?? 0,
       averageRating: _parseDouble(json['averageRating']) ?? _parseDouble(json['rating']),
-      ratingCount: _parseInt(json['ratingCount']) ?? _parseInt(json['ratings']) ?? 0,
-      createdAt: _parseDateTime(json['createdAt']) ?? DateTime.now(),
+      ratingCount: _parseInt(json['ratingCount']) ?? _parseInt(json['totalRatings']) ?? _parseInt(json['ratings']) ?? 0,
+      createdAt: _parseDateTime(json['createdAt']) ?? _parseDateTime(json['publishedDate']) ?? DateTime.now(),
       updatedAt: _parseDateTime(json['updatedAt']) ?? DateTime.now(),
-      isPublished: json['isPublished'] as bool? ?? json['published'] as bool? ?? true,
-      readTimeMinutes: _parseInt(json['readTimeMinutes']) ?? _parseInt(json['readTime']),
+      isPublished: json['reviewStatus'] is String
+          ? json['reviewStatus'] == 'published'
+          : json['isPublished'] as bool? ?? json['published'] as bool? ?? true,
+      readTimeMinutes: _parseInt(json['readTimeMinutes']) ?? _parseInt(json['readTime']) ?? _parseInt(json['readingTime']),
       relatedArticles: _parseRelatedArticles(json['relatedArticles']),
     );
   }
+
+  /// False for an article from a list sent without bodies.
+  bool get hasContent => content.trim().isNotEmpty;
 
   Map<String, dynamic> toJson() {
     return {
@@ -207,7 +221,9 @@ class KnowledgeBaseCategory {
       description: json['description'] as String?,
       iconName: json['iconName'] as String? ?? json['icon'] as String?,
       iconUrl: json['iconUrl'] as String?,
-      articleCount: _parseInt(json['articleCount']) ?? _parseInt(json['count']) ?? 0,
+      articleCount: _parseInt(json['articleCount']) ??
+          _parseInt(json['count']) ??
+          (json['articles'] is List ? (json['articles'] as List).length : 0),
       sortOrder: _parseInt(json['sortOrder']) ?? _parseInt(json['order']) ?? 0,
       parentId: json['parentId']?.toString(),
       isActive: json['isActive'] as bool? ?? json['active'] as bool? ?? true,
@@ -445,6 +461,21 @@ class ArticleListResponse {
   });
 
   factory ArticleListResponse.fromJson(Map<String, dynamic> json) {
+    // The server's list: {recentArticles, categories: [{..., articles}]}.
+    if (json['categories'] is List || json['recentArticles'] is List) {
+      final articles = KnowledgeBaseData.fromJson(json).allArticles;
+      return ArticleListResponse(
+        articles: articles,
+        pagination: ArticlePagination(
+          page: 1,
+          limit: articles.length,
+          totalItems: articles.length,
+          totalPages: articles.isEmpty ? 0 : 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        ),
+      );
+    }
     final articlesData = json['articles'] as List<dynamic>? ??
         json['data'] as List<dynamic>? ??
         json['items'] as List<dynamic>? ?? [];
@@ -469,7 +500,139 @@ class ArticleListResponse {
   }
 }
 
+/// The help centre as the server sends it: categories, each with its
+/// published articles, and the most recent articles.
+///
+/// The same shape arrives three ways: `fetched-chatbot-data.knowledgeBaseData`
+/// on the socket (no bodies), `GET /mobile/chatbot/:id/kb` as
+/// `data.knowledgeBaseData`, and `GET /mobile/knowledge-base/articles` as
+/// `data` (both with bodies). [KnowledgeBaseData.fromJson] reads any of them.
+class KnowledgeBaseData {
+  /// The owner's categories in their dashboard order, empty ones left out.
+  final List<KnowledgeBaseCategory> categories;
+
+  /// Each category's published articles, by category id.
+  final Map<String, List<KnowledgeBaseArticle>> articlesByCategory;
+
+  /// The latest published articles (the server sends four).
+  final List<KnowledgeBaseArticle> recentArticles;
+
+  const KnowledgeBaseData({
+    this.categories = const [],
+    this.articlesByCategory = const {},
+    this.recentArticles = const [],
+  });
+
+  static const empty = KnowledgeBaseData();
+
+  factory KnowledgeBaseData.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return empty;
+    // Accept the REST envelope ({success, data}) and the /kb wrapper.
+    final data = json['data'];
+    if (data is Map && !json.containsKey('categories') && !json.containsKey('recentArticles')) {
+      return KnowledgeBaseData.fromJson(Map<String, dynamic>.from(data));
+    }
+    final wrapped = json['knowledgeBaseData'];
+    if (wrapped is Map) return KnowledgeBaseData.fromJson(Map<String, dynamic>.from(wrapped));
+
+    final categories = <KnowledgeBaseCategory>[];
+    final byCategory = <String, List<KnowledgeBaseArticle>>{};
+    for (final raw in (json['categories'] is List ? json['categories'] as List : const [])) {
+      if (raw is! Map) continue;
+      final category = KnowledgeBaseCategory.fromJson(Map<String, dynamic>.from(raw));
+      if (category.id.isEmpty) continue;
+      final articles = _publishedArticles(raw['articles'])
+          .map((a) => a.copyWith(
+                categoryId: a.categoryId ?? category.id,
+                categoryName: a.categoryName ?? category.name,
+              ))
+          .toList();
+      if (articles.isEmpty && raw['articles'] is List) continue;
+      categories.add(category.copyWith(articleCount: articles.length));
+      byCategory[category.id] = articles;
+    }
+    final names = {for (final c in categories) c.id: c.name};
+    final recent = _publishedArticles(json['recentArticles'])
+        .map((a) => a.categoryName == null && names[a.categoryId] != null
+            ? a.copyWith(categoryName: names[a.categoryId])
+            : a)
+        .toList();
+    return KnowledgeBaseData(
+      categories: categories,
+      articlesByCategory: byCategory,
+      recentArticles: recent,
+    );
+  }
+
+  /// No published article anywhere: the help centre counts as off.
+  bool get isEmpty =>
+      recentArticles.isEmpty && articlesByCategory.values.every((list) => list.isEmpty);
+
+  bool get isNotEmpty => !isEmpty;
+
+  /// Every article once: by category in the owner's order, then any recent
+  /// article no category holds.
+  List<KnowledgeBaseArticle> get allArticles {
+    final seen = <String>{};
+    final out = <KnowledgeBaseArticle>[];
+    for (final category in categories) {
+      for (final article in articlesByCategory[category.id] ?? const <KnowledgeBaseArticle>[]) {
+        if (seen.add(article.id)) out.add(article);
+      }
+    }
+    for (final article in recentArticles) {
+      if (seen.add(article.id)) out.add(article);
+    }
+    return out;
+  }
+
+  /// One category's articles (all of them for null).
+  List<KnowledgeBaseArticle> articlesIn(String? categoryId) =>
+      categoryId == null ? allArticles : (articlesByCategory[categoryId] ?? const []);
+
+  /// An article by id: in a category first, then the recent list
+  /// (web `findArticle`, core/helpCentre.ts).
+  KnowledgeBaseArticle? find(String? articleId) {
+    if (articleId == null || articleId.isEmpty) return null;
+    for (final category in categories) {
+      for (final article in articlesByCategory[category.id] ?? const <KnowledgeBaseArticle>[]) {
+        if (article.id == articleId) return article;
+      }
+    }
+    for (final article in recentArticles) {
+      if (article.id == articleId) return article;
+    }
+    return null;
+  }
+
+  /// The same help centre with one article's body filled in.
+  KnowledgeBaseData withArticle(KnowledgeBaseArticle full) {
+    KnowledgeBaseArticle merge(KnowledgeBaseArticle a) => a.id == full.id
+        ? full.copyWith(categoryId: full.categoryId ?? a.categoryId, categoryName: full.categoryName ?? a.categoryName)
+        : a;
+    return KnowledgeBaseData(
+      categories: categories,
+      articlesByCategory: {
+        for (final entry in articlesByCategory.entries) entry.key: entry.value.map(merge).toList(),
+      },
+      recentArticles: recentArticles.map(merge).toList(),
+    );
+  }
+}
+
+/// Published articles only, as the web widget keeps them (`publishedArticles`).
+List<KnowledgeBaseArticle> _publishedArticles(dynamic value) {
+  if (value is! List) return const [];
+  return value
+      .whereType<Map>()
+      .map((m) => KnowledgeBaseArticle.fromJson(Map<String, dynamic>.from(m)))
+      .where((a) => a.id.isNotEmpty && a.isPublished)
+      .toList();
+}
+
 // Helper functions for parsing
+
+String? _string(dynamic value) => value is String && value.isNotEmpty ? value : null;
 
 List<String> _parseStringList(dynamic value) {
   if (value == null) return [];
