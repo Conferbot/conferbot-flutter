@@ -21,19 +21,24 @@ Layout:
 | #20 | User as `visitorContext` + identity hash (name, email and metadata now reach the server) | `models/user.dart` (`toVisitorContext`), `core/state/chat_state.dart`, provider constructor |
 | #36, #45, #53, #54, #56, #57 | Help centre: loads from the socket's `knowledgeBaseData` (bodies fetched on open) or REST, sends `query` to search, follows `enableKnowledgeBase` / `hideRecentArticles` (`ChatWidget.showKnowledgeBase` overrides), draws HTML bodies, opens AI sources and rich article cards by `articleId`, uses the configured server. Fixtures captured from a local server | `core/help_centre/help_centre.dart`, `models/knowledge_base.dart` (`KnowledgeBaseData`), `providers/knowledge_base_provider.dart`, `services/knowledge_base_service.dart`, `widgets/agent_reply.dart`, `widgets/chat_widget.dart`, `test/fixtures/kb_payloads.json` |
 | #22 | Greeting card: rules, frequency, per-bot state, 11 styles; replaces the old CTA tooltip. Checked with widget-test images, not yet on a device | `core/customization/greeting.dart`, `widgets/greeting_controller.dart`, `widgets/greeting_card.dart`, `widgets/conferbot_fab.dart` |
+| #24-#28, #37, #61-#63, #65 | Handover lifecycle, ported from RN: the Connecting line and its four outcomes, an AI's idle pause ignored, the 20s waiting signal and `onWidgetSignal`, the header keeping the bot with Online and the reply time, "Talk to a person" only when allowed, Leave queue (`queue-self-resolve`, `queue-left`), a live chat or a wait picked back up after a restart without a second ticket, the flow started once per session, `openChat` waiting for start-up, the step's email / sound / assignment settings on `initiate-handover`, End chat and the survey as the server handles them. Checked on the iPhone 16e simulator against a local embed-server | `core/live_chat/handover_state.dart`, `handover_waiting.dart`, `reply_time.dart`, `handover_lifecycle.dart`, `core/agent/agent_handover.dart`, `core/node_flow_engine.dart` (`waitAt`), `providers/conferbot_provider.dart`, `widgets/message_bubble.dart` (`LiveChatLine`), `widgets/live_chat_cards.dart`, `widgets/chat_widget.dart` |
 
 ## Left in this SDK
 
 1. **Greeting card follow-ups:**
    - Check it on a device (iOS and Android).
    - Not drawn yet, as in RN: the word fade-up, the "Online" ping, the exit animations, the mascot and the agent's reply field.
-2. The rest of the list below.
-3. **Test debt:**
+2. **Handover follow-ups:**
+   - #64: the help articles shown while waiting (`queue-help`, "That solved it") are not drawn.
+   - Leave queue was checked against the server with a visitor socket (this simulator has no tap tool); the button itself is covered by widget tests.
+   - After a restore that is still waiting, the max-wait timer starts over rather than from the server's `waitEndsAt`.
+3. The rest of the list below.
+4. **Test debt:**
    - #16: `media_service_test` fails because MockController is not an AudioPlayer.
    - #23: `test/core/handlers/*_test.dart` and `node_flow_engine_test.dart` don't compile: they set a `state` that the handlers no longer have.
    - #58: the older help centre widget tests (`article_list_test`, `article_detail_test`, `category_chips_test`) and `message_bubble_test` don't compile or fail. The help centre is covered by `test/core/help_centre/`, `test/providers/knowledge_base_provider_test.dart` and `test/widgets/knowledge_base/help_centre_test.dart`.
-4. There's no `identify()` after construction; the user comes only from the provider's `user`.
-5. **Help centre follow-ups:**
+5. There's no `identify()` after construction; the user comes only from the provider's `user`.
+6. **Help centre follow-ups:**
    - Ratings still use the SDK's 1-5 stars over REST; the web sends helpful / not helpful (`rate-article`). Reading time and scroll depth (`track-article-engagement`) are not sent.
    - Search uses REST (`/knowledge-base/search?query=`) plus local title matches; the socket's `search-kb-articles` (with snippets) is not used.
    - No home screen yet, so Recent articles sit at the top of the help centre list rather than on a welcome screen.
@@ -41,6 +46,8 @@ Layout:
 ## How to test
 
 - **Unit tests:** `flutter test test/core` (skip the media test, #16).
+- **Handover lifecycle:** `flutter test test/core/live_chat test/core/agent test/widgets/handover/handover_lifecycle_widgets_test.dart`. `handover_lifecycle_test.dart` drives the lifecycle against a fake socket and a fake clock.
+- **Handover on a device:** a temporary bot in local Mongo (`conferbotStaging`) with welcome -> human-handover-node (`enableHandoverEmail: false`) -> message, linked in `workspaces.chatbots` and `admins.chatbots` (the server finds a bot's workspace through `admins`). A node socket.io-client script plays the agent with a dashboard JWT signed with the server's `JWT_ACCESS_SECRET` (`auth: {userId, workspaceId, token}`): `accept-handover`, `leave-chat` with `agentDetails.isAIAgent: true` (the visitor sees an AI escalating), `end-chat`. Hot restart (`R`) checks the restore: count `initiate-handover` in the app log and the session's tickets. Delete the bot and everything for its sessions afterwards.
 - **Help centre:** `flutter test test/core/help_centre test/providers/knowledge_base_provider_test.dart test/services/knowledge_base_service_test.dart test/widgets/knowledge_base/help_centre_test.dart`. The payloads in `test/fixtures/kb_payloads.json` were captured from a local embed-server (socket `fetched-chatbot-data`, `get-kb-article`, `search-kb-articles`; REST `/mobile/chatbot/:id/kb` and `/mobile/knowledge-base/*`). To refresh them, run a small socket.io-client script against `:8001` with a bot that has published articles.
 - **Greeting card images:** `GREETING_GOLDEN_DIR=/abs/dir flutter test --update-goldens test/widgets/greeting_card_test.dart` writes one PNG per style to that directory, outside the repo. It loads Roboto from the Flutter SDK and macOS fonts in place of casual / serif / monospace. Without the variable the image group is skipped.
 - **Example app:**
@@ -71,7 +78,8 @@ Every web widget feature works the same in the 4 mobile SDKs: customization, lau
 | `widgetLanguage` (i18n) | todo | todo | todo | todo |
 | Message sounds | todo | todo | todo | todo |
 | Celebrations / reactions | todo | todo | todo | todo |
-| Reply-time wording | todo | todo | todo | todo |
+| Reply-time wording (header line) | done | todo | todo | done |
+| Handover lifecycle (Connecting line, outcomes, signals, leave queue, restore) | done | todo | todo | done |
 
 Live chat / agent features (handover, queue card, receipts, rating, files, prefill, max-wait timeout, agent bot replies, suggestion chips) are done in all 4.
 
