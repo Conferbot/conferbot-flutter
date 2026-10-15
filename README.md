@@ -262,6 +262,9 @@ If no user is passed, the SDK generates a persistent anonymous visitor ID (store
 
 When the widget connects, the server sends the bot's flow-builder customizations (the same ones the web widget uses): header colors, bubble colors, chat background, bot name, bot avatar, font size, and bubble border radius. The SDK builds a theme from them via `ConferBotProvider.serverTheme` and applies it with no code on your side.
 
+- **Chat background**: solid, gradient (linear, radial, mesh, blur), image with its mask, or one of the 13 patterns.
+- **Widget theme**: all 27 dashboard themes (Classic, Minimal, Glass, Neo-brutal, Midnight, Aurora and the rest). Each brings its surfaces, text colours, corner radii and bubble outline, as on the web widget. **Appearance** light, dark, or auto (follows the phone's dark mode, also when it changes while the chat is open); Midnight, Neon, Chalkboard, Cyberpunk and Space are always dark. **Colours** "Brand" keeps your colours; "Theme palette" swaps in the theme's own header, bubble, option, launcher and send-button colours (`serverCustomizations` then carries them). Your own bubble radius, option radius and chat background still win over the theme. Theme fonts are not loaded; the app's font is used. `ConferBotProvider.widgetTheme` exposes the theme in force.
+
 Keys consumed from the dashboard: `headerBgColor`, `headerTextColor`, `botMsgColor`, `botTextColor`, `userMsgColor`, `userTextColor`, `optionBubbleMsgColor`, `optionBubbleTextColor`, `chatBgColor`, `fontSize`, `bubbleBorderRadius`, plus `botName` / `logoText` (header title) and `avatar` / `logo` (header and message avatar).
 
 ### Precedence: server settings override local theme
