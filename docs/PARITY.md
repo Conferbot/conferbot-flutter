@@ -19,6 +19,7 @@ Layout:
 | #18 | 56 icons (CustomPainter) | `launcher_icons.dart`, `widgets/launcher_icon_painter.dart` |
 | #19 | Launcher motion, passes the golden test | `launcher_motion.dart`, `test/fixtures/launcher_motion_golden.json` |
 | #20 | User as `visitorContext` + identity hash (name, email and metadata now reach the server) | `models/user.dart` (`toVisitorContext`), `core/state/chat_state.dart`, provider constructor |
+| #36, #45, #53, #54, #56, #57 | Help centre: loads from the socket's `knowledgeBaseData` (bodies fetched on open) or REST, sends `query` to search, follows `enableKnowledgeBase` / `hideRecentArticles` (`ChatWidget.showKnowledgeBase` overrides), draws HTML bodies, opens AI sources and rich article cards by `articleId`, uses the configured server. Fixtures captured from a local server | `core/help_centre/help_centre.dart`, `models/knowledge_base.dart` (`KnowledgeBaseData`), `providers/knowledge_base_provider.dart`, `services/knowledge_base_service.dart`, `widgets/agent_reply.dart`, `widgets/chat_widget.dart`, `test/fixtures/kb_payloads.json` |
 | #22 | Greeting card: rules, frequency, per-bot state, 11 styles; replaces the old CTA tooltip. Checked with widget-test images, not yet on a device | `core/customization/greeting.dart`, `widgets/greeting_controller.dart`, `widgets/greeting_card.dart`, `widgets/conferbot_fab.dart` |
 
 ## Left in this SDK
@@ -30,14 +31,21 @@ Layout:
 3. **Test debt:**
    - #16: `media_service_test` fails because MockController is not an AudioPlayer.
    - #23: `test/core/handlers/*_test.dart` and `node_flow_engine_test.dart` don't compile: they set a `state` that the handlers no longer have.
+   - #58: the older help centre widget tests (`article_list_test`, `article_detail_test`, `category_chips_test`) and `message_bubble_test` don't compile or fail. The help centre is covered by `test/core/help_centre/`, `test/providers/knowledge_base_provider_test.dart` and `test/widgets/knowledge_base/help_centre_test.dart`.
 4. There's no `identify()` after construction; the user comes only from the provider's `user`.
+5. **Help centre follow-ups:**
+   - Ratings still use the SDK's 1-5 stars over REST; the web sends helpful / not helpful (`rate-article`). Reading time and scroll depth (`track-article-engagement`) are not sent.
+   - Search uses REST (`/knowledge-base/search?query=`) plus local title matches; the socket's `search-kb-articles` (with snippets) is not used.
+   - No home screen yet, so Recent articles sit at the top of the help centre list rather than on a welcome screen.
 
 ## How to test
 
 - **Unit tests:** `flutter test test/core` (skip the media test, #16).
+- **Help centre:** `flutter test test/core/help_centre test/providers/knowledge_base_provider_test.dart test/services/knowledge_base_service_test.dart test/widgets/knowledge_base/help_centre_test.dart`. The payloads in `test/fixtures/kb_payloads.json` were captured from a local embed-server (socket `fetched-chatbot-data`, `get-kb-article`, `search-kb-articles`; REST `/mobile/chatbot/:id/kb` and `/mobile/knowledge-base/*`). To refresh them, run a small socket.io-client script against `:8001` with a bot that has published articles.
 - **Greeting card images:** `GREETING_GOLDEN_DIR=/abs/dir flutter test --update-goldens test/widgets/greeting_card_test.dart` writes one PNG per style to that directory, outside the repo. It loads Roboto from the Flutter SDK and macOS fonts in place of casual / serif / monospace. Without the variable the image group is skipped.
 - **Example app:**
-  - To point it at a local server, add `ConferBotEndpoints.configure(apiBaseUrl: 'http://10.0.2.2:8001/api/v1/mobile', socketUrl: 'http://10.0.2.2:8001')` in `example/lib/main.dart`.
+  - To point it at a local server, add `ConferBotEndpoints.configure(apiBaseUrl: 'http://10.0.2.2:8001/api/v1/mobile', socketUrl: 'http://10.0.2.2:8001')` in `example/lib/main.dart` (`localhost` on the iOS simulator).
+  - iOS simulator: `flutter run -d <simulator id>` from `example/`.
   - Build: `flutter build apk --debug --target-platform android-x64` with gradle 8.7.
   - Revert `main.dart`, the gradle wrapper, `pubspec.lock` and `GeneratedPluginRegistrant.swift` before committing.
 
