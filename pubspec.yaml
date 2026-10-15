@@ -59,6 +59,7 @@ dependencies:
   flutter_markdown: ^0.6.18
   flutter_html: ^3.0.0-beta.2
   flutter_highlighter: ^0.1.1
+  timezone: ^0.11.2
 
 dev_dependencies:
   flutter_test:
