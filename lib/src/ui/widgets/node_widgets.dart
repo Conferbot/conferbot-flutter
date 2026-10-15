@@ -5,9 +5,6 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../../core/nodes/node_ui_state.dart' as ui_state;
-import '../../core/nodes/handlers/display_handlers.dart' as display;
-import '../../core/nodes/handlers/choices/choice_ui_states.dart' as choice;
-import '../../core/nodes/handlers/legacy_handlers.dart' as legacy;
 import '../../core/live_chat/live_chat.dart';
 import '../../core/customization/customizations.dart';
 import '../../widgets/bubble_outline.dart';
@@ -20,6 +17,9 @@ import '../../widgets/voice_message/voice_player.dart';
 import '../../widgets/media/image_viewer.dart';
 import '../../widgets/media/video_player_widget.dart';
 import '../../widgets/media/audio_player_widget.dart';
+import 'rich_node_widgets.dart';
+
+export 'rich_node_widgets.dart';
 
 /// Main widget that routes to the correct node component based on UI state
 /// Accepts both canonical (node_ui_state.dart) and legacy handler UI states
@@ -39,6 +39,12 @@ class NodeRenderer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A new step (or the same step asking again) gets a fresh card: the
+    // last one's pick or input does not carry over.
+    return KeyedSubtree(key: ObjectKey(uiState), child: _card(context));
+  }
+
+  Widget _card(BuildContext context) {
     final effectiveTheme = theme ?? defaultTheme;
     final effectivePrimaryColor = primaryColor ?? effectiveTheme.colors.primary;
     final state = uiState;
@@ -105,214 +111,30 @@ class NodeRenderer extends StatelessWidget {
       return HtmlNodeWidget(state: state, theme: effectiveTheme);
     }
     if (state is ui_state.PaymentUIState) {
-      return PaymentNodeWidget(state: state, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+      return PaymentNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
     }
     if (state is ui_state.RedirectUIState) {
       return RedirectNodeWidget(state: state, theme: effectiveTheme);
     }
 
-    // ---- Legacy handler types (choice_ui_states.dart, display_handlers.dart, legacy_handlers.dart) ----
-    // These wrap legacy state into the canonical widget by adapting the data.
-
-    if (state is choice.SingleChoiceState) {
-      // Adapt legacy SingleChoiceState -> canonical SingleChoiceUIState
-      return _LegacySingleChoiceAdapter(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    // ---- The rich steps (cards, scales, orderings, forms) ----
+    if (state is ui_state.CarouselUIState) {
+      return CarouselNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
     }
-    if (state is choice.MultipleChoiceState) {
-      return _LegacyMultipleChoiceAdapter(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    if (state is ui_state.SliderUIState) {
+      return SliderNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
     }
-    if (state is display.MessageState) {
-      return MessageNodeWidget(
-        state: ui_state.MessageUIState(text: state.text, nodeId: state.nodeId),
-        theme: effectiveTheme,
-      );
+    if (state is ui_state.RankingUIState) {
+      return RankingNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
     }
-    if (state is legacy.TextInputState) {
-      return _LegacyTextInputAdapter(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    if (state is ui_state.MatrixUIState) {
+      return MatrixNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
     }
-    if (state is legacy.RangeState) {
-      return _LegacyRangeAdapter(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
-    }
-    if (state is legacy.QuizState) {
-      return _LegacyQuizAdapter(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+    if (state is ui_state.AddressUIState) {
+      return AddressNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
     }
 
     return const SizedBox.shrink();
-  }
-}
-
-// ==================== LEGACY STATE ADAPTERS ====================
-
-/// Adapts legacy SingleChoiceState to canonical SingleChoiceNodeWidget
-class _LegacySingleChoiceAdapter extends StatelessWidget {
-  final choice.SingleChoiceState state;
-  final ValueChanged<dynamic> onResponse;
-  final Color primaryColor;
-  final ConferBotTheme theme;
-
-  const _LegacySingleChoiceAdapter({
-    required this.state,
-    required this.onResponse,
-    required this.primaryColor,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final adapted = ui_state.SingleChoiceUIState(
-      questionText: state.questionText,
-      choices: state.choices.map((c) => ui_state.ChoiceOption(
-        id: c.id,
-        text: c.text,
-      )).toList(),
-      nodeId: state.nodeId,
-    );
-    return SingleChoiceNodeWidget(
-      state: adapted,
-      onResponse: (response) {
-        // Map back: include targetPort from original choice
-        if (response is Map) {
-          final id = response['id']?.toString();
-          final original = state.choices.where((c) => c.id == id).firstOrNull;
-          if (original?.targetPort != null) {
-            onResponse({...response, 'targetPort': original!.targetPort});
-            return;
-          }
-        }
-        onResponse(response);
-      },
-      primaryColor: primaryColor,
-      theme: theme,
-    );
-  }
-}
-
-/// Adapts legacy MultipleChoiceState to canonical MultipleChoiceNodeWidget
-class _LegacyMultipleChoiceAdapter extends StatelessWidget {
-  final choice.MultipleChoiceState state;
-  final ValueChanged<dynamic> onResponse;
-  final Color primaryColor;
-  final ConferBotTheme theme;
-
-  const _LegacyMultipleChoiceAdapter({
-    required this.state,
-    required this.onResponse,
-    required this.primaryColor,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final adapted = ui_state.MultipleChoiceUIState(
-      questionText: state.questionText,
-      options: state.options.map((o) => ui_state.SelectOption(
-        id: o.id,
-        text: o.text,
-      )).toList(),
-      nodeId: state.nodeId,
-    );
-    return MultipleChoiceNodeWidget(
-      state: adapted,
-      onResponse: onResponse,
-      primaryColor: primaryColor,
-      theme: theme,
-    );
-  }
-}
-
-/// Adapts legacy TextInputState to canonical TextInputNodeWidget
-class _LegacyTextInputAdapter extends StatelessWidget {
-  final legacy.TextInputState state;
-  final ValueChanged<dynamic> onResponse;
-  final Color primaryColor;
-  final ConferBotTheme theme;
-
-  const _LegacyTextInputAdapter({
-    required this.state,
-    required this.onResponse,
-    required this.primaryColor,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final adapted = ui_state.TextInputUIState(
-      questionText: state.questionText,
-      inputType: state.inputType,
-      placeholder: state.placeholder,
-      validationRegex: state.validationRegex,
-      errorMessage: state.errorMessage,
-      nodeId: state.nodeId,
-    );
-    return TextInputNodeWidget(
-      state: adapted,
-      onResponse: onResponse,
-      primaryColor: primaryColor,
-      theme: theme,
-    );
-  }
-}
-
-/// Adapts legacy RangeState to canonical RangeNodeWidget
-class _LegacyRangeAdapter extends StatelessWidget {
-  final legacy.RangeState state;
-  final ValueChanged<dynamic> onResponse;
-  final Color primaryColor;
-  final ConferBotTheme theme;
-
-  const _LegacyRangeAdapter({
-    required this.state,
-    required this.onResponse,
-    required this.primaryColor,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final adapted = ui_state.RangeUIState(
-      questionText: state.questionText,
-      minValue: state.minValue,
-      maxValue: state.maxValue,
-      defaultValue: state.defaultValue,
-      nodeId: state.nodeId,
-    );
-    return RangeNodeWidget(
-      state: adapted,
-      onResponse: onResponse,
-      primaryColor: primaryColor,
-      theme: theme,
-    );
-  }
-}
-
-/// Adapts legacy QuizState to canonical QuizNodeWidget
-class _LegacyQuizAdapter extends StatelessWidget {
-  final legacy.QuizState state;
-  final ValueChanged<dynamic> onResponse;
-  final Color primaryColor;
-  final ConferBotTheme theme;
-
-  const _LegacyQuizAdapter({
-    required this.state,
-    required this.onResponse,
-    required this.primaryColor,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final adapted = ui_state.QuizUIState(
-      questionText: state.questionText,
-      options: state.options,
-      correctAnswerIndex: state.correctAnswerIndex,
-      nodeId: state.nodeId,
-    );
-    return QuizNodeWidget(
-      state: adapted,
-      onResponse: onResponse,
-      primaryColor: primaryColor,
-      theme: theme,
-    );
   }
 }
 
@@ -534,78 +356,30 @@ class TextInputNodeWidget extends StatefulWidget {
 }
 
 class _TextInputNodeWidgetState extends State<TextInputNodeWidget> {
-  final _controller = TextEditingController();
-  final _focusNode = FocusNode();
-  bool _hasError = false;
   bool _submitted = false;
 
   @override
-  void dispose() {
-    _controller.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  TextInputType _getKeyboardType() {
-    return switch (widget.state.inputType) {
-      ui_state.TextInputType.email => TextInputType.emailAddress,
-      ui_state.TextInputType.phone => TextInputType.phone,
-      ui_state.TextInputType.number => TextInputType.number,
-      ui_state.TextInputType.url => TextInputType.url,
-      _ => TextInputType.text,
-    };
-  }
-
-  List<TextInputFormatter>? _getInputFormatters() {
-    return switch (widget.state.inputType) {
-      ui_state.TextInputType.phone => [FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s()]'))],
-      ui_state.TextInputType.number => [FilteringTextInputFormatter.digitsOnly],
-      _ => null,
-    };
-  }
-
-  bool _validate(String value) {
-    if (value.isEmpty) return false;
-
-    if (widget.state.validationRegex != null) {
-      final regex = RegExp(widget.state.validationRegex!);
-      return regex.hasMatch(value);
-    }
-
-    // Built-in validation based on type
-    return switch (widget.state.inputType) {
-      ui_state.TextInputType.email => RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value),
-      ui_state.TextInputType.phone => value.length >= 10,
-      ui_state.TextInputType.url => Uri.tryParse(value)?.hasAbsolutePath ?? false,
-      _ => true,
-    };
-  }
-
-  void _submit() {
-    final value = _controller.text.trim();
-    if (!_validate(value)) {
-      setState(() => _hasError = true);
-      return;
-    }
-    setState(() {
-      _hasError = false;
-      _submitted = true;
-    });
-    widget.onResponse(value);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Web widget parity: text-family questions show only the bubble; the
-    // visitor answers through the unified bottom bar, which routes typed
-    // text to the active node via ConferBotProvider.sendMessage.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (widget.state.questionText.isNotEmpty)
-          BotMessageBubbleWithAvatar(
-              text: widget.state.questionText, theme: widget.theme),
-      ],
+    // Web widget parity: the question is the step's own chat line and the
+    // visitor answers in the bottom bar (ConferBotProvider.sendMessage). A
+    // step that may be skipped (OTP) shows its Skip chip here.
+    final extra = widget.state.extra;
+    if (extra['allowSkip'] != true) return const SizedBox.shrink();
+    final label = (extra['skipLabel'] ?? 'Skip').toString();
+    return Padding(
+      padding: EdgeInsets.only(left: widget.theme.layout.avatarSize + 10),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: OutlinedButton(
+          onPressed: _submitted
+              ? null
+              : () {
+                  setState(() => _submitted = true);
+                  widget.onResponse(const {'action': 'skip'});
+                },
+          child: Text(label),
+        ),
+      ),
     );
   }
 }
@@ -632,6 +406,30 @@ class FileUploadNodeWidget extends StatefulWidget {
 class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
   String? _selectedFileName;
   bool _isUploading = false;
+
+  /// The file's type by its extension (the step checks it against the
+  /// owner's allowed types).
+  static String _mimeOf(String? ext) {
+    final e = (ext ?? '').toLowerCase();
+    const types = {
+      'pdf': 'application/pdf',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'csv': 'text/csv',
+      'txt': 'text/plain',
+      'mp4': 'video/mp4',
+      'mp3': 'audio/mpeg',
+      'zip': 'application/zip',
+    };
+    return types[e] ?? 'application/octet-stream';
+  }
 
   Future<void> _pickFile() async {
     try {
@@ -682,13 +480,16 @@ class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
         _isUploading = true;
       });
 
-      // Send the file info back via onResponse
+      // The step checks the file and uploads it (ask-file-node).
       widget.onResponse({
-        'fileName': file.name,
-        'filePath': file.path,
-        'fileSize': file.size,
-        'fileExtension': file.extension,
-        'fileBytes': file.bytes,
+        'file': {
+          'name': file.name,
+          'size': file.size,
+          'type': _mimeOf(file.extension),
+          'uri': file.path,
+          if (file.bytes != null) 'bytes': file.bytes,
+        },
+        'label': file.name,
       });
 
       if (mounted) {
@@ -709,10 +510,6 @@ class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.state.questionText.isNotEmpty) ...[
-          BotMessageBubbleWithAvatar(text: widget.state.questionText, theme: widget.theme),
-          SizedBox(height: widget.theme.spacing.sm),
-        ],
         InkWell(
           onTap: _isUploading ? null : _pickFile,
           borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
@@ -770,6 +567,16 @@ class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
                   ),
           ),
         ),
+        if (widget.state.optional) ...[
+          SizedBox(height: widget.theme.spacing.xs),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: _isUploading ? null : () => widget.onResponse(const {'skip': true}),
+              child: const Text('Skip'),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -802,9 +609,6 @@ class _SingleChoiceNodeWidgetState extends State<SingleChoiceNodeWidget> {
   @override
   Widget build(BuildContext context) {
     // Get bot avatar from provider (server customizations)
-    final provider = context.read<ConferBotProvider>();
-    final avatarUrl = provider.botAvatarUrl;
-    final botName = provider.botName ?? 'Bot';
     final avatarSize = widget.theme.layout.avatarSize;
     // Indent = avatar + gap so choices align with the bubble
     final indent = avatarSize + 10;
@@ -812,29 +616,6 @@ class _SingleChoiceNodeWidgetState extends State<SingleChoiceNodeWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Question text with bot avatar
-        if (widget.state.questionText != null &&
-            widget.state.questionText!.isNotEmpty) ...[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              ConferBotAvatar(
-                imageUrl: avatarUrl,
-                name: botName,
-                size: avatarSize,
-                theme: widget.theme,
-              ),
-              const SizedBox(width: 10),
-              Flexible(
-                child: BotMessageBubble(
-                  text: widget.state.questionText!,
-                  theme: widget.theme,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-        ],
         // Choice buttons indented to align with bubble (after avatar)
         Padding(
           padding: EdgeInsets.only(left: indent),
@@ -851,8 +632,15 @@ class _SingleChoiceNodeWidgetState extends State<SingleChoiceNodeWidget> {
                   onPressed: isDisabled
                       ? null
                       : () {
+                          // A link (navigate) opens its page; the step
+                          // keeps waiting for Done.
+                          if (choice.url != null && choice.url!.isNotEmpty && choice.id != 'done') {
+                            launchUrl(Uri.parse(choice.url!), mode: LaunchMode.externalApplication);
+                            widget.onResponse({'buttonId': choice.id, 'label': choice.text});
+                            return;
+                          }
                           setState(() => _selectedId = choice.id);
-                          widget.onResponse({'id': choice.id, 'text': choice.text});
+                          widget.onResponse({'buttonId': choice.id, 'label': choice.text, 'value': choice.value});
                         },
                   style: OutlinedButton.styleFrom(
                     // The owner's option colour at full strength, as the web draws it.
@@ -933,11 +721,6 @@ class _MultipleChoiceNodeWidgetState extends State<MultipleChoiceNodeWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.state.questionText != null &&
-            widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubbleWithAvatar(text: widget.state.questionText!, theme: widget.theme),
-          SizedBox(height: widget.theme.spacing.sm),
-        ],
         ...widget.state.options.map((option) {
           final isSelected = _selectedIds.contains(option.id);
           return Padding(
@@ -1004,11 +787,11 @@ class _MultipleChoiceNodeWidgetState extends State<MultipleChoiceNodeWidget> {
               ? null
               : () {
                   setState(() => _submitted = true);
-                  final selectedTexts = widget.state.options
-                      .where((o) => _selectedIds.contains(o.id))
-                      .map((o) => o.text)
-                      .toList();
-                  widget.onResponse(selectedTexts);
+                  final picked = widget.state.options.where((o) => _selectedIds.contains(o.id)).toList();
+                  widget.onResponse({
+                    'buttonIds': [for (final o in picked) o.id],
+                    'label': picked.map((o) => o.text).join(', '),
+                  });
                 },
           style: ElevatedButton.styleFrom(
             backgroundColor: widget.primaryColor,
@@ -1052,11 +835,6 @@ class _ImageChoiceNodeWidgetState extends State<ImageChoiceNodeWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.state.questionText != null &&
-            widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubbleWithAvatar(text: widget.state.questionText!, theme: widget.theme),
-          SizedBox(height: widget.theme.spacing.sm),
-        ],
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -1077,7 +855,7 @@ class _ImageChoiceNodeWidgetState extends State<ImageChoiceNodeWidget> {
                   : () {
                       setState(() => _selectedId = image.id);
                       widget.onResponse({
-                        'id': image.id,
+                        'buttonId': image.id,
                         'label': image.label,
                         'imageUrl': image.imageUrl,
                       });
@@ -1162,7 +940,7 @@ class _RatingNodeWidgetState extends State<RatingNodeWidget> {
   void _selectRating(int rating) {
     if (_selectedRating != null) return;
     setState(() => _selectedRating = rating);
-    widget.onResponse(rating);
+    widget.onResponse({'value': rating, 'label': '$rating'});
   }
 
   @override
@@ -1170,11 +948,6 @@ class _RatingNodeWidgetState extends State<RatingNodeWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.state.questionText != null &&
-            widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubbleWithAvatar(text: widget.state.questionText!, theme: widget.theme),
-          SizedBox(height: widget.theme.spacing.sm),
-        ],
         switch (widget.state.ratingType) {
           ui_state.RatingType.star => _buildStarRating(),
           ui_state.RatingType.smiley => _buildSmileyRating(),
@@ -1308,11 +1081,6 @@ class _DropdownNodeWidgetState extends State<DropdownNodeWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.state.questionText != null &&
-            widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubbleWithAvatar(text: widget.state.questionText!, theme: widget.theme),
-          SizedBox(height: widget.theme.spacing.sm),
-        ],
         DropdownButtonFormField<ui_state.SelectOption>(
           value: _selectedOption,
           decoration: InputDecoration(
@@ -1343,7 +1111,7 @@ class _DropdownNodeWidgetState extends State<DropdownNodeWidget> {
               : (option) {
                   if (option != null) {
                     setState(() => _selectedOption = option);
-                    widget.onResponse({'id': option.id, 'text': option.text});
+                    widget.onResponse({'buttonId': option.id, 'label': option.text});
                   }
                 },
         ),
@@ -1388,11 +1156,6 @@ class _RangeNodeWidgetState extends State<RangeNodeWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.state.questionText != null &&
-            widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubbleWithAvatar(text: widget.state.questionText!, theme: widget.theme),
-          SizedBox(height: widget.theme.spacing.sm),
-        ],
         Row(
           children: [
             Text(
@@ -1439,7 +1202,7 @@ class _RangeNodeWidgetState extends State<RangeNodeWidget> {
               ? null
               : () {
                   setState(() => _submitted = true);
-                  widget.onResponse(_value.toInt());
+                  widget.onResponse({'value': _value.toInt(), 'label': '${_value.toInt()}'});
                 },
           style: ElevatedButton.styleFrom(
             backgroundColor: widget.primaryColor,
@@ -1478,13 +1241,42 @@ class CalendarNodeWidget extends StatefulWidget {
 class _CalendarNodeWidgetState extends State<CalendarNodeWidget> {
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+  String? _selectedSlot;
   bool _submitted = false;
+
+  /// A date/time step (datetime-node) answers one value; the calendar step
+  /// answers a day and, with bookable slots, one of them.
+  bool get _isDateTime => widget.state.extra['datetime'] == true;
+  bool get _needsDate => !_isDateTime || widget.state.mode != 'time';
+  bool get _needsTime => _isDateTime ? widget.state.mode != 'date' : false;
+  List<String>? get _slots =>
+      _selectedDate == null ? null : widget.state.availableSlots?[_formatDate(_selectedDate!)];
+
+  bool get _ready =>
+      (!_needsDate || _selectedDate != null) &&
+      (!_needsTime || _selectedTime != null) &&
+      (widget.state.availableSlots == null || _selectedSlot != null);
+
+  Map<String, dynamic> _answer() {
+    if (_isDateTime) {
+      final date = _selectedDate == null ? null : _formatDate(_selectedDate!);
+      final time = _selectedTime == null ? null : _formatTime(_selectedTime!);
+      final value = widget.state.mode == 'time'
+          ? time
+          : widget.state.mode == 'datetime'
+              ? '${date}T$time'
+              : date;
+      return {'value': value, 'label': value};
+    }
+    final date = _formatDate(_selectedDate!);
+    return {'date': date, if (_selectedSlot != null) 'slot': _selectedSlot, 'label': _selectedSlot == null ? date : '$date $_selectedSlot'};
+  }
 
   Future<void> _pickDate() async {
     final date = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
+      initialDate: widget.state.minDate != null && widget.state.minDate!.isAfter(DateTime.now()) ? widget.state.minDate! : DateTime.now(),
+      firstDate: widget.state.minDate ?? DateTime(2000),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
         return Theme(
@@ -1496,7 +1288,10 @@ class _CalendarNodeWidgetState extends State<CalendarNodeWidget> {
       },
     );
     if (date != null) {
-      setState(() => _selectedDate = date);
+      setState(() {
+        _selectedDate = date;
+        _selectedSlot = null;
+      });
     }
   }
 
@@ -1531,11 +1326,6 @@ class _CalendarNodeWidgetState extends State<CalendarNodeWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.state.questionText != null &&
-            widget.state.questionText!.isNotEmpty) ...[
-          BotMessageBubbleWithAvatar(text: widget.state.questionText!, theme: widget.theme),
-          SizedBox(height: widget.theme.spacing.sm),
-        ],
         Card(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
@@ -1545,15 +1335,15 @@ class _CalendarNodeWidgetState extends State<CalendarNodeWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
+                if (_needsDate) Text(
                   'Select Date',
                   style: TextStyle(
                     fontSize: widget.theme.typography.fontSizeMd,
                     fontWeight: widget.theme.typography.fontWeightMedium,
                   ),
                 ),
-                SizedBox(height: widget.theme.spacing.sm),
-                OutlinedButton.icon(
+                if (_needsDate) SizedBox(height: widget.theme.spacing.sm),
+                if (_needsDate) OutlinedButton.icon(
                   onPressed: _submitted ? null : _pickDate,
                   icon: const Icon(Icons.calendar_today),
                   label: Text(
@@ -1569,7 +1359,22 @@ class _CalendarNodeWidgetState extends State<CalendarNodeWidget> {
                     ),
                   ),
                 ),
-                if (widget.state.showTimeSelection) ...[
+                if (_slots != null) ...[
+                  SizedBox(height: widget.theme.spacing.md),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final slot in _slots!)
+                        ChoiceChip(
+                          label: Text(slot),
+                          selected: _selectedSlot == slot,
+                          onSelected: _submitted ? null : (_) => setState(() => _selectedSlot = slot),
+                        ),
+                    ],
+                  ),
+                ],
+                if (_needsTime) ...[
                   SizedBox(height: widget.theme.spacing.md),
                   Text(
                     'Select Time',
@@ -1602,16 +1407,11 @@ class _CalendarNodeWidgetState extends State<CalendarNodeWidget> {
         ),
         SizedBox(height: widget.theme.spacing.sm),
         ElevatedButton(
-          onPressed: _submitted || _selectedDate == null
+          onPressed: _submitted || !_ready
               ? null
               : () {
                   setState(() => _submitted = true);
-                  widget.onResponse({
-                    'date': _formatDate(_selectedDate!),
-                    'time': _selectedTime != null
-                        ? _formatTime(_selectedTime!)
-                        : null,
-                  });
+                  widget.onResponse(_answer());
                 },
           style: ElevatedButton.styleFrom(
             backgroundColor: widget.primaryColor,
@@ -1655,10 +1455,6 @@ class _QuizNodeWidgetState extends State<QuizNodeWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.state.questionText.isNotEmpty) ...[
-          BotMessageBubbleWithAvatar(text: widget.state.questionText, theme: widget.theme),
-          SizedBox(height: widget.theme.spacing.sm),
-        ],
         ...widget.state.options.asMap().entries.map((entry) {
           final index = entry.key;
           final option = entry.value;
@@ -1976,79 +1772,53 @@ class HtmlNodeWidget extends StatelessWidget {
   }
 }
 
-/// Widget for payment
+/// Widget for payment (payment-node): the step's buttons - Pay now opens
+/// Stripe Checkout, then "I've paid" checks, and Cancel - as the web draws
+/// them. The step waits for the payment itself.
 class PaymentNodeWidget extends StatelessWidget {
   final ui_state.PaymentUIState state;
+  final ValueChanged<dynamic>? onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
 
   const PaymentNodeWidget({
     super.key,
     required this.state,
+    this.onResponse,
     required this.primaryColor,
     required this.theme,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(theme.spacing.md),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Payment',
-              style: TextStyle(
-                fontSize: theme.typography.fontSizeLg,
-                fontWeight: theme.typography.fontWeightMedium,
-              ),
-            ),
-            if (state.amount != null && state.currency != null) ...[
-              SizedBox(height: theme.spacing.sm),
-              Text(
-                '${state.currency} ${state.amount}',
-                style: TextStyle(
-                  fontSize: theme.typography.fontSizeXl,
-                  fontWeight: theme.typography.fontWeightBold,
-                ),
-              ),
-            ],
-            if (state.description != null && state.description!.isNotEmpty) ...[
-              SizedBox(height: theme.spacing.xs),
-              Text(
-                state.description!,
-                style: TextStyle(
-                  fontSize: theme.typography.fontSizeMd,
-                  color: theme.colors.textSecondary,
-                ),
-              ),
-            ],
-            SizedBox(height: theme.spacing.md),
+    final buttons = (state.extra['buttons'] is List ? state.extra['buttons'] as List : const [])
+        .whereType<Map>()
+        .toList();
+    final url = (state.extra['checkoutUrl'] ?? state.paymentUrl)?.toString() ?? '';
+    final list = buttons.isEmpty ? [{'id': 'open', 'label': state.buttonLabel ?? 'Pay now'}] : buttons;
+    return Padding(
+      padding: EdgeInsets.only(left: theme.layout.avatarSize + 10),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (final b in list)
             ElevatedButton(
-              onPressed: state.paymentUrl.isNotEmpty
-                  ? () async {
-                      await launchUrl(Uri.parse(state.paymentUrl), mode: LaunchMode.externalApplication);
-                    }
-                  : null,
+              onPressed: () async {
+                final id = '${b['id']}';
+                if (id == 'open' && url.isNotEmpty) {
+                  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                }
+                onResponse?.call({'action': id, 'label': '${b['label']}'});
+              },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF635BFF), // Stripe color
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(
-                  vertical: theme.spacing.sm,
-                  horizontal: theme.spacing.lg,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(theme.borderRadius.md),
-                ),
+                backgroundColor: '${b['id']}' == 'open' ? primaryColor : theme.colors.optionBubble,
+                foregroundColor: '${b['id']}' == 'open' ? Colors.white : theme.colors.optionBubbleText,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(theme.borderRadius.md)),
               ),
-              child: const Text('Pay Now'),
+              child: Text('${b['label']}'),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
