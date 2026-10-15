@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -637,7 +638,9 @@ void main() {
       final mockClient = MockClient((request) async {
         expect(request.method, 'GET');
         expect(request.url.path, contains('/knowledge-base/search'));
-        expect(request.url.queryParameters['q'], 'how to');
+        // The server reads `query` only (#54).
+        expect(request.url.queryParameters['query'], 'how to');
+        expect(request.url.queryParameters.containsKey('q'), isFalse);
         expect(request.url.queryParameters['botId'], 'chatbot_123');
 
         return http.Response(
@@ -894,6 +897,74 @@ void main() {
       );
 
       expect(() => kbService.dispose(), returnsNormally);
+    });
+  });
+
+  // Real payloads from a local embed-server (test/fixtures/kb_payloads.json).
+  group('KnowledgeBaseService against captured server payloads', () {
+    final fixtures = jsonDecode(File('test/fixtures/kb_payloads.json').readAsStringSync()) as Map<String, dynamic>;
+    String body(String name) => jsonEncode(fixtures[name]);
+
+    KnowledgeBaseService serviceFor(Future<http.Response> Function(http.Request) handler) =>
+        KnowledgeBaseService(apiKey: 'k', botId: '6ab686f8d47ff029b76892f7', baseUrl: 'http://localhost:8001/api/v1/mobile', client: MockClient(handler));
+
+    test('fetchHelpCentre reads {data: {recentArticles, categories}}', () async {
+      final service = serviceFor((request) async {
+        expect(request.url.toString(), 'http://localhost:8001/api/v1/mobile/knowledge-base/articles');
+        return http.Response(body('rest_kb_articles'), 200);
+      });
+      final response = await service.fetchHelpCentre();
+      expect(response.success, isTrue);
+      expect(response.data!.categories, hasLength(2));
+      expect(response.data!.recentArticles, hasLength(4));
+      expect(response.data!.allArticles.first.hasContent, isTrue);
+    });
+
+    test('fetchCategories reads {data: {categories}} (it cast a map to a list, #53)', () async {
+      final service = serviceFor((_) async => http.Response(body('rest_kb_categories'), 200));
+      final response = await service.fetchCategories('6ab686f8d47ff029b76892f7');
+      expect(response.success, isTrue, reason: response.error);
+      expect(response.data!.map((c) => c.name), ['Chatbot Essentials', 'Chatbot Creation']);
+      expect(response.data!.first.articleCount, 2);
+      expect(response.data!.first.iconName, 'plug');
+    });
+
+    test('fetchArticles flattens the help centre and filters a category here', () async {
+      final service = serviceFor((_) async => http.Response(body('rest_kb_articles'), 200));
+      final all = await service.fetchArticles('6ab686f8d47ff029b76892f7');
+      expect(all.success, isTrue, reason: all.error);
+      expect(all.data!.articles, isNotEmpty);
+      final ids = all.data!.articles.map((a) => a.id).toList();
+      expect(ids.toSet().length, ids.length);
+
+      final categoryId = (fixtures['rest_kb_articles']['data']['categories'] as List).first['_id'] as String;
+      final one = await service.fetchArticles('6ab686f8d47ff029b76892f7', category: categoryId);
+      expect(one.data!.articles, hasLength(2));
+      expect(one.data!.articles.every((a) => a.categoryId == categoryId), isTrue);
+      expect(one.data!.pagination.hasNextPage, isFalse);
+    });
+
+    test('fetchArticle reads one article with its HTML body', () async {
+      final service = serviceFor((request) async {
+        expect(request.url.path, '/api/v1/mobile/knowledge-base/articles/6ab7ac0bb03f13ff22412c87');
+        return http.Response(body('rest_kb_article'), 200);
+      });
+      final response = await service.fetchArticle('6ab7ac0bb03f13ff22412c87');
+      expect(response.data!.title, "How to Use Conferbot's AI Chatbot Builder");
+      expect(response.data!.content, startsWith('<p>'));
+    });
+
+    test('searchArticles sends query and reads the server rows (#54)', () async {
+      final service = serviceFor((request) async {
+        if (request.url.queryParameters['query'] == null) {
+          return http.Response(body('rest_kb_search_missing_query'), 400);
+        }
+        return http.Response(body('rest_kb_search'), 200);
+      });
+      final response = await service.searchArticles('6ab686f8d47ff029b76892f7', 'chat');
+      expect(response.success, isTrue, reason: response.error);
+      expect(response.data!.first.article.title, 'How to Set Up Live Chat with AI Chatbot Handoff');
+      expect(response.data!.first.article.categoryName, 'AI Chatbot Features');
     });
   });
 }
