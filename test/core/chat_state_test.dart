@@ -171,10 +171,11 @@ void main() {
       expect(resolved, 'plain text');
     });
 
-    test('should return original value if variable not found', () {
-      final resolved = chatState.resolveValue('{{nonexistent}}');
-
-      expect(resolved, '{{nonexistent}}');
+    // Web nodeLogic.fillVariables: an unknown variable shows nothing and
+    // the gap it leaves is tidied (flow spec engine.interpolation).
+    test('an unknown variable shows nothing', () {
+      expect(chatState.resolveValue('{{nonexistent}}'), '');
+      expect(chatState.resolveValue('Hey {name}, welcome'), 'Hey, welcome');
     });
 
     test('should prioritize answer variables over temp variables', () {
@@ -184,6 +185,59 @@ void main() {
       final resolved = chatState.resolveValue('{{value}}');
 
       expect(resolved, 'answer');
+    });
+  });
+
+  // The web widget's answer variables (flow spec engine.answerVariables).
+  group('Answer variables as the web keeps them', () {
+    test('a step fills only the entry it registered (#31)', () {
+      expect(chatState.setAnswerVariable('q1', 'x'), isFalse);
+      expect(chatState.answerVariables, isEmpty);
+      chatState.registerAnswerVariable('q1', 'name');
+      expect(chatState.setAnswerVariable('q1', 'Ana'), isTrue);
+      expect(chatState.getAnswer('name'), 'Ana');
+    });
+
+    test('saved by name: every entry with that key, else a new column_mapped one', () {
+      chatState.registerAnswerVariable('a', 'score');
+      chatState.registerAnswerVariable('b', 'score');
+      chatState.saveVariableByName('score', 3);
+      expect(chatState.answerVariables.map((v) => v.value), [3, 3]);
+      chatState.saveVariableByName('total', 9);
+      expect(chatState.answerVariables.last.nodeId, 'column_mapped_total');
+    });
+
+    test('the first entry with a key fills text', () {
+      chatState.registerAnswerVariable('a', 'city');
+      chatState.registerAnswerVariable('b', 'city');
+      chatState.setAnswerVariable('a', 'Paris');
+      chatState.setAnswerVariable('b', 'Rome');
+      expect(chatState.resolveVariables('In {city}'), 'In Paris');
+    });
+
+    test('card numbers are masked unless redactSensitive is false (#33)', () {
+      chatState.registerAnswerVariable('c', 'card');
+      chatState.setAnswerVariable('c', '4242 4242 4242 4242');
+      expect(chatState.getAnswer('card'), '[card •••• 4242]');
+      chatState.setRedactSensitive(false);
+      chatState.setAnswerVariable('c', '4242 4242 4242 4242');
+      expect(chatState.getAnswer('card'), '4242 4242 4242 4242');
+    });
+
+    test("the visitor's record entries are masked, the transcript is not", () {
+      chatState.addRecord({'id': 'n', 'shape': 'user-input-response', 'text': 'my card 4242424242424242'});
+      chatState.addUserMessage('my card 4242424242424242', 'n');
+      expect(chatState.getRecord().single['text'], 'my card [card •••• 4242]');
+      expect(chatState.transcript.single.message, 'my card 4242424242424242');
+    });
+
+    test("a step's entry and the visitor's answer to it stay separate", () {
+      chatState.appendRecord({'id': 'n', 'type': 'n-choices-node', 'data': {}});
+      chatState.addRecord({'id': 'n', 'shape': 'user-selected-choice', 'selectedChoice': 'A'});
+      chatState.addRecord({'id': 'n', 'shape': 'user-selected-choice', 'selectedChoice': 'B'});
+      final record = chatState.getRecord();
+      expect(record.length, 2);
+      expect(record.last['selectedChoice'], 'B');
     });
   });
 
