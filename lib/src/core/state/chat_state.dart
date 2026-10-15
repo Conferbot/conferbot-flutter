@@ -1112,8 +1112,20 @@ class ChatState extends ChangeNotifier {
   }
 
   /// Build full response data object for socket emit
+  /// The app's signed-in user (ConferBotUser.toVisitorContext), sent with every
+  /// response record. Set by ConferBotProvider; kept across resets.
+  Map<String, dynamic>? visitorContext;
+
   Map<String, dynamic> buildResponseData() {
+    // The app's signed-in user travels with every record, as the web widget's
+    // visitorContext; the server checks its hash and drops it.
+    final ctx = visitorContext;
     return {
+      if (ctx != null) ...{
+        'visitorContext': ctx,
+        if (ctx['name'] is String) 'visitorName': ctx['name'],
+        if (ctx['email'] is String) 'visitorEmail': ctx['email'],
+      },
       'version': 'v2',
       'chatSessionId': _chatSessionId,
       'visitorId': _visitorId,
