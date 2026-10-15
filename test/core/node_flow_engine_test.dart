@@ -1,543 +1,278 @@
-import 'package:flutter_test/flutter_test.dart';
+/// NodeFlowEngine against the shared flow-node spec (conferbot-react-native
+/// scripts/parity/flows/nodes.spec.json, "engine"), as the chat UI uses it:
+/// the lines it says, the step that waits and the answer it takes. The
+/// spec's 156 fixtures run in test/parity/flows_test.dart; these cover the
+/// engine's API around them (streams, handover hooks, customizations).
+library;
+
+import 'dart:async';
+
+import 'package:conferbot_flutter/src/core/flow/flow_context.dart';
 import 'package:conferbot_flutter/src/core/node_flow_engine.dart';
-import 'package:conferbot_flutter/src/core/nodes/node_types.dart';
-import 'package:conferbot_flutter/src/core/nodes/handlers/display_handlers.dart';
-import '../mocks/mock_socket_client.dart';
-import '../fixtures/test_fixtures.dart';
+import 'package:conferbot_flutter/src/core/nodes/node_handler_registry.dart';
+import 'package:conferbot_flutter/src/core/nodes/node_ui_state.dart';
+import 'package:conferbot_flutter/src/core/state/chat_state.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+class _Socket implements FlowSocket {
+  final emits = <String>[];
+  final listeners = <String, List<void Function(dynamic)>>{};
+  int records = 0;
+
+  void fire(String event, [dynamic payload]) {
+    for (final l in List.of(listeners[event] ?? const <void Function(dynamic)>[])) {
+      l(payload);
+    }
+  }
+
+  @override
+  void emit(String event, dynamic payload) => emits.add(event);
+
+  @override
+  void Function() on(String event, void Function(dynamic payload) listener) {
+    listeners.putIfAbsent(event, () => []).add(listener);
+    return () => listeners[event]?.remove(listener);
+  }
+
+  @override
+  void sendResponseRecord(Map<String, dynamic> responseData) => records++;
+}
+
+Map<String, dynamic> _node(String id, String type, [Map<String, dynamic> data = const {}]) =>
+    {'id': id, 'type': type, 'data': data, 'position': {'x': 0, 'y': 0}};
+
+Map<String, dynamic> _edge(String source, String target, [String handle = 'source']) =>
+    {'id': 'e-$source-$handle-$target', 'source': source, 'sourceHandle': handle, 'target': target};
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late _Socket socket;
   late NodeFlowEngine engine;
-  late MockSocketClient mockSocketClient;
+  late List<Map<String, dynamic>> botLines;
+  late List<Map<String, dynamic>> userLines;
+  late List<FlowTraceEvent> trace;
+  final subs = <StreamSubscription<dynamic>>[];
+
+  NodeFlowEngine makeEngine({Map<String, dynamic>? customizations, int mediaAdvanceMs = 4000}) {
+    final e = NodeFlowEngine(
+      socket: socket,
+      registry: NodeHandlerRegistry.withAll(),
+      customizations: customizations,
+      config: NodeFlowEngineConfig(typingDelay: 0, mediaAdvanceMs: mediaAdvanceMs, onTrace: trace.add),
+    );
+    subs.add(e.botMessageStream.listen(botLines.add));
+    subs.add(e.userMessageStream.listen(userLines.add));
+    return e;
+  }
+
+  Future<void> run(List<Map<String, dynamic>> nodes, List<Map<String, dynamic>> edges) async {
+    engine.loadFlow(nodes, edges);
+    // start() resolves once the flow waits or ends; a media step waits on
+    // its picture, so it is not awaited here.
+    unawaited(engine.start());
+    await pumpEventQueue();
+  }
 
   setUp(() {
-    mockSocketClient = MockSocketClient();
-    engine = NodeFlowEngine(socketClient: mockSocketClient);
+    ChatState.instance.reset();
+    ChatState.instance.initialize(chatSessionId: 's1', visitorId: 'v1', botId: 'b1');
+    socket = _Socket();
+    botLines = [];
+    userLines = [];
+    trace = [];
+    engine = makeEngine();
   });
 
-  tearDown(() {
+  tearDown(() async {
+    for (final s in subs) {
+      await s.cancel();
+    }
+    subs.clear();
     engine.dispose();
-    mockSocketClient.clearEmittedEvents();
+    ChatState.instance.reset();
   });
 
-  group('NodeFlowEngine Initialization', () {
-    test('should initialize with session data', () {
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: TestFixtures.simpleFlow(),
-        edgesData: TestFixtures.simpleEdges(),
-      );
-
-      expect(engine.chatSessionId, 'session_123');
-      expect(engine.visitorId, 'visitor_456');
-      expect(engine.botId, 'bot_789');
-      expect(engine.isInitialized, true);
-    });
-
-    test('should load steps and edges', () {
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: TestFixtures.simpleFlow(),
-        edgesData: TestFixtures.simpleEdges(),
-      );
-
-      expect(engine.steps.length, 3);
-      expect(engine.edges.length, 2);
-    });
-
-    test('should start in not processing state', () {
-      expect(engine.isProcessing, false);
-      expect(engine.currentUIState, isNull);
-      expect(engine.currentNodeId, isNull);
-    });
+  test('starts at the first welcome-node and says each step, then the chat ends', () async {
+    await run([
+      _node('m0', 'message-node', {'text': '<p>not first</p>'}),
+      _node('w', 'welcome-node', {'text': '<p>Hi</p>', 'image': 'https://cdn.test/w.gif'}),
+      _node('m', 'message-node', {'text': '<p>Bye</p>'}),
+    ], [
+      _edge('w', 'm'),
+    ]);
+    expect(botLines.map((l) => l['text']), ['Hi', '', 'Bye']);
+    expect(botLines[1]['imageUrl'], 'https://cdn.test/w.gif');
+    expect(engine.isFlowComplete, isTrue);
+    expect(socket.emits, ['chat-flow-completed']);
   });
 
-  group('NodeFlowEngine Start', () {
-    test('should start processing first node', () async {
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: TestFixtures.simpleFlow(),
-        edgesData: TestFixtures.simpleEdges(),
-      );
-
-      engine.start();
-
-      // Wait for async processing
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      expect(engine.currentNodeId, isNotNull);
-    });
-
-    test('should not start if not initialized', () {
-      engine.start();
-
-      expect(engine.isProcessing, false);
-      expect(engine.currentNodeId, isNull);
-    });
-
-    test('should not start with empty steps', () {
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: [],
-        edgesData: [],
-      );
-
-      engine.start();
-
-      expect(engine.isProcessing, false);
-    });
+  test('a choice step waits with its options and leaves by the picked id (#31)', () async {
+    await run([
+      _node('w', 'welcome-node', {'text': '<p>Hi</p>'}),
+      _node('c', 'n-choices-node', {
+        'choicePrompt': '<p>Pick</p>',
+        'choices': [
+          {'id': '1', 'choiceText': '<p>One</p>'},
+          {'id': 'uuid-2', 'choiceText': '<p>Two</p>'},
+        ],
+        'answerVariable': 'picked',
+      }),
+      _node('two', 'message-node', {'text': '<p>You picked {picked}</p>'}),
+    ], [
+      _edge('w', 'c'),
+      _edge('c', 'two', 'source-uuid-2'),
+    ]);
+    expect(engine.isWaitingForInput, isTrue);
+    final ui = engine.currentUIState as SingleChoiceUIState;
+    expect(ui.choices.map((c) => c.id), ['1', 'uuid-2']);
+    await engine.submitResponse({'buttonId': 'uuid-2', 'label': 'Two'});
+    await pumpEventQueue();
+    expect(userLines.single['text'], 'Two');
+    expect(botLines.last['text'], 'You picked Two');
+    expect(ChatState.instance.getAnswer('picked'), 'Two');
   });
 
-  group('NodeFlowEngine Handler Registry', () {
-    test('should have handlers for all display node types', () {
-      expect(engine.hasHandler(NodeTypes.message), true);
-      expect(engine.hasHandler(NodeTypes.image), true);
-      expect(engine.hasHandler(NodeTypes.video), true);
-      expect(engine.hasHandler(NodeTypes.audio), true);
-      expect(engine.hasHandler(NodeTypes.file), true);
-    });
-
-    test('should have handlers for ask question node types', () {
-      expect(engine.hasHandler(NodeTypes.askName), true);
-      expect(engine.hasHandler(NodeTypes.askEmail), true);
-      expect(engine.hasHandler(NodeTypes.askPhone), true);
-      expect(engine.hasHandler(NodeTypes.askNumber), true);
-      expect(engine.hasHandler(NodeTypes.askUrl), true);
-    });
-
-    test('should have handlers for choice node types', () {
-      expect(engine.hasHandler(NodeTypes.twoChoices), true);
-      expect(engine.hasHandler(NodeTypes.threeChoices), true);
-      expect(engine.hasHandler(NodeTypes.nChoices), true);
-      expect(engine.hasHandler(NodeTypes.yesOrNoChoice), true);
-    });
-
-    test('should have handlers for logic node types', () {
-      expect(engine.hasHandler(NodeTypes.condition), true);
-      expect(engine.hasHandler(NodeTypes.booleanLogic), true);
-      expect(engine.hasHandler(NodeTypes.mathOperation), true);
-      expect(engine.hasHandler(NodeTypes.variable), true);
-      expect(engine.hasHandler(NodeTypes.jumpTo), true);
-    });
-
-    test('should have handlers for integration node types', () {
-      expect(engine.hasHandler(NodeTypes.webhook), true);
-      expect(engine.hasHandler(NodeTypes.email), true);
-      expect(engine.hasHandler(NodeTypes.googleSheets), true);
-      expect(engine.hasHandler(NodeTypes.stripe), true);
-    });
-
-    test('should have handler for special node types', () {
-      expect(engine.hasHandler(NodeTypes.delay), true);
-      expect(engine.hasHandler(NodeTypes.humanHandover), true);
-    });
+  test('an answer is ignored when no step waits, and a blank one always', () async {
+    await run([
+      _node('w', 'welcome-node', {'text': '<p>Hi</p>'}),
+      _node('n', 'ask-name-node', {'questionText': '<p>Name?</p>', 'answerVariable': 'name'}),
+    ], [
+      _edge('w', 'n'),
+    ]);
+    await engine.submitResponse('   ');
+    expect(engine.isWaitingForInput, isTrue);
+    expect(userLines, isEmpty);
+    await engine.submitResponse('ana gomez');
+    await pumpEventQueue();
+    expect(ChatState.instance.getAnswer('name'), 'ana gomez');
+    expect(engine.isFlowComplete, isTrue);
+    await engine.submitResponse('again');
+    expect(userLines.length, 1);
   });
 
-  group('NodeFlowEngine Node Processing', () {
-    test('should process message node and display UI', () async {
-      final steps = [
-        TestFixtures.messageNode(nodeId: 'msg_1', text: 'Hello!'),
-      ];
-
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: steps,
-        edgesData: [],
-      );
-
-      engine.start();
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      expect(engine.currentUIState, isNotNull);
-      expect(engine.currentUIState, isA<MessageState>());
-      final messageState = engine.currentUIState as MessageState;
-      expect(messageState.text, 'Hello!');
-    });
-
-    test('should auto-proceed from message node', () async {
-      final steps = [
-        TestFixtures.messageNode(nodeId: 'msg_1', text: 'Hello!'),
-        TestFixtures.messageNode(nodeId: 'msg_2', text: 'Goodbye!'),
-      ];
-      final edges = [
-        {'id': 'edge_1', 'source': 'msg_1', 'target': 'msg_2'},
-      ];
-
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: steps,
-        edgesData: edges,
-      );
-
-      engine.start();
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Should have moved past first message
-      expect(engine.currentNodeId, isNotNull);
-    });
+  test('an unknown step passes along its first edge; a missing exact handle ends the chat (#30)', () async {
+    await run([
+      _node('w', 'welcome-node', {'text': '<p>Hi</p>'}),
+      _node('x', 'future-node'),
+      _node('y', 'yes-or-no-choice-node', {'questionText': '<p>Ok?</p>'}),
+      _node('z', 'message-node', {'text': '<p>never</p>'}),
+    ], [
+      _edge('w', 'x'),
+      _edge('x', 'y', 'whatever'),
+      _edge('y', 'z', 'source-1'),
+    ]);
+    expect(trace.where((e) => e.kind == 'unsupported').single.node, 'x');
+    expect(engine.currentNodeId, 'y');
+    await engine.submitResponse({'buttonId': '2'});
+    await pumpEventQueue();
+    final port = trace.where((e) => e.kind == 'port').single;
+    expect([port.handle, port.wired], ['source-2', false]);
+    expect(engine.isFlowComplete, isTrue);
+    expect(botLines.map((l) => l['text']), isNot(contains('never')));
   });
 
-  group('NodeFlowEngine Response Handling', () {
-    test('should submit response for interactive node', () async {
-      final steps = [
-        TestFixtures.askNameNode(nodeId: 'ask_name'),
-      ];
-
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: steps,
-        edgesData: [],
-      );
-
-      engine.start();
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      engine.submitResponse('John Doe');
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      // Response should have been processed
-      expect(engine.chatState.getAnswerVariableValue('name'), isNotNull);
-    });
-
-    test('should handle branching response', () async {
-      final steps = [
-        TestFixtures.twoChoicesNode(nodeId: 'choice_1'),
-        TestFixtures.messageNode(nodeId: 'path_a', text: 'Path A'),
-        TestFixtures.messageNode(nodeId: 'path_b', text: 'Path B'),
-      ];
-      final edges = [
-        {'id': 'edge_1', 'source': 'choice_1', 'sourceHandle': 'source-1', 'target': 'path_a'},
-        {'id': 'edge_2', 'source': 'choice_1', 'sourceHandle': 'source-2', 'target': 'path_b'},
-      ];
-
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: steps,
-        edgesData: edges,
-      );
-
-      engine.start();
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      engine.submitResponse({'id': '1', 'text': 'Option B'});
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      // Should have followed path B
-      expect(engine.currentNodeId, 'path_b');
-    });
+  test("reads the step's type from the node, not its data (#31)", () async {
+    await run([
+      _node('w', 'welcome-node', {'text': '<p>Hi</p>'}),
+      _node('u', 'user-input-node', {'type': 'email', 'inputPrompt': '<p>Email?</p>', 'answerVariable': 'email'}),
+    ], [
+      _edge('w', 'u'),
+    ]);
+    expect(engine.currentNodeType, 'user-input-node');
+    expect(engine.isWaitingForInput, isTrue);
   });
 
-  group('NodeFlowEngine Edge Navigation', () {
-    test('should find next node from edge', () {
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: TestFixtures.simpleFlow(),
-        edgesData: TestFixtures.simpleEdges(),
-      );
-
-      final nextNode = engine.findNextNode('step_1', null);
-
-      expect(nextNode, isNotNull);
-      expect(nextNode!['id'], 'step_2');
-    });
-
-    test('should find next node with target port', () {
-      final edges = [
-        {'id': 'edge_1', 'source': 'choice', 'sourceHandle': 'source-1', 'target': 'path_a'},
-        {'id': 'edge_2', 'source': 'choice', 'sourceHandle': 'source-2', 'target': 'path_b'},
-      ];
-      final steps = [
-        {'id': 'choice', 'type': 'two-choices-node'},
-        {'id': 'path_a', 'type': 'message-node'},
-        {'id': 'path_b', 'type': 'message-node'},
-      ];
-
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: steps,
-        edgesData: edges,
-      );
-
-      final pathA = engine.findNextNode('choice', 'source-1');
-      expect(pathA, isNotNull);
-      expect(pathA!['id'], 'path_a');
-
-      final pathB = engine.findNextNode('choice', 'source-2');
-      expect(pathB, isNotNull);
-      expect(pathB!['id'], 'path_b');
-    });
-
-    test('should return null when no edge found', () {
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: TestFixtures.simpleFlow(),
-        edgesData: [],
-      );
-
-      final nextNode = engine.findNextNode('step_1', null);
-
-      expect(nextNode, isNull);
-    });
+  test('runs more than 100 steps without the visitor (no distinct-node cap, #30)', () async {
+    final nodes = [_node('w', 'welcome-node', {'text': '<p>Hi</p>'})];
+    final edges = <Map<String, dynamic>>[];
+    var prev = 'w';
+    for (var i = 0; i < 150; i++) {
+      nodes.add(_node('m$i', 'message-node', {'text': '<p>$i</p>'}));
+      edges.add(_edge(prev, 'm$i'));
+      prev = 'm$i';
+    }
+    await run(nodes, edges);
+    expect(engine.isFlowComplete, isTrue);
+    expect(botLines.length, 151);
   });
 
-  group('NodeFlowEngine Jump To', () {
-    test('should jump to target node', () async {
-      final steps = [
-        TestFixtures.jumpToNode(nodeId: 'jump_1', targetNodeId: 'target'),
-        TestFixtures.messageNode(nodeId: 'skipped', text: 'Skipped'),
-        TestFixtures.messageNode(nodeId: 'target', text: 'Target reached'),
-      ];
-
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: steps,
-        edgesData: [],
-      );
-
-      engine.start();
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      expect(engine.currentNodeId, 'target');
-    });
+  test('an image step moves on when its media settles, before the cap', () async {
+    engine.dispose();
+    engine = makeEngine(mediaAdvanceMs: 600000);
+    await run([
+      _node('w', 'welcome-node', {'text': '<p>Hi</p>'}),
+      _node('i', 'image-node', {'image': 'https://cdn.test/a.png'}),
+      _node('m', 'message-node', {'text': '<p>after</p>'}),
+    ], [
+      _edge('w', 'i'),
+      _edge('i', 'm'),
+    ]);
+    expect(botLines.last['mediaNodeId'], 'i');
+    expect(engine.isFlowComplete, isFalse);
+    engine.mediaSettled('i');
+    await pumpEventQueue();
+    expect(botLines.last['text'], 'after');
+    expect(engine.isFlowComplete, isTrue);
   });
 
-  group('NodeFlowEngine Variable Substitution', () {
-    test('should substitute variables in text', () async {
-      final steps = [
-        TestFixtures.variableNode(nodeId: 'var_1', name: 'username', value: 'Alice'),
-        {
-          'id': 'msg_1',
-          'type': 'message-node',
-          'data': {
-            'type': 'message-node',
-            'text': 'Hello {{username}}!',
-          },
-        },
-      ];
-      final edges = [
-        {'id': 'edge_1', 'source': 'var_1', 'target': 'msg_1'},
-      ];
-
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: steps,
-        edgesData: edges,
-      );
-
-      engine.start();
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      // The variable should have been set
-      expect(engine.chatState.getVariable('username'), 'Alice');
-    });
+  test('redactSensitive false keeps what the visitor typed (#33)', () async {
+    engine.dispose();
+    engine = makeEngine(customizations: {'redactSensitive': false});
+    await run([
+      _node('w', 'welcome-node', {'text': '<p>Hi</p>'}),
+      _node('q', 'ask-custom-question-node', {'questionText': '<p>Card?</p>', 'answerVariable': 'card'}),
+    ], [
+      _edge('w', 'q'),
+    ]);
+    await engine.submitResponse('4242 4242 4242 4242');
+    await pumpEventQueue();
+    expect(ChatState.instance.getAnswer('card'), '4242 4242 4242 4242');
   });
 
-  group('NodeFlowEngine Flow Completion', () {
-    test('should mark flow as complete when no more nodes', () async {
-      final steps = [
-        TestFixtures.messageNode(nodeId: 'msg_1', text: 'End'),
-      ];
+  group('the handover step', () {
+    final flow = [
+      _node('w', 'welcome-node', {'text': '<p>Hi</p>'}),
+      _node('ho', 'human-handover-node', {'handoverMessage': '<p>Connecting…</p>', 'fallbackMessage': '<p>Busy</p>'}),
+      _node('after', 'message-node', {'text': '<p>after</p>'}),
+    ];
+    final edges = [_edge('w', 'ho'), _edge('ho', 'after')];
 
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: steps,
-        edgesData: [],
-      );
-
-      engine.start();
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      expect(engine.isFlowComplete, true);
-    });
-  });
-
-  group('NodeFlowEngine Error Handling', () {
-    test('should set error message on processing error', () async {
-      // Create an invalid node type to trigger error
-      final steps = [
-        {
-          'id': 'invalid',
-          'type': 'unknown-node-type',
-          'data': {'type': 'unknown-node-type'},
-        },
-      ];
-
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: steps,
-        edgesData: [],
-      );
-
-      engine.start();
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      expect(engine.errorMessage, isNotNull);
-    });
-
-    test('should clear error', () {
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: [],
-        edgesData: [],
-      );
-
-      // Manually set error for testing
-      engine.setError('Test error');
-      expect(engine.errorMessage, 'Test error');
-
-      engine.clearError();
-      expect(engine.errorMessage, isNull);
-    });
-  });
-
-  group('NodeFlowEngine Reset', () {
-    test('should reset all state', () async {
-      final steps = [
-        TestFixtures.messageNode(nodeId: 'msg_1', text: 'Hello'),
-      ];
-
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: steps,
-        edgesData: [],
-      );
-
-      engine.start();
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      engine.reset();
-
-      expect(engine.isInitialized, false);
-      expect(engine.isProcessing, false);
-      expect(engine.currentNodeId, isNull);
-      expect(engine.currentUIState, isNull);
-      expect(engine.isFlowComplete, false);
-    });
-  });
-
-  group('NodeFlowEngine Server Message Handling', () {
-    test('should handle server message with node data', () {
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: [],
-        edgesData: [],
-      );
-
-      engine.handleServerMessage({
-        'nodeId': 'server_node',
-        'nodeData': {
-          'type': 'message-node',
-          'text': 'Server message',
-        },
-      });
-
-      // Should process the message
-      expect(engine.currentNodeId, 'server_node');
-    });
-  });
-
-  group('NodeFlowEngine Agent Handover', () {
-    test('should handle agent accepted event', () {
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: [],
-        edgesData: [],
-      );
-
-      engine.handleAgentAccepted('Agent Smith');
-
-      // Agent name should be recorded in transcript
-      expect(
-        engine.chatState.transcript.any((e) => e.message.contains('Agent Smith')),
-        true,
-      );
-    });
-
-    test('should handle no agents available event', () {
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: [],
-        edgesData: [],
-      );
-
-      engine.handleNoAgentsAvailable();
-
-      // Should add fallback message to transcript
-      expect(engine.chatState.transcript.length, greaterThan(0));
-    });
-
-    test('should handle chat ended event', () {
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: [],
-        edgesData: [],
-      );
-
+    test('asks for a person, waits, and carries on when the chat ends', () async {
+      await run(flow, edges);
+      // The handover message comes after a beat of typing.
+      await Future<void>.delayed(const Duration(milliseconds: 1100));
+      await pumpEventQueue();
+      expect(socket.emits, contains('initiate-handover'));
+      expect(engine.isAtHandover, isTrue);
+      expect((engine.currentUIState as HumanHandoverUIState).state, HandoverState.waitingForAgent);
+      engine.handleAgentAccepted('Sam');
+      expect((engine.currentUIState as HumanHandoverUIState).state, HandoverState.agentConnected);
       engine.handleChatEnded();
-
-      // Should mark flow as complete or handle post-chat survey
-      // The exact behavior depends on current node state
+      await pumpEventQueue();
+      expect(botLines.last['text'], 'after');
     });
-  });
 
-  group('NodeFlowEngine ChangeNotifier', () {
-    test('should notify listeners on state change', () async {
-      var notifyCount = 0;
-      engine.addListener(() => notifyCount++);
+    test('nobody free: the fallback, then on when leaving a message is off', () async {
+      engine.dispose();
+      engine = makeEngine(customizations: {'chatLeaveMessage': false});
+      await run(flow, edges);
+      await Future<void>.delayed(const Duration(milliseconds: 1100));
+      socket.fire('no-agents-available');
+      await Future<void>.delayed(const Duration(milliseconds: 1100));
+      await pumpEventQueue();
+      expect(botLines.map((l) => l['text']), containsAllInOrder(['Busy', 'after']));
+    });
 
-      engine.initialize(
-        chatSessionId: 'session_123',
-        visitorId: 'visitor_456',
-        botId: 'bot_789',
-        stepsData: TestFixtures.simpleFlow(),
-        edgesData: TestFixtures.simpleEdges(),
-      );
-
-      engine.start();
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      expect(notifyCount, greaterThan(0));
+    test('a restored chat waits on the step without asking again', () async {
+      engine.loadFlow(flow, edges);
+      expect(engine.waitAt('ho', const HumanHandoverUIState(state: HandoverState.waitingForAgent, nodeId: 'ho')), isTrue);
+      expect(engine.isAtHandover, isTrue);
+      expect(socket.emits, isEmpty);
+      engine.continueAfterHandover();
+      await pumpEventQueue();
+      expect(botLines.last['text'], 'after');
+      expect(engine.waitAt('missing', null), isFalse);
     });
   });
 }
