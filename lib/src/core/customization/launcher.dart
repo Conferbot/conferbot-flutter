@@ -192,7 +192,8 @@ class Launcher {
       avatar: avatar,
       imageUrl: imageUrl,
       iconId: _str(c['widgetIconSVG']).isEmpty ? null : _str(c['widgetIconSVG']),
-      glyph: (size * (shape == 'tab' || shape == 'peek' ? 0.5 : 0.6)).roundToDouble(),
+      // The icon at 70% of the round button (css/liveChat/index.css), 50% of a tab.
+      glyph: (size * (shape == 'tab' || shape == 'peek' ? 0.5 : 0.7)).roundToDouble(),
       animation: c['launcherAnimation'] == 'lively' || c['launcherAnimation'] == 'off' ? c['launcherAnimation'] as String : 'subtle',
       // Only when the owner turned the greeting on (templates/shared.ts: no chatIconCta, no bubble).
       ctaText: c['chatIconCta'] == true && _str(c['chatIconCtaText']).isNotEmpty ? _str(c['chatIconCtaText']) : null,
