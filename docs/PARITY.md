@@ -21,6 +21,7 @@ Layout:
 | #20 | User as `visitorContext` + identity hash (name, email and metadata now reach the server) | `models/user.dart` (`toVisitorContext`), `core/state/chat_state.dart`, provider constructor |
 | #36, #45, #53, #54, #56, #57 | Help centre: loads from the socket's `knowledgeBaseData` (bodies fetched on open) or REST, sends `query` to search, follows `enableKnowledgeBase` / `hideRecentArticles` (`ChatWidget.showKnowledgeBase` overrides), draws HTML bodies, opens AI sources and rich article cards by `articleId`, uses the configured server. Fixtures captured from a local server | `core/help_centre/help_centre.dart`, `models/knowledge_base.dart` (`KnowledgeBaseData`), `providers/knowledge_base_provider.dart`, `services/knowledge_base_service.dart`, `widgets/agent_reply.dart`, `widgets/chat_widget.dart`, `test/fixtures/kb_payloads.json` |
 | #22 | Greeting card: rules, frequency, per-bot state, 11 styles; replaces the old CTA tooltip. Checked with widget-test images, not yet on a device | `core/customization/greeting.dart`, `widgets/greeting_controller.dart`, `widgets/greeting_card.dart`, `widgets/conferbot_fab.dart` |
+| #23, #29-#34, #48, #55, #66-#70 | Flow nodes: the engine and every node handler run the shared flow-node spec. **156 of 156 fixtures pass** (`test/parity/flows_test.dart`); none pending. See "Flow nodes" below | `core/node_flow_engine.dart`, `core/flow/*` (text, logic, flow_control, rich, inputs, calendar, zones, flow_context), `core/privacy/redact.dart`, `core/nodes/handlers/*`, `core/state/chat_state.dart`, `ui/widgets/node_widgets.dart`, `ui/widgets/rich_node_widgets.dart`, `widgets/message_bubble.dart` |
 | #24-#28, #37, #61-#63, #65 | Handover lifecycle, ported from RN: the Connecting line and its four outcomes, an AI's idle pause ignored, the 20s waiting signal and `onWidgetSignal`, the header keeping the bot with Online and the reply time, "Talk to a person" only when allowed, Leave queue (`queue-self-resolve`, `queue-left`), a live chat or a wait picked back up after a restart without a second ticket, the flow started once per session, `openChat` waiting for start-up, the step's email / sound / assignment settings on `initiate-handover`, End chat and the survey as the server handles them. Checked on the iPhone 16e simulator against a local embed-server | `core/live_chat/handover_state.dart`, `handover_waiting.dart`, `reply_time.dart`, `handover_lifecycle.dart`, `core/agent/agent_handover.dart`, `core/node_flow_engine.dart` (`waitAt`), `providers/conferbot_provider.dart`, `widgets/message_bubble.dart` (`LiveChatLine`), `widgets/live_chat_cards.dart`, `widgets/chat_widget.dart` |
 
 ## Left in this SDK
@@ -35,10 +36,14 @@ Layout:
 3. The rest of the list below.
 4. **Test debt:**
    - #16: `media_service_test` fails because MockController is not an AudioPlayer.
-   - #23: `test/core/handlers/*_test.dart` and `node_flow_engine_test.dart` don't compile: they set a `state` that the handlers no longer have.
    - #58: the older help centre widget tests (`article_list_test`, `article_detail_test`, `category_chips_test`) and `message_bubble_test` don't compile or fail. The help centre is covered by `test/core/help_centre/`, `test/providers/knowledge_base_provider_test.dart` and `test/widgets/knowledge_base/help_centre_test.dart`.
-5. There's no `identify()` after construction; the user comes only from the provider's `user`.
-6. **Help centre follow-ups:**
+5. **Flow node follow-ups:**
+   - Check the rich steps on a device (iOS and Android): carousel, slider, ranking, matrix, address, payment, consent, OTP.
+   - Not drawn natively yet: the signature pad (a typed signature works, `{action: 'sign', method: 'typed'}`), the OTP six-digit boxes (the code is typed in the bottom bar), the address map preview.
+   - Hidden fields read the page the chat runs on. An app has none: the provider passes no `NodeFlowEngineConfig.page`.
+   - The visitor's time zone is the device's offset as a fixed `Etc/GMT` zone, because Dart does not expose the IANA name. The provider does not pass `NodeFlowEngineConfig.visitorTimeZone` yet.
+6. There's no `identify()` after construction; the user comes only from the provider's `user`.
+7. **Help centre follow-ups:**
    - Ratings still use the SDK's 1-5 stars over REST; the web sends helpful / not helpful (`rate-article`). Reading time and scroll depth (`track-article-engagement`) are not sent.
    - Search uses REST (`/knowledge-base/search?query=`) plus local title matches; the socket's `search-kb-articles` (with snippets) is not used.
    - No home screen yet, so Recent articles sit at the top of the help centre list rather than on a welcome screen.
@@ -46,6 +51,7 @@ Layout:
 ## How to test
 
 - **Unit tests:** `flutter test test/core` (skip the media test, #16).
+- **Flow nodes:** `flutter test test/parity/flows_test.dart` runs the 156 fixtures; `flutter test test/core/node_flow_engine_test.dart test/core/handlers test/core/flow test/core/privacy test/widgets/node_renderer_test.dart test/widgets/flow_media_lines_test.dart` covers the engine API, the handlers, the flow rules and the step cards. `tool/sync_flow_fixtures.sh` copies the fixtures from the React Native repo (`RN_SDK` if it is not next door) into `test/fixtures/parity_flows/` and writes the RN revision to `REVISION`.
 - **Handover lifecycle:** `flutter test test/core/live_chat test/core/agent test/widgets/handover/handover_lifecycle_widgets_test.dart`. `handover_lifecycle_test.dart` drives the lifecycle against a fake socket and a fake clock.
 - **Handover on a device:** a temporary bot in local Mongo (`conferbotStaging`) with welcome -> human-handover-node (`enableHandoverEmail: false`) -> message, linked in `workspaces.chatbots` and `admins.chatbots` (the server finds a bot's workspace through `admins`). A node socket.io-client script plays the agent with a dashboard JWT signed with the server's `JWT_ACCESS_SECRET` (`auth: {userId, workspaceId, token}`): `accept-handover`, `leave-chat` with `agentDetails.isAIAgent: true` (the visitor sees an AI escalating), `end-chat`. Hot restart (`R`) checks the restore: count `initiate-handover` in the app log and the session's tickets. Delete the bot and everything for its sessions afterwards.
 - **Help centre:** `flutter test test/core/help_centre test/providers/knowledge_base_provider_test.dart test/services/knowledge_base_service_test.dart test/widgets/knowledge_base/help_centre_test.dart`. The payloads in `test/fixtures/kb_payloads.json` were captured from a local embed-server (socket `fetched-chatbot-data`, `get-kb-article`, `search-kb-articles`; REST `/mobile/chatbot/:id/kb` and `/mobile/knowledge-base/*`). To refresh them, run a small socket.io-client script against `:8001` with a bot that has published articles.
@@ -80,6 +86,7 @@ Every web widget feature works the same in the 4 mobile SDKs: customization, lau
 | Celebrations / reactions | todo | todo | todo | todo |
 | Reply-time wording (header line) | done | todo | todo | done |
 | Handover lifecycle (Connecting line, outcomes, signals, leave queue, restore) | done | todo | todo | done |
+| Flow nodes: shared spec, 156 fixtures (RN `scripts/parity/flows/`) | 156/156 | todo | todo | 156/156 |
 
 Live chat / agent features (handover, queue card, receipts, rating, files, prefill, max-wait timeout, agent bot replies, suggestion chips) are done in all 4.
 
@@ -119,6 +126,37 @@ All paths are under `conferbot-widget/src/`.
   - Opening the chat sets `chatted` and rests the card.
   - Signed in means the visitor context has an id or email.
 - **`FloatingWidget/GreetingCard.tsx`** draws the 11 styles: card, note, imessage (default), postcard, sticky, typewriter, glass, notification, neon, voice, aurora. The geometry, colours, reveal timings and native font fallbacks are in RN's `docs/greeting-card-native-spec.md`.
+
+## Flow nodes
+
+The flow engine follows the shared flow-node spec (conferbot-react-native `scripts/parity/flows/nodes.spec.json`), and `test/parity/flows_test.dart` runs all 156 fixtures through the real `NodeFlowEngine` and every handler (`NodeHandlerRegistry.withAll()`): **156 pass, 0 pending**. The fixtures are a copy (`test/fixtures/parity_flows/`, RN revision in `REVISION`, as of RN `2f0b2a6`). It is a port of the RN engine, `src/core/flow/*` and the handlers.
+
+- **The driver** (`test/parity/flow_driver.dart`):
+  - The clock is virtual. Each case runs in a Zone whose timers the driver fires in time order, and the engine reads the same clock (2026-10-15 10:00 UTC, as `web/env.js`).
+  - The bot API is a `MockClient` scripted from `server.http`.
+  - A fake socket answers `execute-integration` and `initiate-handover` from `server.integration` and `server.handover`.
+  - Each visitor action is played through `engine.submitResponse`, with the answer the SDK's cards send (the table in the README).
+  - The engine reports what it does through `NodeFlowEngineConfig.onTrace`: enter, shown, port, unsupported, error, end and crash.
+- **Compared:** path (node, type, via), ports, variables (key and value), the end, errors (count and node), answers (shape and value fields), rendered text, emits, unsupported steps, http (path and body keys), flowVariables, and the typing pace between shown steps, within 50 ms.
+- **Not compared, on purpose:**
+  - The pace in 7 cases (`timingSkip`). The web harness plays the next action after its cards' own UI timers (focus 30-50 ms, the address search debounce, animations), which native cards don't have.
+  - The times the visitor acted at (`consent_at`, `signature_at`), which are compared as timestamps.
+  - Emits of `response-record` and `join-chat-room-visitor`, which are transport, not flow.
+- **Engine rules** (spec `engine`):
+  - Start at the first `welcome-node`.
+  - A step that does not branch takes its first edge. A branch takes its exact handle or ends the chat. A wired edge to a missing node stops the chat where it is.
+  - Unknown types, and a welcome reached again, pass along their first edge. A jump to a missing node ends the chat.
+  - The rich steps' `goPort` fallback, loops and sub-flows.
+  - Answer variables are registered per step and saved by name. An unknown `{var}` shows nothing.
+  - Masking follows `redactSensitive`.
+  - Typing pace is `paceFor` unless a fixed `typingDelay` is set. Images and videos move on when they load (`engine.mediaSettled`) or at 4000 ms.
+  - The runaway guard is 500 steps without the visitor, not a cap on distinct steps.
+- **Time zones:** business hours, calendar slots and date limits read IANA zones through `package:timezone` (`core/flow/zones.dart`), with DST.
+- **The chat UI:**
+  - Each step says its own lines through `botMessageStream`: questions, greetings, answers, and media lines (image, video, audio, file, HTML, link) that `MessageBubble` draws. The visitor's answers come through `userMessageStream`.
+  - The waiting step's card is `currentUIState`. `NodeRenderer` draws it, keyed by the state, so two steps of the same kind don't share a card.
+  - Typed questions are answered in the bottom bar.
+  - The rich steps have their own cards (`ui/widgets/rich_node_widgets.dart`: carousel and product card, slider, ranking, matrix, address); payment, consent, dynamic choices and navigate draw as buttons.
 
 ## Conventions
 
