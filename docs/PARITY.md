@@ -29,7 +29,7 @@ Layout:
 2. The rest of the list below.
 3. **Test debt:**
    - #16: `media_service_test` fails because MockController is not an AudioPlayer.
-   - `test/core/handlers/*_test.dart` and `node_flow_engine_test.dart` don't compile: they set a `state` that the handlers no longer have.
+   - #23: `test/core/handlers/*_test.dart` and `node_flow_engine_test.dart` don't compile: they set a `state` that the handlers no longer have.
 4. There's no `identify()` after construction; the user comes only from the provider's `user`.
 
 ## How to test
