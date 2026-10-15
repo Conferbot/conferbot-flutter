@@ -214,7 +214,11 @@ class _EmailFormState extends State<_EmailForm> {
   }
 }
 
-/// The owner's quick actions (and "Talk to a person") above the composer, from the first AI answer on.
+/// The owner's quick actions (and "Talk to a person") above the composer,
+/// as on the web (quickActions.ts): from the first AI answer on. "Talk to a
+/// person" only while no handover is under way and nobody is here
+/// (ConferBotProvider.offerTalkToPerson); it goes on tap and never comes
+/// back, and the owner's links stay.
 class QuickActionsStrip extends StatelessWidget {
   final ConferBotProvider provider;
   final ConferBotTheme theme;
@@ -222,13 +226,11 @@ class QuickActionsStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aiAnswered = provider.record.any((m) => m is AgentMessageRecord && m.agentDetails.isAIAgent);
-    final agent = provider.currentAgent;
-    final personHere = agent != null && !agent.id.startsWith('ai-agent-');
-    if (!aiAnswered || personHere) return const SizedBox.shrink();
-    final customizations = provider.serverCustomizations;
-    final actions = AgentBotParser.quickActionsOf(customizations);
-    final human = provider.agentBot != null && customizations?['chatTalkToHuman'] == true;
+    final shown = [...provider.record, ...provider.paginatedMessages];
+    final aiAnswered = shown.any((m) => m is AgentMessageRecord && m.agentDetails.isAIAgent);
+    if (!aiAnswered) return const SizedBox.shrink();
+    final actions = AgentBotParser.quickActionsOf(provider.serverCustomizations);
+    final human = provider.offerTalkToPerson;
     if (actions.isEmpty && !human) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -248,7 +250,7 @@ class QuickActionsStrip extends StatelessWidget {
                   if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
                 },
               ),
-            if (human) _Pill(theme: theme, label: 'Talk to a person', onTap: () => provider.sendMessage(LiveChat.talkToPersonAsk)),
+            if (human) _Pill(key: const ValueKey('cb-talk-to-person'), theme: theme, label: 'Talk to a person', onTap: provider.talkToPerson),
           ],
         ),
       ),
@@ -260,7 +262,7 @@ class _Pill extends StatelessWidget {
   final ConferBotTheme theme;
   final String label;
   final VoidCallback onTap;
-  const _Pill({required this.theme, required this.label, required this.onTap});
+  const _Pill({super.key, required this.theme, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -279,12 +281,17 @@ class _Pill extends StatelessWidget {
   }
 }
 
-/// The handover step while it waits for a person: where they stand, about how long.
+/// The handover step while it waits for a person: where they stand, about
+/// how long, and Leave queue (queue-self-resolve: the team stops seeing
+/// them waiting, and the flow carries on).
 class HandoverWaitCard extends StatelessWidget {
   final LiveChatExtras liveChat;
   final ConferBotTheme theme;
   final String? message;
-  const HandoverWaitCard({super.key, required this.liveChat, required this.theme, this.message});
+
+  /// Leave the queue (ConferBotProvider.leaveQueue); no action when null.
+  final VoidCallback? onLeave;
+  const HandoverWaitCard({super.key, required this.liveChat, required this.theme, this.message, this.onLeave});
 
   @override
   Widget build(BuildContext context) {
@@ -310,6 +317,21 @@ class HandoverWaitCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(message!, style: TextStyle(color: theme.colors.textSecondary, fontSize: 13)),
+            ),
+          if (onLeave != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                key: const ValueKey('cb-leave-queue'),
+                onPressed: onLeave,
+                style: TextButton.styleFrom(
+                  foregroundColor: theme.colors.textSecondary,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Leave queue', style: TextStyle(fontSize: 13)),
+              ),
             ),
         ],
       ),
