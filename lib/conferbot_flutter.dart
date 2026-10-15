@@ -15,7 +15,7 @@ export 'src/config/constants.dart';
 export 'src/core/errors/conferbot_exceptions.dart';
 export 'src/core/errors/error_handler.dart' hide ErrorResult;
 
-// ========== Node System (All 51 Node Types) ========== //
+// ========== Node System (the web widget's node types) ========== //
 export 'src/core/state/chat_state.dart';
 // The handover's widget signals (ConferBotProvider.onWidgetSignal).
 export 'src/core/live_chat/handover_waiting.dart' show WidgetSignals;
@@ -25,16 +25,10 @@ export 'src/core/nodes/node_result.dart';
 export 'src/core/nodes/node_ui_state.dart';
 export 'src/core/nodes/node_handler_registry.dart';
 
-// Node Handlers — hide types that conflict with node_ui_state.dart
-export 'src/core/nodes/handlers/legacy_handlers.dart'
-    hide NodeUIState, CalendarState, ChoiceOption, RatingType;
-export 'src/core/nodes/handlers/display_handlers.dart' hide CalendarState;
-export 'src/core/nodes/handlers/ask_question_handlers.dart';
-export 'src/core/nodes/handlers/choice_handlers.dart' hide ChoiceOption, RatingType;
-export 'src/core/nodes/handlers/logic_handlers.dart';
-export 'src/core/nodes/handlers/integration_handlers.dart';
-export 'src/core/nodes/handlers/special_handlers.dart';
-export 'src/core/nodes/handlers/voice_message_handler.dart';
+// Node Handlers (one per node type; registerAllHandlers) and the shared
+// flow rules they use
+export 'src/core/nodes/node_handler.dart';
+export 'src/core/nodes/handlers/handlers.dart';
 
 // ========== Pagination System ========== //
 export 'src/core/state/message_pagination_controller.dart';
