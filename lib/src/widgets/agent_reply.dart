@@ -147,6 +147,23 @@ Widget _link(String label, String url, ConferBotTheme theme) => Padding(
       ),
     );
 
+/// "Read article" on a rich article card: opens it in the help centre.
+Widget _articleLink(String label, VoidCallback onTap, ConferBotTheme theme) => Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: InkWell(
+        key: const ValueKey('agent-rich-article-open'),
+        onTap: onTap,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label, style: TextStyle(fontSize: theme.typography.fontSizeSm, color: theme.colors.primary, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 2),
+            Icon(Icons.chevron_right, size: 16, color: theme.colors.primary),
+          ],
+        ),
+      ),
+    );
+
 /// Under an AI reply: sources, buttons, cards, an action to confirm, "Helpful?".
 class AgentReplyExtras extends StatelessWidget {
   final AgentMessageRecord message;
@@ -178,7 +195,13 @@ class AgentReplyExtras extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: InkWell(
-                  onTap: source.url == null ? null : () => _open(source.url),
+                  // A help centre article opens in the help centre, by its id
+                  // (web agentSources.ts); a page opens in the browser.
+                  onTap: provider != null && provider.canOpenArticle(source.articleId)
+                      ? () => provider.openArticle(source.articleId!)
+                      : source.url == null
+                          ? null
+                          : () => _open(source.url),
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -197,7 +220,12 @@ class AgentReplyExtras extends StatelessWidget {
                             style: TextStyle(fontSize: theme.typography.fontSizeSm, fontWeight: FontWeight.w500, color: theme.colors.text),
                           ),
                         ),
-                        if (source.url != null) ...[
+                        if (provider != null && provider.canOpenArticle(source.articleId)) ...[
+                          const SizedBox(width: 6),
+                          Text('Help article',
+                              style: TextStyle(fontSize: theme.typography.fontSizeXs, color: theme.colors.textSecondary)),
+                          Icon(Icons.chevron_right, size: 14, color: theme.colors.textSecondary),
+                        ] else if (source.url != null) ...[
                           const SizedBox(width: 6),
                           Text(AgentBotParser.sourceHost(source.url),
                               style: TextStyle(fontSize: theme.typography.fontSizeXs, color: theme.colors.textSecondary)),
@@ -433,7 +461,12 @@ class RichAgentMessage extends StatelessWidget {
           _title(r.title, theme),
           if (r.snippet.isNotEmpty)
             Text(r.snippet, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: theme.typography.fontSizeSm, color: theme.colors.textSecondary)),
-          if (r.url != null) _link('Read article', r.url!, theme),
+          // In the help centre by id (web agentRich.ts openArticle), else
+          // the public help centre page when there is one.
+          if (provider != null && provider.canOpenArticle(r.articleId))
+            _articleLink('Read article', () => provider.openArticle(r.articleId), theme)
+          else if (r.url != null)
+            _link('Read article', r.url!, theme),
         ]),
       RichCard r => _CardSurface(theme: theme, children: [
           if (r.imageUrl != null)
