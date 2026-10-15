@@ -5,18 +5,30 @@ import 'package:flutter/painting.dart';
 import 'package:flutter/rendering.dart';
 
 import '../core/customization/launcher_icons.dart';
+import '../core/customization/launcher_motion.dart';
 import '../core/customization/svg_path.dart';
 
 /// Draws a launcher icon (core/customization/launcher_icons.dart) filling
 /// the canvas, in [ink] with its cut-outs in [bg], at rest: parts that only
 /// show while animating stay hidden. Gradients sit in each shape's own
-/// bounding box (SVG objectBoundingBox), as on the web.
+/// bounding box (SVG objectBoundingBox), as on the web. With a [frame]
+/// (LauncherMotion.iconFrame) the moving parts are drawn mid-moment, an
+/// animated opacity fading its whole group as one layer, as CSS opacity does.
 class LauncherIconPainter extends CustomPainter {
   final LauncherIcon icon;
   final Color ink;
   final Color bg;
+  final List<OpFrame?>? frame;
 
-  LauncherIconPainter({required String? iconId, required this.ink, required this.bg}) : icon = LauncherIcons.byId(iconId);
+  LauncherIconPainter({required String? iconId, required this.ink, required this.bg, this.frame}) : icon = LauncherIcons.byId(iconId);
+
+  static Float64List _m4(List<double> m) => Float64List.fromList([m[0], m[1], 0, 0, m[2], m[3], 0, 0, 0, 0, 1, 0, m[4], m[5], 0, 1]);
+
+  static List<double> _invert(List<double> m) {
+    final det = m[0] * m[3] - m[1] * m[2];
+    if (det == 0) return const [1, 0, 0, 1, 0, 0];
+    return [m[3] / det, -m[1] / det, -m[2] / det, m[0] / det, (m[2] * m[5] - m[3] * m[4]) / det, (m[1] * m[4] - m[0] * m[5]) / det];
+  }
 
   static final Map<String, Path> _paths = {};
 
@@ -73,18 +85,52 @@ class LauncherIconPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     canvas.save();
     canvas.scale(size.width / 24, size.height / 24);
-    for (final o in icon.ops) {
-      if (o.op == 0) continue;
+    final open = <int>[];
+    for (var i = 0; i < icon.ops.length; i++) {
+      final o = icon.ops[i];
+      final f = frame != null && i < frame!.length ? frame![i] : null;
+      final layers = f?.layers ?? const <(int, double)>[];
+      // A layer that is the shape's own element replaces its own opacity.
+      final ownGroup = o.self && o.parts.isNotEmpty ? o.parts.last.g : null;
+      final ownLayer = layers.isNotEmpty && layers.last.$1 == ownGroup ? layers.last : null;
+      final groupLayers = ownLayer != null ? layers.sublist(0, layers.length - 1) : layers;
+      var keep = 0;
+      while (keep < open.length && keep < groupLayers.length && open[keep] == groupLayers[keep].$1) {
+        keep++;
+      }
+      while (open.length > keep) {
+        canvas.restore();
+        open.removeLast();
+      }
+      for (var k = keep; k < groupLayers.length; k++) {
+        canvas.saveLayer(const Rect.fromLTWH(-24, -24, 72, 72), Paint()..color = Color.fromRGBO(0, 0, 0, groupLayers[k].$2));
+        open.add(groupLayers[k].$1);
+      }
+      // At rest op; moving, an animated part's opacity replaces its own.
+      var opacity = o.op ?? 1.0;
+      if (layers.isNotEmpty) {
+        final animated = layers.map((l) => l.$1).toSet();
+        opacity = o.opRest ?? (o.parts.any((p) => p.o != null) ? 1.0 : (o.op ?? 1.0));
+        for (final p in o.parts) {
+          if (!animated.contains(p.g) && p.o != null) opacity *= p.o!;
+        }
+        if (ownLayer != null) opacity *= ownLayer.$2;
+      }
+      if (opacity == 0) continue;
       final path = _path(o.d);
       path.fillType = o.evenOdd ? PathFillType.evenOdd : PathFillType.nonZero;
       final bounds = path.getBounds();
-      final opacity = o.op ?? 1;
+      final m = f?.m ?? o.m;
       canvas.save();
-      final m = o.m;
-      if (m != null && m.length == 6) {
-        canvas.transform(Float64List.fromList([m[0], m[1], 0, 0, m[2], m[3], 0, 0, 0, 0, 1, 0, m[4], m[5], 0, 1]));
+      if (o.clip != null && f?.clipM != null && m != null) {
+        // The clip in its own space, then the shape's transform.
+        canvas.transform(_m4(f!.clipM!));
+        canvas.clipPath(_path(o.clip!));
+        canvas.transform(_m4(LauncherMotion.mul(_invert(f.clipM!), m)));
+      } else {
+        if (m != null && m.length == 6) canvas.transform(_m4(m));
+        if (o.clip != null) canvas.clipPath(_path(o.clip!));
       }
-      if (o.clip != null) canvas.clipPath(_path(o.clip!));
       void fill() {
         if (o.fill != null) canvas.drawPath(path, _paint(o.fill!, bounds, opacity)..style = PaintingStyle.fill);
       }
@@ -110,9 +156,13 @@ class LauncherIconPainter extends CustomPainter {
       }
       canvas.restore();
     }
+    while (open.isNotEmpty) {
+      canvas.restore();
+      open.removeLast();
+    }
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant LauncherIconPainter old) => old.icon != icon || old.ink != ink || old.bg != bg;
+  bool shouldRepaint(covariant LauncherIconPainter old) => old.icon != icon || old.ink != ink || old.bg != bg || old.frame != frame;
 }
