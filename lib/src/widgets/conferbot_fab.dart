@@ -6,13 +6,17 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../core/customization/launcher.dart';
 import '../core/customization/launcher_icons.dart';
 import '../core/customization/launcher_motion.dart';
+import '../core/state/chat_state.dart';
 import '../models/user.dart';
 import '../providers/conferbot_provider.dart';
 import '../theme/conferbot_theme.dart';
 import 'chat_widget.dart';
+import 'greeting_card.dart';
+import 'greeting_controller.dart';
 import 'launcher_icon_painter.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -897,117 +901,7 @@ class _CloseIconPainter extends CustomPainter {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Part 8 – CTA tooltip
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _CtaTooltip extends StatefulWidget {
-  final String text;
-  final Color bgColor;
-  final double borderRadius;
-  final VoidCallback onClose;
-
-  const _CtaTooltip({
-    required this.text,
-    required this.bgColor,
-    required this.borderRadius,
-    required this.onClose,
-  });
-
-  @override
-  State<_CtaTooltip> createState() => _CtaTooltipState();
-}
-
-class _CtaTooltipState extends State<_CtaTooltip>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _opacity;
-  late final Animation<Offset> _slide;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    _slide = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
-
-    // Auto-show after 2 s
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) _ctrl.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  Color get _foreground {
-    // Always white text on CTA, matching web widget
-    return Colors.white;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: SlideTransition(
-        position: _slide,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 212),
-          child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            color: widget.bgColor,
-            child: InkWell(
-              onTap: widget.onClose,
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        widget.text,
-                        style: TextStyle(
-                          color: _foreground,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: widget.onClose,
-                      child: Icon(
-                        Icons.close,
-                        size: 14,
-                        color: _foreground.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Part 9 – Unread badge
+// Part 8 – Unread badge
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _UnreadBadge extends StatelessWidget {
@@ -1040,7 +934,7 @@ class _UnreadBadge extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Part 10 – ConferBotFAB  (main widget)
+// Part 9 – ConferBotFAB  (main widget)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Floating Action Button that wraps your app content.
@@ -1079,7 +973,9 @@ class ConferBotFAB extends StatefulWidget {
 class _ConferBotFABState extends State<ConferBotFAB>
     with TickerProviderStateMixin {
   bool _isOpen = false;
-  bool _ctaDismissed = false;
+
+  /// The greeting card by the closed launcher (greeting_controller.dart).
+  GreetingController? _greeting;
 
   // ── Motion (core/customization/launcher_motion.dart) ──────────────────────
   /// When the chat was last opened in this app session: idle moments rest a while after.
@@ -1171,6 +1067,7 @@ class _ConferBotFABState extends State<ConferBotFAB>
   void dispose() {
     _idleTimer?.cancel();
     _ticker?.dispose();
+    _greeting?.dispose();
     _pressCtrl.dispose();
     super.dispose();
   }
@@ -1227,10 +1124,22 @@ class _ConferBotFABState extends State<ConferBotFAB>
     return 'default';
   }
 
-  String? _resolveCtaText(ConferBotProvider p) {
-    final raw = _sc(p)?['chatIconCtaText']?.toString();
-    if (raw == null || raw.trim().isEmpty) return null;
-    return raw.trim();
+  void _onGreeting() {
+    if (mounted) setState(() {});
+  }
+
+  /// The card tapped: rests it, then opens the chat (sending its words for "send"), or its link.
+  void _onGreetingPress(BuildContext context, ConferBotProvider provider, GreetingCardData card) {
+    _greeting?.closeForNow();
+    if (card.click == 'link' && card.linkUrl.isNotEmpty) {
+      final uri = Uri.tryParse(card.linkUrl);
+      if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication).catchError((_) => false);
+      return;
+    }
+    if (!_isOpen) _openChat(context, provider);
+    if (card.click == 'send') {
+      Future.delayed(const Duration(milliseconds: 400), () => provider.sendMessage(card.text).catchError((_) {}));
+    }
   }
 
   // ── Open chat sheet ───────────────────────────────────────────────────────
@@ -1308,8 +1217,6 @@ class _ConferBotFABState extends State<ConferBotFAB>
             bottomLeft: Radius.circular(look.corners.bottomLeft),
           )
         : BorderRadius.circular(_resolveBorderRadius(provider, size));
-    // Only when the owner turned the greeting on.
-    final ctaText = hasLook ? look.ctaText : _resolveCtaText(provider);
     final unreadCount = provider.unreadCount;
     final iconSize = hasLook ? look.glyph : size * 0.6;
     final showLabel = hasLook && look.style == 'label';
@@ -1318,16 +1225,19 @@ class _ConferBotFABState extends State<ConferBotFAB>
 
     final isLeft = position == FabPosition.left;
 
-    // CTA border radius: min(widgetBorderRadius ?? 50, 20)
-    final ctaBorderRadius = math.min(
-      _sc(provider)?['widgetBorderRadius'] != null
-          ? ((_sc(provider)?['widgetBorderRadius'] as num?)?.toDouble() ?? 50.0)
-          : 50.0,
-      20.0,
-    );
-
-    // CTA horizontal offset from edge: beside the button
-    final ctaEdgeOffset = offsetX + width + 10;
+    // The greeting card, decided from the bot's settings once they arrive.
+    final greeting = _greeting ??= GreetingController(provider.botId)..addListener(_onGreeting);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      greeting.update(
+        customizations: _sc(provider),
+        chatOpen: _isOpen,
+        agentBot: provider.agentBot,
+        visitorContext: ChatState.instance.visitorContext,
+        botName: provider.botName ?? '',
+      );
+    });
+    final card = greeting.card;
 
     // The icon's idle and new-message moments and the ripple; nothing with
     // the phone's animations off, or for an image or avatar launcher.
@@ -1394,22 +1304,23 @@ class _ConferBotFABState extends State<ConferBotFAB>
         // ── App content ───────────────────────────────────────────────────
         widget.child,
 
-        // ── CTA tooltip ───────────────────────────────────────────────────
-        if (ctaText != null && !_ctaDismissed && !_isOpen)
+        // ── Greeting card: 12 above the launcher, its edge in line with it ──
+        if (card != null && !_isOpen)
           Positioned(
-            bottom: offsetBottom,
-            left: isLeft ? ctaEdgeOffset : null,
-            right: isLeft ? null : ctaEdgeOffset,
-            child: Align(
-              alignment: isLeft
-                  ? Alignment.centerLeft
-                  : Alignment.centerRight,
-              child: _CtaTooltip(
-                text: ctaText,
-                bgColor: fabColor,
-                borderRadius: ctaBorderRadius,
-                onClose: () => setState(() => _ctaDismissed = true),
-              ),
+            bottom: offsetBottom + size + 12,
+            left: isLeft ? math.max(8.0, offsetX) : null,
+            right: isLeft ? null : math.max(8.0, offsetX),
+            child: GreetingCard(
+              key: ValueKey(card),
+              data: card,
+              alignLeft: isLeft,
+              onPress: () => _onGreetingPress(context, provider, card),
+              onClose: greeting.dismiss,
+              onStarter: (text) {
+                greeting.closeForNow();
+                _openChat(context, provider);
+                Future.delayed(const Duration(milliseconds: 400), () => provider.sendMessage(text).catchError((_) {}));
+              },
             ),
           ),
 
@@ -1498,7 +1409,7 @@ class _ConferBotFABState extends State<ConferBotFAB>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Part 11 – ConferBotFABScope convenience wrapper
+// Part 10 – ConferBotFABScope convenience wrapper
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Convenience widget that creates a [ConferBotProvider] and wraps the child
