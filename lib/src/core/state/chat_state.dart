@@ -9,6 +9,9 @@ import '../../storage/adapters/hive_adapters.dart';
 import '../../utils/logger.dart';
 import 'message_pagination_controller.dart';
 import 'message_storage_service.dart';
+import '../flow/js.dart' show jsIsoString;
+import '../flow/text.dart' show fillVariables;
+import '../privacy/redact.dart' show maskValue, maskRecordEntry;
 
 /// Answer variable stored during conversation flow
 /// Mirrors the web widget's answerVariables structure
@@ -17,10 +20,15 @@ class AnswerVariable {
   final String key;
   dynamic value;
 
+  /// The question it answers (a multi-question's or pre-chat question's id);
+  /// the step's id otherwise.
+  final String? questionId;
+
   AnswerVariable({
     required this.nodeId,
     required this.key,
     this.value,
+    this.questionId,
   });
 
   AnswerVariable copyWith({
@@ -58,10 +66,20 @@ class TranscriptEntry {
   final String message;
   final int timestamp;
 
+  /// The flow step that said it, when a step did.
+  final String? nodeId;
+  final String? nodeType;
+
+  /// Extra content a step's line carries (sources, an image...).
+  final Map<String, dynamic>? data;
+
   TranscriptEntry({
     required this.by,
     required this.message,
     int? timestamp,
+    this.nodeId,
+    this.nodeType,
+    this.data,
   }) : timestamp = timestamp ?? DateTime.now().millisecondsSinceEpoch;
 
   TranscriptEntry copyWith({
@@ -156,6 +174,10 @@ class RecordEntry {
   final String time;
   final Map<String, dynamic> data;
 
+  /// An entry kept exactly as the flow wrote it (a step, an edge, the
+  /// visitor's answer in the web's shape): sent to the server as is.
+  final Map<String, dynamic>? fields;
+
   RecordEntry({
     required this.id,
     required this.shape,
@@ -164,7 +186,20 @@ class RecordEntry {
     String? time,
     Map<String, dynamic>? data,
   })  : time = time ?? DateTime.now().toUtc().toIso8601String(),
-        data = data ?? {};
+        data = data ?? {},
+        fields = null;
+
+  /// An entry in the web widget's own shape (index.ts S.record.push).
+  RecordEntry.raw(Map<String, dynamic> this.fields)
+      : id = (fields['id'] ?? fields['_id'] ?? '').toString(),
+        shape = (fields['shape'] ?? '').toString(),
+        type = fields['type']?.toString(),
+        text = fields['text'] is String ? fields['text'] as String : null,
+        time = (fields['time'] ?? '').toString(),
+        data = fields['data'] is Map ? Map<String, dynamic>.from(fields['data'] as Map) : <String, dynamic>{};
+
+  /// Whether this is an entry kept in the web's shape.
+  bool get isRaw => fields != null;
 
   RecordEntry copyWith({
     String? id,
@@ -174,6 +209,18 @@ class RecordEntry {
     String? time,
     Map<String, dynamic>? data,
   }) {
+    if (fields != null) {
+      return RecordEntry.raw({
+        ...fields!,
+        if (id != null) 'id': id,
+        if (id != null) '_id': id,
+        if (shape != null) 'shape': shape,
+        if (type != null) 'type': type,
+        if (text != null) 'text': text,
+        if (time != null) 'time': time,
+        if (data != null) 'data': data,
+      });
+    }
     return RecordEntry(
       id: id ?? this.id,
       shape: shape ?? this.shape,
@@ -185,6 +232,7 @@ class RecordEntry {
   }
 
   Map<String, dynamic> toJson() {
+    if (fields != null) return Map<String, dynamic>.from(fields!);
     final json = <String, dynamic>{
       '_id': id,
       'id': id,
@@ -236,6 +284,9 @@ class RecordEntry {
 /// - Automatic state restoration on app restart
 /// - GPT context building with full conversation history
 /// - Offline message queue integration with delivery status tracking
+/// The persisted shape of an entry kept in the web's own shape.
+const String _rawShape = '__raw__';
+
 class ChatState extends ChangeNotifier {
   // Singleton pattern
   static final ChatState _instance = ChatState._internal();
@@ -498,6 +549,10 @@ class ChatState extends ChangeNotifier {
       _record.clear();
       if (session.record != null) {
         for (final r in session.record!) {
+          if (r.shape == _rawShape) {
+            _record.add(RecordEntry.raw(Map<String, dynamic>.from(r.data ?? {})));
+            continue;
+          }
           _record.add(RecordEntry(
             id: r.id,
             shape: r.shape,
@@ -573,11 +628,11 @@ class ChatState extends ChangeNotifier {
         record: _record
             .map((r) => PersistedRecordEntry.create(
                   id: r.id,
-                  shape: r.shape,
+                  shape: r.isRaw ? _rawShape : r.shape,
                   type: r.type,
                   text: r.text,
                   time: r.time,
-                  data: r.data,
+                  data: r.isRaw ? r.fields : r.data,
                 ))
             .toList(),
       );
@@ -770,64 +825,100 @@ class ChatState extends ChangeNotifier {
   }
 
   // ========== Answer Variables ==========
+  //
+  // The web widget's answerVariables (index.ts _nodeCategorizeHelper,
+  // _setAnswerVariable, _setAnswerVariableByKey): a question step registers
+  // {nodeId, key, value: null} when it is shown and its answer fills that
+  // entry; logic results and integration values are saved by name.
 
-  /// Add a new answer variable (when node is displayed)
+  /// Masking of card numbers, ids and passwords in the answers and the
+  /// visitor's record entries (customizations.redactSensitive: on unless
+  /// false). The transcript keeps what was typed.
+  bool _redactSensitive = true;
+  bool get redactSensitive => _redactSensitive;
+  void setRedactSensitive(bool on) => _redactSensitive = on;
+
+  dynamic _masked(dynamic value) => _redactSensitive ? maskValue(value) : value;
+
+  /// A question step with data.answerVariable registers {nodeId, key,
+  /// value: null} when it is shown.
+  void registerAnswerVariable(String nodeId, String key) {
+    if (key.isEmpty) return;
+    _answerVariables.add(AnswerVariable(nodeId: nodeId, key: key, questionId: nodeId));
+    notifyListeners();
+    _schedulePersist();
+  }
+
+  /// Add an answer variable for a step: the step's entry is replaced (the
+  /// value too), else one is added.
   void addAnswerVariable(String nodeId, String key, {dynamic value}) {
     final existingIndex = _answerVariables.indexWhere((v) => v.nodeId == nodeId);
     if (existingIndex != -1) {
       _answerVariables[existingIndex].value = value;
     } else {
-      _answerVariables.add(AnswerVariable(
-        nodeId: nodeId,
-        key: key,
-        value: value,
-      ));
+      _answerVariables.add(AnswerVariable(nodeId: nodeId, key: key, value: value));
     }
     notifyListeners();
     _schedulePersist();
   }
 
-  /// Update answer variable by nodeId
-  void setAnswerVariable(String nodeId, dynamic value) {
-    final variable = _answerVariables.firstWhere(
-      (v) => v.nodeId == nodeId,
-      orElse: () => AnswerVariable(nodeId: '', key: ''),
-    );
-    if (variable.nodeId.isNotEmpty) {
-      variable.value = value;
-      notifyListeners();
-      _schedulePersist();
-    }
+  /// Fills the entry registered for a step (the first with that nodeId).
+  /// Nothing happens when the step registered none - a question without
+  /// data.answerVariable stores nothing. Returns whether one was filled.
+  bool setAnswerVariable(String nodeId, dynamic value) {
+    final index = _answerVariables.indexWhere((v) => v.nodeId == nodeId);
+    if (index == -1) return false;
+    _answerVariables[index].value = _masked(value);
+    notifyListeners();
+    _schedulePersist();
+    return true;
   }
 
-  /// Update or create answer variable by key
-  void setAnswerVariableByKey(String key, dynamic value) {
-    final existingIndex = _answerVariables.indexWhere((v) => v.key == key);
-    if (existingIndex != -1) {
-      _answerVariables[existingIndex].value = value;
-    } else {
-      _answerVariables.add(AnswerVariable(
-        nodeId: 'column_mapped_$key',
-        key: key,
-        value: value,
-      ));
+  /// Saves a value under a variable's name: every entry with that name gets
+  /// it; with none, one entry is added (nodeId "column_mapped_<key>" unless
+  /// one is given).
+  void saveVariableByName(String key, dynamic value, [String? nodeId, String? questionId]) {
+    if (key.isEmpty) return;
+    final v = _masked(value);
+    var matched = false;
+    for (final a in _answerVariables) {
+      if (a.key == key) {
+        a.value = v;
+        matched = true;
+      }
+    }
+    if (!matched) {
+      final id = (nodeId != null && nodeId.isNotEmpty) ? nodeId : 'column_mapped_$key';
+      _answerVariables.add(AnswerVariable(nodeId: id, key: key, value: v, questionId: questionId ?? id));
     }
     notifyListeners();
     _schedulePersist();
   }
 
-  /// Get answer variable value by key
-  dynamic getAnswerVariableValue(String key) {
-    final variable = _answerVariables.firstWhere(
-      (v) => v.key == key,
-      orElse: () => AnswerVariable(nodeId: '', key: ''),
-    );
-    return variable.nodeId.isNotEmpty ? variable.value : null;
+  /// Saves a value by name (see [saveVariableByName]).
+  void setAnswerVariableByKey(String key, dynamic value) => saveVariableByName(key, value);
+
+  /// Whether an entry with this key exists (answered or not).
+  bool hasAnswerVariable(String key) => _answerVariables.any((a) => a.key == key);
+
+  /// An answer by name: the FIRST entry with that key; null when none.
+  dynamic getAnswer(String key) {
+    for (final a in _answerVariables) {
+      if (a.key == key) return a.value;
+    }
+    return null;
   }
 
-  /// Get all answer variables as map
+  /// Get answer variable value by key (the first entry with that key)
+  dynamic getAnswerVariableValue(String key) => getAnswer(key);
+
+  /// All answers by name (the first entry per key)
   Map<String, dynamic> getAnswerVariablesMap() {
-    return {for (var v in _answerVariables) v.key: v.value};
+    final out = <String, dynamic>{};
+    for (final v in _answerVariables) {
+      out.putIfAbsent(v.key, () => v.value);
+    }
+    return out;
   }
 
   // ========== Variables (Temporary Calculations) ==========
@@ -844,43 +935,43 @@ class ChatState extends ChangeNotifier {
     return _variables[name];
   }
 
-  /// Resolve a value that might contain variable references
-  /// Supports three formats (matching web widget regex /\$?\{(\w+)\}/g):
-  /// 1. {{variableName}} — legacy double-brace
-  /// 2. ${variableName} — web widget standard
-  /// 3. {variableName}  — web widget legacy single-brace
-  ///
-  /// Resolution order: answer variables -> temp variables -> user metadata
-  dynamic resolveValue(String value) {
-    // Pattern matches all three formats:
-    //   {{var}} — group(1) captures via double-brace
-    //   ${var}  — group(2) captures via dollar-brace
-    //   {var}   — group(3) captures via single-brace (must not start with $)
-    final variablePattern = RegExp(r'\{\{(\w+?)\}\}|\$\{(\w+?)\}|\{(\w+?)\}');
-
-    // Replace all occurrences in the string
-    final resolved = value.replaceAllMapped(variablePattern, (match) {
-      final varName = match.group(1) ?? match.group(2) ?? match.group(3) ?? '';
-      if (varName.isEmpty) return match.group(0)!;
-
-      // 1. Check answer variables first
-      final answerValue = getAnswerVariableValue(varName);
-      if (answerValue != null) return answerValue.toString();
-
-      // 2. Then check temp variables
-      final tempValue = getVariable(varName);
-      if (tempValue != null) return tempValue.toString();
-
-      // 3. Then check user metadata
-      final metaValue = getUserMetadata(varName);
-      if (metaValue != null) return metaValue;
-
-      // No resolution found — keep original placeholder
-      return match.group(0)!;
-    });
-
-    return resolved;
+  /// Remove a temporary variable
+  void deleteVariable(String name) {
+    _variables.remove(name);
+    notifyListeners();
   }
+
+  /// A placeholder's value: the answers first (the first entry with that
+  /// key), then the flow variables, then the visitor's details. Internal
+  /// "_" variables never fill text.
+  dynamic lookupVariable(String key) {
+    final name = key.trim();
+    if (name.isEmpty) return null;
+    if (hasAnswerVariable(name)) return getAnswer(name);
+    if (!name.startsWith('_')) {
+      if (_variables.containsKey(name)) return _variables[name];
+    }
+    switch (name) {
+      case 'name':
+        return _userMetadata.name;
+      case 'email':
+        return _userMetadata.email;
+      case 'phone':
+        return _userMetadata.phone;
+    }
+    return _userMetadata.metadata[name];
+  }
+
+  /// Fills {x}, ${x}, {{x}}, ${ANSWERS.x} and $${x} from the answers (web
+  /// nodeLogic.fillVariables): an unknown, null or "" value shows nothing
+  /// and the gap is tidied. "html" escapes the values; "raw" does not.
+  String resolveVariables(String text, {String mode = 'raw'}) {
+    if (text.isEmpty) return text;
+    return fillVariables(text, lookupVariable, mode: mode);
+  }
+
+  /// Resolve the variables in a value (see [resolveVariables]).
+  dynamic resolveValue(String value) => resolveVariables(value);
 
   // ========== User Metadata ==========
 
@@ -935,6 +1026,46 @@ class ChatState extends ChangeNotifier {
 
     notifyListeners();
     _schedulePersist();
+  }
+
+  /// The lines a flow step says or the visitor answers in it
+  /// ([addBotMessage], [addUserMessage]): the chat draws them.
+  final StreamController<TranscriptEntry> _flowLines = StreamController<TranscriptEntry>.broadcast(sync: true);
+  Stream<TranscriptEntry> get flowLines => _flowLines.stream;
+
+  void _addLine(TranscriptEntry entry) {
+    _transcript.add(entry);
+    if (_transcript.length > maxTranscriptSize) {
+      _transcript.removeRange(0, _transcript.length - maxTranscriptSize);
+    }
+    if (!_flowLines.isClosed) _flowLines.add(entry);
+    notifyListeners();
+    _schedulePersist();
+  }
+
+  /// A bot line a step says (a question, a greeting, an answer).
+  void addBotMessage(String text, [String? nodeId, String? nodeType, Map<String, dynamic>? data]) {
+    _addLine(TranscriptEntry(by: 'bot', message: text, nodeId: nodeId, nodeType: nodeType, data: data));
+  }
+
+  /// The visitor's line in a step (as typed: the transcript is never masked).
+  void addUserMessage(String text, [String? nodeId]) {
+    _addLine(TranscriptEntry(by: 'user', message: text, nodeId: nodeId));
+  }
+
+  void setUserName(String name) {
+    _userMetadata = _userMetadata.copyWith(name: name);
+    notifyListeners();
+  }
+
+  void setUserEmail(String email) {
+    _userMetadata = _userMetadata.copyWith(email: email);
+    notifyListeners();
+  }
+
+  void setUserPhone(String phone) {
+    _userMetadata = _userMetadata.copyWith(phone: phone);
+    notifyListeners();
   }
 
   /// Get full transcript for GPT context (simple version)
@@ -1088,20 +1219,62 @@ class ChatState extends ChangeNotifier {
 
   // ========== Record ==========
 
-  /// Push data to record (with auto-merge if same ID exists)
+  /// Adds an entry; one with the same id AND the same kind (type|shape)
+  /// is merged into, as the web widget's _pushDataToRecord does - the bot's
+  /// step and the visitor's answer to it stay separate entries.
   void pushToRecord(RecordEntry entry) {
-    final existingIndex = _record.indexWhere((r) => r.id == entry.id);
+    String kind(Map<String, dynamic> r) => '${r['type'] ?? ''}|${r['shape'] ?? ''}';
+    final json = entry.toJson();
+    final existingIndex = _record.indexWhere((r) => r.id == entry.id && kind(r.toJson()) == kind(json));
 
     if (existingIndex != -1) {
-      // Merge with existing record
       final existing = _record[existingIndex];
-      final mergedData = Map<String, dynamic>.from(existing.data);
-      mergedData.addAll(entry.data);
-      _record[existingIndex] = entry.copyWith(data: mergedData);
+      if (existing.isRaw || entry.isRaw) {
+        final merged = <String, dynamic>{...existing.toJson(), ...json};
+        final a = existing.toJson()['data'];
+        final b = json['data'];
+        if (a is Map || b is Map) {
+          merged['data'] = {...?(a is Map ? Map<String, dynamic>.from(a) : null), ...?(b is Map ? Map<String, dynamic>.from(b) : null)};
+        }
+        _record[existingIndex] = RecordEntry.raw(merged);
+      } else {
+        final mergedData = Map<String, dynamic>.from(existing.data);
+        mergedData.addAll(entry.data);
+        _record[existingIndex] = entry.copyWith(data: mergedData);
+      }
     } else {
       _record.add(entry);
     }
 
+    notifyListeners();
+    _schedulePersist();
+  }
+
+  /// An entry in the web's shape, merged like [pushToRecord]. The visitor's
+  /// own entries never carry a card number, id or password (web
+  /// _pushDataToRecord -> privacy maskRecordEntry).
+  void addRecord(Map<String, dynamic> entry) {
+    final e = Map<String, dynamic>.from(entry);
+    if (_redactSensitive) maskRecordEntry(e);
+    pushToRecord(RecordEntry.raw(e));
+  }
+
+  /// Appends an entry as it is - every visit of a step and every edge taken
+  /// is its own entry (web index.ts S.record.push).
+  void appendRecord(Map<String, dynamic> entry) {
+    _record.add(RecordEntry.raw(Map<String, dynamic>.from(entry)));
+    notifyListeners();
+    _schedulePersist();
+  }
+
+  /// The record as the server gets it.
+  List<Map<String, dynamic>> getRecord() => getRecordForServer();
+
+  /// The flow reached its end (web: hasChatEnded).
+  void markConversationComplete([String? reason]) {
+    _variables['_flowComplete'] = true;
+    _variables['_flowCompletedAt'] = jsIsoString(DateTime.now());
+    if (reason != null) _variables['_flowCompletionReason'] = reason;
     notifyListeners();
     _schedulePersist();
   }
@@ -1174,6 +1347,7 @@ class ChatState extends ChangeNotifier {
 
     _answerVariables.clear();
     _variables.clear();
+    _redactSensitive = true;
     _userMetadata = UserMetadata();
     _transcript.clear();
     _record.clear();
