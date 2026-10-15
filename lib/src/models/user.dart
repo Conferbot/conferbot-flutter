@@ -6,12 +6,18 @@ class ConferBotUser {
   final String? phone;
   final Map<String, dynamic>? metadata;
 
+  /// Identity verification: HMAC-SHA256 of the user's id (or email when there
+  /// is no id) with your workspace's identity secret, hex, made on your
+  /// server. With it the chat is filed under the verified user.
+  final String? hash;
+
   const ConferBotUser({
     required this.id,
     this.name,
     this.email,
     this.phone,
     this.metadata,
+    this.hash,
   });
 
   factory ConferBotUser.fromJson(Map<String, dynamic> json) {
@@ -21,6 +27,7 @@ class ConferBotUser {
       email: json['email'] as String?,
       phone: json['phone'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      hash: json['hash'] as String?,
     );
   }
 
@@ -31,6 +38,20 @@ class ConferBotUser {
       if (email != null) 'email': email,
       if (phone != null) 'phone': phone,
       if (metadata != null) 'metadata': metadata,
+      if (hash != null) 'hash': hash,
+    };
+  }
+
+  /// The user as the web widget's visitorContext: the app's own data, then id, name, email, phone, hash.
+  Map<String, dynamic> toVisitorContext() {
+    bool filled(String? v) => v != null && v.trim().isNotEmpty;
+    return {
+      ...?metadata,
+      'id': id,
+      if (filled(name)) 'name': name,
+      if (filled(email)) 'email': email,
+      if (filled(phone)) 'phone': phone,
+      if (filled(hash)) 'hash': hash,
     };
   }
 }
