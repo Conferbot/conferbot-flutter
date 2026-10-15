@@ -17,6 +17,8 @@ export 'src/core/errors/error_handler.dart' hide ErrorResult;
 
 // ========== Node System (All 51 Node Types) ========== //
 export 'src/core/state/chat_state.dart';
+// The handover's widget signals (ConferBotProvider.onWidgetSignal).
+export 'src/core/live_chat/handover_waiting.dart' show WidgetSignals;
 export 'src/core/node_flow_engine.dart';
 export 'src/core/nodes/node_types.dart';
 export 'src/core/nodes/node_result.dart';
