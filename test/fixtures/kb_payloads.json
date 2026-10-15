@@ -1,0 +1,1274 @@
+{
+ "_about": "Captured from a local embed-server (:8001), bot 6ab686f8d47ff029b76892f7, 2026-10-15. Socket: fetched-chatbot-data (customizations trimmed to the help centre keys), get-kb-article and search-kb-articles acks. REST under /api/v1/mobile: chatbot/:id/kb (chatbotData trimmed), knowledge-base/articles, categories, articles/:id, search?query= and search?q= (400). Lists cut to 2 categories x 2 articles; search rows cut to the fields the SDK reads.",
+ "rest_chatbot_kb": {
+  "success": true,
+  "data": {
+   "chatbotData": {
+    "customizations": {
+     "enableKnowledgeBase": true
+    }
+   },
+   "knowledgeBaseData": {
+    "recentArticles": [
+     {
+      "_id": "6ab7ac0bb03f13ff22412c87",
+      "slug": "how-to-use-conferbot-s-ai-chatbot-builder",
+      "publishedDate": "2026-09-27T06:31:04.520Z",
+      "viewCount": 4,
+      "helpfulCount": 1,
+      "title": "How to Use Conferbot's AI Chatbot Builder",
+      "description": "Learn to create chatbots quickly with Conferbot's AI builder.",
+      "content": "<p>Conferbot's AI Chatbot Builder allows you to create chatbots quickly by describing your desired chatbot in plain English. The AI handles conversation flow design, making the process fast and straightforward.</p><h2>Steps to Create a Chatbot</h2><ol><li><strong>Describe Your Chatbot:</strong> Tell the AI what you want your chatbot to do. For example, 'Create a lead generation bot for a real estate agency.'</li><li><strong>AI Generates Complete Flow:</strong> The AI creates a conversation flow with welcome messages, questions, branching logic, and response actions.</li><li><strong>Review, Customize &amp; Launch:</strong> Preview the generated chatbot, customize any messages or flows in the visual editor, then publish to your website or channels.</li></ol><h2>Features of the AI Chatbot Builder</h2><ul><li><strong>Natural Language Input:</strong> Describe your chatbot in natural language, and the AI will generate the necessary conversation flow.</li><li><strong>AI-Optimized Design:</strong> The AI follows best practices for conversation design, including concise messages and logical progression.</li><li><strong>Easy Customization:</strong> You can easily refine and customize the chatbot by typing instructions to the AI.</li><li><strong>Zero Learning Curve:</strong> There's no need to learn a visual builder interface. Simply describe what you want.</li><li><strong>Quick Setup:</strong> Create chatbots 10x faster than traditional methods.</li><li><strong>Professional Quality:</strong> Generates professional-grade conversation flows with built-in validation and error handling.</li></ul><h2>Types of Chatbots You Can Build</h2><ul><li><strong>Lead Generation Bot:</strong> Capture user information and schedule demos.</li><li><strong>Support Bot:</strong> Address common support issues with FAQs and ticket creation.</li><li><strong>Booking Bot:</strong> Handle calendar integration and service selection.</li><li><strong>Survey Bot:</strong> Conduct surveys with conditional branching.</li><li><strong>FAQ Bot:</strong> Structure FAQ content into an interactive format.</li><li><strong>Onboarding Bot:</strong> Guide users through onboarding steps.</li></ul><h2>Benefits of Using AI Chatbot Builder</h2><ul><li><strong>Fast Creation:</strong> Build chatbots in seconds without manual flow design.</li><li><strong>Continuous Improvement:</strong> Refine chatbots post-launch by instructing the AI to make adjustments.</li><li><strong>Template Suggestions:</strong> Get recommendations based on your description for industry-specific chatbot designs.</li></ul><p>Conferbot's AI Chatbot Builder simplifies chatbot creation, making it accessible to everyone. Start building your chatbot today, no credit card required.</p>",
+      "category": {
+       "_id": "6ab7abfcb03f13ff22412c38",
+       "name": "Chatbot Creation"
+      },
+      "chatbotId": "6ab686f8d47ff029b76892f7",
+      "author": {
+       "_id": "642d37a520a83e213dcb95b7",
+       "name": "admin"
+      },
+      "readingTime": 2,
+      "wordCount": 315,
+      "updatedAt": "2026-09-27T18:35:37.072Z"
+     },
+     {
+      "_id": "6ab7ac19b03f13ff22412cd5",
+      "slug": "how-to-set-up-live-chat-with-ai-chatbot-handoff",
+      "publishedDate": "2026-09-27T06:31:04.520Z",
+      "viewCount": 9,
+      "helpfulCount": 1,
+      "title": "How to Set Up Live Chat with AI Chatbot Handoff",
+      "description": "Learn how live chat integrates with AI chatbot for seamless customer support.",
+      "content": "<p>Live chat with AI chatbot handoff combines human empathy with the efficiency of automation, providing a seamless customer support experience. This integration ensures that customers receive timely assistance while allowing human agents to focus on complex issues.</p><h2>Seamless Bot-to-Human Handoff</h2><p>Conversations automatically transfer from the chatbot to a human agent when necessary. The full context and conversation history are preserved, ensuring a smooth transition and a better customer experience.</p><h2>Intelligent Conversation Routing</h2><p>Conversations are directed to the right agent based on skills, department, language, or availability. This ensures that customers receive the most appropriate assistance quickly.</p><h2>Agent Dashboard</h2><p>Agents manage multiple conversations in real-time through a unified dashboard. They can view customer profiles and track queue metrics, enhancing their ability to provide effective support.</p><h2>Multi-Channel Support</h2><p>Handle live conversations from various platforms such as websites, WhatsApp, and Messenger in one inbox, providing customers with a consistent experience no matter the channel.</p><h2>Setting Up Bot-to-Human Handoff</h2><p>Configure when conversations should transfer from chatbot to human agent using escalation triggers based on keywords, sentiment, or user requests. Set up pre-chat forms to collect context, ensuring agents have all the information they need.</p><p>Agents can see incoming conversations with full chatbot transcripts and visitor information, ensuring no context is lost during the handoff.</p><h2>Use Cases Across Industries</h2><ul><li><strong>Customer Support:</strong> The bot handles FAQs and routine queries, escalating complex issues to human agents.</li><li><strong>Sales Assistance:</strong> The bot qualifies leads and books demos, handing off prospects to sales reps.</li><li><strong>Healthcare:</strong> The bot triages patient queries, connecting urgent cases to medical staff.</li><li><strong>Banking:</strong> The bot manages balance checks and FAQs, with live agents handling loan applications and disputes.</li><li><strong>E-Commerce:</strong> The bot provides order tracking and return processing, with agents addressing complex complaints and VIP customers.</li></ul>",
+      "category": {
+       "_id": "6ab7abfcb03f13ff22412c3c",
+       "name": "AI Chatbot Features"
+      },
+      "chatbotId": "6ab686f8d47ff029b76892f7",
+      "author": {
+       "_id": "642d37a520a83e213dcb95b7",
+       "name": "admin"
+      },
+      "readingTime": 2,
+      "wordCount": 289,
+      "updatedAt": "2026-10-11T12:51:45.179Z"
+     },
+     {
+      "_id": "6ab7ac01b03f13ff22412c4e",
+      "slug": "how-to-integrate-openai-with-conferbot",
+      "publishedDate": "2026-09-27T06:31:04.520Z",
+      "viewCount": 4,
+      "helpfulCount": 0,
+      "title": "How to Integrate OpenAI with Conferbot",
+      "description": "Learn how to integrate OpenAI with Conferbot for smarter chatbot interactions.",
+      "content": "<p>Integrating OpenAI with Conferbot enhances your chatbot's capabilities, enabling it to deliver intelligent, context-aware conversations. Here's a guide on how to set up OpenAI with Conferbot.</p><h2>Connecting Your OpenAI Model</h2><p>To integrate OpenAI with Conferbot, you need to connect your OpenAI API key. Follow these steps:</p><ol><li>Obtain your OpenAI API key from the OpenAI platform.</li><li>Navigate to your Conferbot dashboard.</li><li>Go to <strong>Settings &gt; Integrations &gt; OpenAI</strong>.</li><li>Paste your API key to establish the connection.</li></ol><p>Once connected, you can select your preferred GPT model and configure settings such as temperature and token limits.</p><h2>Training on Your Business Data</h2><p>For more accurate and brand-consistent responses, train the AI on your business data. You can upload documents, FAQs, and knowledge bases to help the AI understand your business context.</p><h2>Deploying AI-Powered Conversations</h2><p>After setting up the integration, your chatbot can handle complex queries, multi-turn conversations, and nuanced requests. This enhances user interactions and provides a more satisfying customer experience.</p><h2>Advanced Features and Customization</h2><p>Using your own OpenAI API key unlocks advanced features and customization options. You can choose specific GPT models, customize AI behavior, and manage AI usage costs directly.</p><h2>Model Selection and Use Cases</h2><p>Conferbot supports various OpenAI models, each suitable for different use cases:</p><ul><li><strong>Advanced AI models</strong>: Ideal for straightforward customer service tasks.</li><li><strong>Advanced AI</strong>: Best for complex reasoning and nuanced conversations.</li></ul><p>You can switch between models to optimize performance and cost for your specific needs.</p><h2>Benefits of OpenAI Integration</h2><ul><li>Open-ended question handling</li><li>Natural language generation</li><li>Multi-turn context retention</li><li>Summarization and extraction</li><li>Content creation</li><li>Multilingual support</li></ul><p>Conferbot's integration manages technical complexities, allowing you to focus on conversation design.</p>",
+      "category": {
+       "_id": "6ab7abfcb03f13ff22412c36",
+       "name": "Chatbot Essentials"
+      },
+      "chatbotId": "6ab686f8d47ff029b76892f7",
+      "author": {
+       "_id": "642d37a520a83e213dcb95b7",
+       "name": "admin"
+      },
+      "readingTime": 2,
+      "wordCount": 271,
+      "updatedAt": "2026-09-27T18:57:13.827Z"
+     },
+     {
+      "_id": "6ab7ac1cb03f13ff22412ce1",
+      "slug": "how-to-manage-your-chatbot-team-effectively",
+      "publishedDate": "2026-09-27T06:31:04.520Z",
+      "viewCount": 1,
+      "helpfulCount": 0,
+      "title": "How to Manage Your Chatbot Team Effectively",
+      "description": "Organize your support team with role-based access, routing, and analytics.",
+      "content": "<p>Managing your chatbot support team is crucial for efficient and effective customer service. With Conferbot, you can organize your team using role-based access, smart routing, and performance tracking to ensure your support operations run smoothly.</p><h2>Organize Your Support Team</h2><p>Ensure your team operates at peak efficiency with these features:</p><ul><li><strong>Role-Based Access Control:</strong> Define Admin and Agent roles with specific permissions. Admins manage bots and settings, while agents handle conversations. Custom roles are available for enterprise teams.</li><li><strong>Smart Workload Routing:</strong> Distribute conversations automatically based on agent availability, skills, and workload. Choose from round-robin, skill-based, and capacity-based routing options.</li><li><strong>Performance Tracking &amp; Analytics:</strong> Monitor real-time metrics like response times, resolution rates, CSAT scores, and conversation volume to identify top performers and coaching opportunities.</li></ul><h2>Why Team Management Matters</h2><p>Effective team management ensures the right conversation reaches the right agent:</p><ul><li><strong>Clear Accountability:</strong> Role-based permissions maintain security and focus.</li><li><strong>Balanced Workload:</strong> Intelligent routing prevents agent burnout and idle time.</li><li><strong>Better Training:</strong> Use performance metrics to identify coaching needs.</li><li><strong>Faster Onboarding:</strong> New members can start quickly with pre-configured roles and permissions.</li><li><strong>Scalable Operations:</strong> Manage a growing team from one dashboard.</li></ul><h2>How It Works</h2><ol><li><strong>Invite Team Members:</strong> Send email invitations and assign roles. Members join with one click and start immediately.</li><li><strong>Assign Chatbots &amp; Routes:</strong> Link team members to specific chatbots or departments and set up routing rules for workload distribution.</li><li><strong>Monitor &amp; Optimize:</strong> Track team performance in real-time to balance workloads and improve operations continuously.</li></ol><h2>Teams for Every Organization</h2><p>Whether you are a startup or an enterprise, Conferbot's team management scales with your business:</p><ul><li><strong>Customer Support Teams:</strong> Organize agents by skill, language, or product.</li><li><strong>Sales Teams:</strong> Assign leads by territory or round-robin. Track conversions per agent.</li><li><strong>HR Departments:</strong> Manage internal support for employee queries.</li><li><strong>IT Support:</strong> Organize support tiers with automatic escalation.</li><li><strong>Multi-Location:</strong> Manage teams across different locations and time zones.</li><li><strong>Agency Management:</strong> Handle multiple client chatbots with dedicated teams.</li></ul>",
+      "category": {
+       "_id": "6ab7abfcb03f13ff22412c3c",
+       "name": "AI Chatbot Features"
+      },
+      "chatbotId": "6ab686f8d47ff029b76892f7",
+      "author": {
+       "_id": "642d37a520a83e213dcb95b7",
+       "name": "admin"
+      },
+      "readingTime": 2,
+      "wordCount": 314,
+      "updatedAt": "2026-09-27T06:31:27.663Z"
+     }
+    ],
+    "categories": [
+     {
+      "_id": "6ab7abfcb03f13ff22412c36",
+      "name": "Chatbot Essentials",
+      "description": "Explore plans, templates, integrations, and AI-powered knowledge for your chatbots.",
+      "icon": "plug",
+      "articles": [
+       {
+        "_id": "6ab7ac01b03f13ff22412c4e",
+        "slug": "how-to-integrate-openai-with-conferbot",
+        "publishedDate": "2026-09-27T06:31:04.520Z",
+        "viewCount": 4,
+        "helpfulCount": 0,
+        "title": "How to Integrate OpenAI with Conferbot",
+        "description": "Learn how to integrate OpenAI with Conferbot for smarter chatbot interactions.",
+        "content": "<p>Integrating OpenAI with Conferbot enhances your chatbot's capabilities, enabling it to deliver intelligent, context-aware conversations. Here's a guide on how to set up OpenAI with Conferbot.</p><h2>Connecting Your OpenAI Model</h2><p>To integrate OpenAI with Conferbot, you need to connect your OpenAI API key. Follow these steps:</p><ol><li>Obtain your OpenAI API key from the OpenAI platform.</li><li>Navigate to your Conferbot dashboard.</li><li>Go to <strong>Settings &gt; Integrations &gt; OpenAI</strong>.</li><li>Paste your API key to establish the connection.</li></ol><p>Once connected, you can select your preferred GPT model and configure settings such as temperature and token limits.</p><h2>Training on Your Business Data</h2><p>For more accurate and brand-consistent responses, train the AI on your business data. You can upload documents, FAQs, and knowledge bases to help the AI understand your business context.</p><h2>Deploying AI-Powered Conversations</h2><p>After setting up the integration, your chatbot can handle complex queries, multi-turn conversations, and nuanced requests. This enhances user interactions and provides a more satisfying customer experience.</p><h2>Advanced Features and Customization</h2><p>Using your own OpenAI API key unlocks advanced features and customization options. You can choose specific GPT models, customize AI behavior, and manage AI usage costs directly.</p><h2>Model Selection and Use Cases</h2><p>Conferbot supports various OpenAI models, each suitable for different use cases:</p><ul><li><strong>Advanced AI models</strong>: Ideal for straightforward customer service tasks.</li><li><strong>Advanced AI</strong>: Best for complex reasoning and nuanced conversations.</li></ul><p>You can switch between models to optimize performance and cost for your specific needs.</p><h2>Benefits of OpenAI Integration</h2><ul><li>Open-ended question handling</li><li>Natural language generation</li><li>Multi-turn context retention</li><li>Summarization and extraction</li><li>Content creation</li><li>Multilingual support</li></ul><p>Conferbot's integration manages technical complexities, allowing you to focus on conversation design.</p>",
+        "category": "6ab7abfcb03f13ff22412c36",
+        "chatbotId": "6ab686f8d47ff029b76892f7",
+        "author": {
+         "_id": "642d37a520a83e213dcb95b7",
+         "name": "admin"
+        },
+        "readingTime": 2,
+        "wordCount": 271,
+        "updatedAt": "2026-09-27T18:57:13.827Z"
+       },
+       {
+        "_id": "6ab7ac02b03f13ff22412c54",
+        "slug": "what-is-an-nlp-chatbot-and-how-does-it-work",
+        "publishedDate": "2026-09-27T06:31:04.520Z",
+        "viewCount": 0,
+        "helpfulCount": 0,
+        "title": "What is an NLP Chatbot and How Does it Work?",
+        "description": "Learn about NLP chatbots, their features, and benefits for your business.",
+        "content": "<p>An NLP chatbot uses Natural Language Processing to understand and respond to user queries intelligently, enhancing customer interaction.</p><h2>Understanding NLP Chatbots</h2><p>NLP, or Natural Language Processing, is a form of artificial intelligence that enables chatbots to understand, interpret, and respond to human language meaningfully. Unlike simple keyword-based bots, NLP chatbots comprehend the intent behind user inputs, allowing for more natural and effective conversations.</p><h2>Key Features of NLP Chatbots</h2><ul><li><strong>Intent Recognition:</strong> Understands what users mean, handling typos and varied phrasing.</li><li><strong>Entity Extraction:</strong> Identifies key information like names, dates, and locations from conversations.</li><li><strong>Sentiment Analysis:</strong> Detects user emotions to route queries appropriately.</li><li><strong>Context Memory:</strong> Maintains conversation context over multiple interactions.</li><li><strong>Multi-Language Support:</strong> Communicates in over 50 languages with native-level understanding.</li><li><strong>Continuous Learning:</strong> Automatically improves by learning from real conversations.</li></ul><h2>How to Add NLP to Your Chatbot</h2><ol><li>Select a pre-built template from over 1000 choices using the drag-and-drop builder.</li><li>Publish your chatbot as a widget, standalone page, or on WhatsApp.</li><li>Analyze conversation data using the Conferbot dashboard and integrate with your CRM or database.</li></ol><h2>NLP Chatbots Across Industries</h2><p>NLP chatbots are versatile and can be applied across various sectors:</p><ul><li><strong>Customer Support:</strong> Auto-categorizes tickets and routes them efficiently.</li><li><strong>E-Commerce:</strong> Enhances product search and conversational shopping experiences.</li><li><strong>Healthcare:</strong> Understands symptoms and schedules appointments naturally.</li><li><strong>Banking &amp; Finance:</strong> Handles balance inquiries and transaction searches.</li><li><strong>Education:</strong> Facilitates student inquiries and course recommendations.</li><li><strong>Travel &amp; Hospitality:</strong> Manages bookings and offers destination advice.</li></ul>",
+        "category": "6ab7abfcb03f13ff22412c36",
+        "chatbotId": "6ab686f8d47ff029b76892f7",
+        "author": {
+         "_id": "642d37a520a83e213dcb95b7",
+         "name": "admin"
+        },
+        "readingTime": 2,
+        "wordCount": 234,
+        "updatedAt": "2026-09-27T06:31:04.521Z"
+       }
+      ]
+     },
+     {
+      "_id": "6ab7abfcb03f13ff22412c38",
+      "name": "Chatbot Creation",
+      "description": "Explore tools and insights for building and managing AI chatbots effortlessly.",
+      "icon": "code",
+      "articles": [
+       {
+        "_id": "6ab7ac0bb03f13ff22412c87",
+        "slug": "how-to-use-conferbot-s-ai-chatbot-builder",
+        "publishedDate": "2026-09-27T06:31:04.520Z",
+        "viewCount": 4,
+        "helpfulCount": 1,
+        "title": "How to Use Conferbot's AI Chatbot Builder",
+        "description": "Learn to create chatbots quickly with Conferbot's AI builder.",
+        "content": "<p>Conferbot's AI Chatbot Builder allows you to create chatbots quickly by describing your desired chatbot in plain English. The AI handles conversation flow design, making the process fast and straightforward.</p><h2>Steps to Create a Chatbot</h2><ol><li><strong>Describe Your Chatbot:</strong> Tell the AI what you want your chatbot to do. For example, 'Create a lead generation bot for a real estate agency.'</li><li><strong>AI Generates Complete Flow:</strong> The AI creates a conversation flow with welcome messages, questions, branching logic, and response actions.</li><li><strong>Review, Customize &amp; Launch:</strong> Preview the generated chatbot, customize any messages or flows in the visual editor, then publish to your website or channels.</li></ol><h2>Features of the AI Chatbot Builder</h2><ul><li><strong>Natural Language Input:</strong> Describe your chatbot in natural language, and the AI will generate the necessary conversation flow.</li><li><strong>AI-Optimized Design:</strong> The AI follows best practices for conversation design, including concise messages and logical progression.</li><li><strong>Easy Customization:</strong> You can easily refine and customize the chatbot by typing instructions to the AI.</li><li><strong>Zero Learning Curve:</strong> There's no need to learn a visual builder interface. Simply describe what you want.</li><li><strong>Quick Setup:</strong> Create chatbots 10x faster than traditional methods.</li><li><strong>Professional Quality:</strong> Generates professional-grade conversation flows with built-in validation and error handling.</li></ul><h2>Types of Chatbots You Can Build</h2><ul><li><strong>Lead Generation Bot:</strong> Capture user information and schedule demos.</li><li><strong>Support Bot:</strong> Address common support issues with FAQs and ticket creation.</li><li><strong>Booking Bot:</strong> Handle calendar integration and service selection.</li><li><strong>Survey Bot:</strong> Conduct surveys with conditional branching.</li><li><strong>FAQ Bot:</strong> Structure FAQ content into an interactive format.</li><li><strong>Onboarding Bot:</strong> Guide users through onboarding steps.</li></ul><h2>Benefits of Using AI Chatbot Builder</h2><ul><li><strong>Fast Creation:</strong> Build chatbots in seconds without manual flow design.</li><li><strong>Continuous Improvement:</strong> Refine chatbots post-launch by instructing the AI to make adjustments.</li><li><strong>Template Suggestions:</strong> Get recommendations based on your description for industry-specific chatbot designs.</li></ul><p>Conferbot's AI Chatbot Builder simplifies chatbot creation, making it accessible to everyone. Start building your chatbot today, no credit card required.</p>",
+        "category": "6ab7abfcb03f13ff22412c38",
+        "chatbotId": "6ab686f8d47ff029b76892f7",
+        "author": {
+         "_id": "642d37a520a83e213dcb95b7",
+         "name": "admin"
+        },
+        "readingTime": 2,
+        "wordCount": 315,
+        "updatedAt": "2026-09-27T18:35:37.072Z"
+       },
+       {
+        "_id": "6ab7ac0cb03f13ff22412c8d",
+        "slug": "how-to-use-rich-media-in-your-conferbot-chatbot",
+        "publishedDate": "2026-09-27T06:31:04.520Z",
+        "viewCount": 0,
+        "helpfulCount": 0,
+        "title": "How to Use Rich Media in Your Conferbot Chatbot",
+        "description": "Enhance your chatbot with rich media for better engagement.",
+        "content": "<p>Enhancing your chatbot with rich media like images, videos, and GIFs can significantly improve user engagement and conversion rates. Conferbot allows you to easily incorporate these elements without needing any design skills.</p><h2>Benefits of Rich Media</h2><ul><li><strong>Instant Visual Impact:</strong> Capture attention quickly with eye-catching visuals.</li><li><strong>Boost Conversions:</strong> Use product carousels and visual CTAs to drive higher click-through rates.</li><li><strong>Mobile-First Design:</strong> All media is optimized for phones, tablets, and desktops.</li><li><strong>CDN-Powered Delivery:</strong> Fast media loading worldwide with automatic compression and caching.</li><li><strong>Cross-Platform Compatibility:</strong> Use rich media on platforms like WhatsApp, Messenger, Instagram, and more.</li><li><strong>No Code Required:</strong> Drag-and-drop media blocks into your chatbot flow.</li></ul><h2>How to Add Rich Media to Your Chatbot</h2><ol><li>Select a pre-built chatbot template and modify it using the drag-and-drop builder.</li><li>Drag the 'Image' or 'Video' block into your conversation flow.</li><li>Upload images or videos from your computer or paste URLs for embedded content.</li><li>Add optional captions, alt text, or descriptions, and configure media settings.</li><li>Preview your changes to ensure everything looks as expected before publishing.</li></ol><h2>Rich Media Use Cases</h2><ul><li><strong>E-Commerce:</strong> Product galleries and video demos.</li><li><strong>Real Estate:</strong> Virtual property tours and floor plans.</li><li><strong>Education:</strong> Video lessons and interactive quizzes.</li><li><strong>Healthcare:</strong> Visual symptom guides and appointment confirmations.</li><li><strong>Restaurants:</strong> Menu carousels and promo videos.</li><li><strong>B2B/SaaS:</strong> Product demos and case studies.</li></ul><h2>Getting Started with Rich Media</h2><p>Begin by exploring the diverse media types available in Conferbot, and see how businesses across various industries use visual chatbot experiences to drive results. Adding rich media to your chatbot is straightforward and can be done in minutes, enhancing both the look and functionality of your interactions.</p>",
+        "category": "6ab7abfcb03f13ff22412c38",
+        "chatbotId": "6ab686f8d47ff029b76892f7",
+        "author": {
+         "_id": "642d37a520a83e213dcb95b7",
+         "name": "admin"
+        },
+        "readingTime": 2,
+        "wordCount": 263,
+        "updatedAt": "2026-09-27T06:31:04.521Z"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ },
+ "rest_kb_article": {
+  "success": true,
+  "data": {
+   "_id": "6ab7ac0bb03f13ff22412c87",
+   "slug": "how-to-use-conferbot-s-ai-chatbot-builder",
+   "publishedDate": "2026-09-27T06:31:04.520Z",
+   "viewCount": 4,
+   "helpfulCount": 1,
+   "title": "How to Use Conferbot's AI Chatbot Builder",
+   "description": "Learn to create chatbots quickly with Conferbot's AI builder.",
+   "content": "<p>Conferbot's AI Chatbot Builder allows you to create chatbots quickly by describing your desired chatbot in plain English. The AI handles conversation flow design, making the process fast and straightforward.</p><h2>Steps to Create a Chatbot</h2><ol><li><strong>Describe Your Chatbot:</strong> Tell the AI what you want your chatbot to do. For example, 'Create a lead generation bot for a real estate agency.'</li><li><strong>AI Generates Complete Flow:</strong> The AI creates a conversation flow with welcome messages, questions, branching logic, and response actions.</li><li><strong>Review, Customize &amp; Launch:</strong> Preview the generated chatbot, customize any messages or flows in the visual editor, then publish to your website or channels.</li></ol><h2>Features of the AI Chatbot Builder</h2><ul><li><strong>Natural Language Input:</strong> Describe your chatbot in natural language, and the AI will generate the necessary conversation flow.</li><li><strong>AI-Optimized Design:</strong> The AI follows best practices for conversation design, including concise messages and logical progression.</li><li><strong>Easy Customization:</strong> You can easily refine and customize the chatbot by typing instructions to the AI.</li><li><strong>Zero Learning Curve:</strong> There's no need to learn a visual builder interface. Simply describe what you want.</li><li><strong>Quick Setup:</strong> Create chatbots 10x faster than traditional methods.</li><li><strong>Professional Quality:</strong> Generates professional-grade conversation flows with built-in validation and error handling.</li></ul><h2>Types of Chatbots You Can Build</h2><ul><li><strong>Lead Generation Bot:</strong> Capture user information and schedule demos.</li><li><strong>Support Bot:</strong> Address common support issues with FAQs and ticket creation.</li><li><strong>Booking Bot:</strong> Handle calendar integration and service selection.</li><li><strong>Survey Bot:</strong> Conduct surveys with conditional branching.</li><li><strong>FAQ Bot:</strong> Structure FAQ content into an interactive format.</li><li><strong>Onboarding Bot:</strong> Guide users through onboarding steps.</li></ul><h2>Benefits of Using AI Chatbot Builder</h2><ul><li><strong>Fast Creation:</strong> Build chatbots in seconds without manual flow design.</li><li><strong>Continuous Improvement:</strong> Refine chatbots post-launch by instructing the AI to make adjustments.</li><li><strong>Template Suggestions:</strong> Get recommendations based on your description for industry-specific chatbot designs.</li></ul><p>Conferbot's AI Chatbot Builder simplifies chatbot creation, making it accessible to everyone. Start building your chatbot today, no credit card required.</p>",
+   "category": {
+    "_id": "6ab7abfcb03f13ff22412c38",
+    "name": "Chatbot Creation"
+   },
+   "chatbotId": "6ab686f8d47ff029b76892f7",
+   "author": {
+    "_id": "642d37a520a83e213dcb95b7",
+    "name": "admin"
+   },
+   "readingTime": 2,
+   "wordCount": 315,
+   "updatedAt": "2026-09-27T18:35:37.072Z"
+  }
+ },
+ "rest_kb_articles": {
+  "success": true,
+  "data": {
+   "recentArticles": [
+    {
+     "_id": "6ab7ac0bb03f13ff22412c87",
+     "slug": "how-to-use-conferbot-s-ai-chatbot-builder",
+     "publishedDate": "2026-09-27T06:31:04.520Z",
+     "viewCount": 4,
+     "helpfulCount": 1,
+     "title": "How to Use Conferbot's AI Chatbot Builder",
+     "description": "Learn to create chatbots quickly with Conferbot's AI builder.",
+     "content": "<p>Conferbot's AI Chatbot Builder allows you to create chatbots quickly by describing your desired chatbot in plain English. The AI handles conversation flow design, making the process fast and straightforward.</p><h2>Steps to Create a Chatbot</h2><ol><li><strong>Describe Your Chatbot:</strong> Tell the AI what you want your chatbot to do. For example, 'Create a lead generation bot for a real estate agency.'</li><li><strong>AI Generates Complete Flow:</strong> The AI creates a conversation flow with welcome messages, questions, branching logic, and response actions.</li><li><strong>Review, Customize &amp; Launch:</strong> Preview the generated chatbot, customize any messages or flows in the visual editor, then publish to your website or channels.</li></ol><h2>Features of the AI Chatbot Builder</h2><ul><li><strong>Natural Language Input:</strong> Describe your chatbot in natural language, and the AI will generate the necessary conversation flow.</li><li><strong>AI-Optimized Design:</strong> The AI follows best practices for conversation design, including concise messages and logical progression.</li><li><strong>Easy Customization:</strong> You can easily refine and customize the chatbot by typing instructions to the AI.</li><li><strong>Zero Learning Curve:</strong> There's no need to learn a visual builder interface. Simply describe what you want.</li><li><strong>Quick Setup:</strong> Create chatbots 10x faster than traditional methods.</li><li><strong>Professional Quality:</strong> Generates professional-grade conversation flows with built-in validation and error handling.</li></ul><h2>Types of Chatbots You Can Build</h2><ul><li><strong>Lead Generation Bot:</strong> Capture user information and schedule demos.</li><li><strong>Support Bot:</strong> Address common support issues with FAQs and ticket creation.</li><li><strong>Booking Bot:</strong> Handle calendar integration and service selection.</li><li><strong>Survey Bot:</strong> Conduct surveys with conditional branching.</li><li><strong>FAQ Bot:</strong> Structure FAQ content into an interactive format.</li><li><strong>Onboarding Bot:</strong> Guide users through onboarding steps.</li></ul><h2>Benefits of Using AI Chatbot Builder</h2><ul><li><strong>Fast Creation:</strong> Build chatbots in seconds without manual flow design.</li><li><strong>Continuous Improvement:</strong> Refine chatbots post-launch by instructing the AI to make adjustments.</li><li><strong>Template Suggestions:</strong> Get recommendations based on your description for industry-specific chatbot designs.</li></ul><p>Conferbot's AI Chatbot Builder simplifies chatbot creation, making it accessible to everyone. Start building your chatbot today, no credit card required.</p>",
+     "category": {
+      "_id": "6ab7abfcb03f13ff22412c38",
+      "name": "Chatbot Creation"
+     },
+     "chatbotId": "6ab686f8d47ff029b76892f7",
+     "author": {
+      "_id": "642d37a520a83e213dcb95b7",
+      "name": "admin"
+     },
+     "readingTime": 2,
+     "wordCount": 315,
+     "updatedAt": "2026-09-27T18:35:37.072Z"
+    },
+    {
+     "_id": "6ab7ac19b03f13ff22412cd5",
+     "slug": "how-to-set-up-live-chat-with-ai-chatbot-handoff",
+     "publishedDate": "2026-09-27T06:31:04.520Z",
+     "viewCount": 9,
+     "helpfulCount": 1,
+     "title": "How to Set Up Live Chat with AI Chatbot Handoff",
+     "description": "Learn how live chat integrates with AI chatbot for seamless customer support.",
+     "content": "<p>Live chat with AI chatbot handoff combines human empathy with the efficiency of automation, providing a seamless customer support experience. This integration ensures that customers receive timely assistance while allowing human agents to focus on complex issues.</p><h2>Seamless Bot-to-Human Handoff</h2><p>Conversations automatically transfer from the chatbot to a human agent when necessary. The full context and conversation history are preserved, ensuring a smooth transition and a better customer experience.</p><h2>Intelligent Conversation Routing</h2><p>Conversations are directed to the right agent based on skills, department, language, or availability. This ensures that customers receive the most appropriate assistance quickly.</p><h2>Agent Dashboard</h2><p>Agents manage multiple conversations in real-time through a unified dashboard. They can view customer profiles and track queue metrics, enhancing their ability to provide effective support.</p><h2>Multi-Channel Support</h2><p>Handle live conversations from various platforms such as websites, WhatsApp, and Messenger in one inbox, providing customers with a consistent experience no matter the channel.</p><h2>Setting Up Bot-to-Human Handoff</h2><p>Configure when conversations should transfer from chatbot to human agent using escalation triggers based on keywords, sentiment, or user requests. Set up pre-chat forms to collect context, ensuring agents have all the information they need.</p><p>Agents can see incoming conversations with full chatbot transcripts and visitor information, ensuring no context is lost during the handoff.</p><h2>Use Cases Across Industries</h2><ul><li><strong>Customer Support:</strong> The bot handles FAQs and routine queries, escalating complex issues to human agents.</li><li><strong>Sales Assistance:</strong> The bot qualifies leads and books demos, handing off prospects to sales reps.</li><li><strong>Healthcare:</strong> The bot triages patient queries, connecting urgent cases to medical staff.</li><li><strong>Banking:</strong> The bot manages balance checks and FAQs, with live agents handling loan applications and disputes.</li><li><strong>E-Commerce:</strong> The bot provides order tracking and return processing, with agents addressing complex complaints and VIP customers.</li></ul>",
+     "category": {
+      "_id": "6ab7abfcb03f13ff22412c3c",
+      "name": "AI Chatbot Features"
+     },
+     "chatbotId": "6ab686f8d47ff029b76892f7",
+     "author": {
+      "_id": "642d37a520a83e213dcb95b7",
+      "name": "admin"
+     },
+     "readingTime": 2,
+     "wordCount": 289,
+     "updatedAt": "2026-10-11T12:51:45.179Z"
+    },
+    {
+     "_id": "6ab7ac01b03f13ff22412c4e",
+     "slug": "how-to-integrate-openai-with-conferbot",
+     "publishedDate": "2026-09-27T06:31:04.520Z",
+     "viewCount": 4,
+     "helpfulCount": 0,
+     "title": "How to Integrate OpenAI with Conferbot",
+     "description": "Learn how to integrate OpenAI with Conferbot for smarter chatbot interactions.",
+     "content": "<p>Integrating OpenAI with Conferbot enhances your chatbot's capabilities, enabling it to deliver intelligent, context-aware conversations. Here's a guide on how to set up OpenAI with Conferbot.</p><h2>Connecting Your OpenAI Model</h2><p>To integrate OpenAI with Conferbot, you need to connect your OpenAI API key. Follow these steps:</p><ol><li>Obtain your OpenAI API key from the OpenAI platform.</li><li>Navigate to your Conferbot dashboard.</li><li>Go to <strong>Settings &gt; Integrations &gt; OpenAI</strong>.</li><li>Paste your API key to establish the connection.</li></ol><p>Once connected, you can select your preferred GPT model and configure settings such as temperature and token limits.</p><h2>Training on Your Business Data</h2><p>For more accurate and brand-consistent responses, train the AI on your business data. You can upload documents, FAQs, and knowledge bases to help the AI understand your business context.</p><h2>Deploying AI-Powered Conversations</h2><p>After setting up the integration, your chatbot can handle complex queries, multi-turn conversations, and nuanced requests. This enhances user interactions and provides a more satisfying customer experience.</p><h2>Advanced Features and Customization</h2><p>Using your own OpenAI API key unlocks advanced features and customization options. You can choose specific GPT models, customize AI behavior, and manage AI usage costs directly.</p><h2>Model Selection and Use Cases</h2><p>Conferbot supports various OpenAI models, each suitable for different use cases:</p><ul><li><strong>Advanced AI models</strong>: Ideal for straightforward customer service tasks.</li><li><strong>Advanced AI</strong>: Best for complex reasoning and nuanced conversations.</li></ul><p>You can switch between models to optimize performance and cost for your specific needs.</p><h2>Benefits of OpenAI Integration</h2><ul><li>Open-ended question handling</li><li>Natural language generation</li><li>Multi-turn context retention</li><li>Summarization and extraction</li><li>Content creation</li><li>Multilingual support</li></ul><p>Conferbot's integration manages technical complexities, allowing you to focus on conversation design.</p>",
+     "category": {
+      "_id": "6ab7abfcb03f13ff22412c36",
+      "name": "Chatbot Essentials"
+     },
+     "chatbotId": "6ab686f8d47ff029b76892f7",
+     "author": {
+      "_id": "642d37a520a83e213dcb95b7",
+      "name": "admin"
+     },
+     "readingTime": 2,
+     "wordCount": 271,
+     "updatedAt": "2026-09-27T18:57:13.827Z"
+    },
+    {
+     "_id": "6ab7ac1cb03f13ff22412ce1",
+     "slug": "how-to-manage-your-chatbot-team-effectively",
+     "publishedDate": "2026-09-27T06:31:04.520Z",
+     "viewCount": 1,
+     "helpfulCount": 0,
+     "title": "How to Manage Your Chatbot Team Effectively",
+     "description": "Organize your support team with role-based access, routing, and analytics.",
+     "content": "<p>Managing your chatbot support team is crucial for efficient and effective customer service. With Conferbot, you can organize your team using role-based access, smart routing, and performance tracking to ensure your support operations run smoothly.</p><h2>Organize Your Support Team</h2><p>Ensure your team operates at peak efficiency with these features:</p><ul><li><strong>Role-Based Access Control:</strong> Define Admin and Agent roles with specific permissions. Admins manage bots and settings, while agents handle conversations. Custom roles are available for enterprise teams.</li><li><strong>Smart Workload Routing:</strong> Distribute conversations automatically based on agent availability, skills, and workload. Choose from round-robin, skill-based, and capacity-based routing options.</li><li><strong>Performance Tracking &amp; Analytics:</strong> Monitor real-time metrics like response times, resolution rates, CSAT scores, and conversation volume to identify top performers and coaching opportunities.</li></ul><h2>Why Team Management Matters</h2><p>Effective team management ensures the right conversation reaches the right agent:</p><ul><li><strong>Clear Accountability:</strong> Role-based permissions maintain security and focus.</li><li><strong>Balanced Workload:</strong> Intelligent routing prevents agent burnout and idle time.</li><li><strong>Better Training:</strong> Use performance metrics to identify coaching needs.</li><li><strong>Faster Onboarding:</strong> New members can start quickly with pre-configured roles and permissions.</li><li><strong>Scalable Operations:</strong> Manage a growing team from one dashboard.</li></ul><h2>How It Works</h2><ol><li><strong>Invite Team Members:</strong> Send email invitations and assign roles. Members join with one click and start immediately.</li><li><strong>Assign Chatbots &amp; Routes:</strong> Link team members to specific chatbots or departments and set up routing rules for workload distribution.</li><li><strong>Monitor &amp; Optimize:</strong> Track team performance in real-time to balance workloads and improve operations continuously.</li></ol><h2>Teams for Every Organization</h2><p>Whether you are a startup or an enterprise, Conferbot's team management scales with your business:</p><ul><li><strong>Customer Support Teams:</strong> Organize agents by skill, language, or product.</li><li><strong>Sales Teams:</strong> Assign leads by territory or round-robin. Track conversions per agent.</li><li><strong>HR Departments:</strong> Manage internal support for employee queries.</li><li><strong>IT Support:</strong> Organize support tiers with automatic escalation.</li><li><strong>Multi-Location:</strong> Manage teams across different locations and time zones.</li><li><strong>Agency Management:</strong> Handle multiple client chatbots with dedicated teams.</li></ul>",
+     "category": {
+      "_id": "6ab7abfcb03f13ff22412c3c",
+      "name": "AI Chatbot Features"
+     },
+     "chatbotId": "6ab686f8d47ff029b76892f7",
+     "author": {
+      "_id": "642d37a520a83e213dcb95b7",
+      "name": "admin"
+     },
+     "readingTime": 2,
+     "wordCount": 314,
+     "updatedAt": "2026-09-27T06:31:27.663Z"
+    }
+   ],
+   "categories": [
+    {
+     "_id": "6ab7abfcb03f13ff22412c36",
+     "name": "Chatbot Essentials",
+     "description": "Explore plans, templates, integrations, and AI-powered knowledge for your chatbots.",
+     "icon": "plug",
+     "articles": [
+      {
+       "_id": "6ab7ac01b03f13ff22412c4e",
+       "slug": "how-to-integrate-openai-with-conferbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 4,
+       "helpfulCount": 0,
+       "title": "How to Integrate OpenAI with Conferbot",
+       "description": "Learn how to integrate OpenAI with Conferbot for smarter chatbot interactions.",
+       "content": "<p>Integrating OpenAI with Conferbot enhances your chatbot's capabilities, enabling it to deliver intelligent, context-aware conversations. Here's a guide on how to set up OpenAI with Conferbot.</p><h2>Connecting Your OpenAI Model</h2><p>To integrate OpenAI with Conferbot, you need to connect your OpenAI API key. Follow these steps:</p><ol><li>Obtain your OpenAI API key from the OpenAI platform.</li><li>Navigate to your Conferbot dashboard.</li><li>Go to <strong>Settings &gt; Integrations &gt; OpenAI</strong>.</li><li>Paste your API key to establish the connection.</li></ol><p>Once connected, you can select your preferred GPT model and configure settings such as temperature and token limits.</p><h2>Training on Your Business Data</h2><p>For more accurate and brand-consistent responses, train the AI on your business data. You can upload documents, FAQs, and knowledge bases to help the AI understand your business context.</p><h2>Deploying AI-Powered Conversations</h2><p>After setting up the integration, your chatbot can handle complex queries, multi-turn conversations, and nuanced requests. This enhances user interactions and provides a more satisfying customer experience.</p><h2>Advanced Features and Customization</h2><p>Using your own OpenAI API key unlocks advanced features and customization options. You can choose specific GPT models, customize AI behavior, and manage AI usage costs directly.</p><h2>Model Selection and Use Cases</h2><p>Conferbot supports various OpenAI models, each suitable for different use cases:</p><ul><li><strong>Advanced AI models</strong>: Ideal for straightforward customer service tasks.</li><li><strong>Advanced AI</strong>: Best for complex reasoning and nuanced conversations.</li></ul><p>You can switch between models to optimize performance and cost for your specific needs.</p><h2>Benefits of OpenAI Integration</h2><ul><li>Open-ended question handling</li><li>Natural language generation</li><li>Multi-turn context retention</li><li>Summarization and extraction</li><li>Content creation</li><li>Multilingual support</li></ul><p>Conferbot's integration manages technical complexities, allowing you to focus on conversation design.</p>",
+       "category": "6ab7abfcb03f13ff22412c36",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 271,
+       "updatedAt": "2026-09-27T18:57:13.827Z"
+      },
+      {
+       "_id": "6ab7ac02b03f13ff22412c54",
+       "slug": "what-is-an-nlp-chatbot-and-how-does-it-work",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "What is an NLP Chatbot and How Does it Work?",
+       "description": "Learn about NLP chatbots, their features, and benefits for your business.",
+       "content": "<p>An NLP chatbot uses Natural Language Processing to understand and respond to user queries intelligently, enhancing customer interaction.</p><h2>Understanding NLP Chatbots</h2><p>NLP, or Natural Language Processing, is a form of artificial intelligence that enables chatbots to understand, interpret, and respond to human language meaningfully. Unlike simple keyword-based bots, NLP chatbots comprehend the intent behind user inputs, allowing for more natural and effective conversations.</p><h2>Key Features of NLP Chatbots</h2><ul><li><strong>Intent Recognition:</strong> Understands what users mean, handling typos and varied phrasing.</li><li><strong>Entity Extraction:</strong> Identifies key information like names, dates, and locations from conversations.</li><li><strong>Sentiment Analysis:</strong> Detects user emotions to route queries appropriately.</li><li><strong>Context Memory:</strong> Maintains conversation context over multiple interactions.</li><li><strong>Multi-Language Support:</strong> Communicates in over 50 languages with native-level understanding.</li><li><strong>Continuous Learning:</strong> Automatically improves by learning from real conversations.</li></ul><h2>How to Add NLP to Your Chatbot</h2><ol><li>Select a pre-built template from over 1000 choices using the drag-and-drop builder.</li><li>Publish your chatbot as a widget, standalone page, or on WhatsApp.</li><li>Analyze conversation data using the Conferbot dashboard and integrate with your CRM or database.</li></ol><h2>NLP Chatbots Across Industries</h2><p>NLP chatbots are versatile and can be applied across various sectors:</p><ul><li><strong>Customer Support:</strong> Auto-categorizes tickets and routes them efficiently.</li><li><strong>E-Commerce:</strong> Enhances product search and conversational shopping experiences.</li><li><strong>Healthcare:</strong> Understands symptoms and schedules appointments naturally.</li><li><strong>Banking &amp; Finance:</strong> Handles balance inquiries and transaction searches.</li><li><strong>Education:</strong> Facilitates student inquiries and course recommendations.</li><li><strong>Travel &amp; Hospitality:</strong> Manages bookings and offers destination advice.</li></ul>",
+       "category": "6ab7abfcb03f13ff22412c36",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 234,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      }
+     ]
+    },
+    {
+     "_id": "6ab7abfcb03f13ff22412c38",
+     "name": "Chatbot Creation",
+     "description": "Explore tools and insights for building and managing AI chatbots effortlessly.",
+     "icon": "code",
+     "articles": [
+      {
+       "_id": "6ab7ac0bb03f13ff22412c87",
+       "slug": "how-to-use-conferbot-s-ai-chatbot-builder",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 4,
+       "helpfulCount": 1,
+       "title": "How to Use Conferbot's AI Chatbot Builder",
+       "description": "Learn to create chatbots quickly with Conferbot's AI builder.",
+       "content": "<p>Conferbot's AI Chatbot Builder allows you to create chatbots quickly by describing your desired chatbot in plain English. The AI handles conversation flow design, making the process fast and straightforward.</p><h2>Steps to Create a Chatbot</h2><ol><li><strong>Describe Your Chatbot:</strong> Tell the AI what you want your chatbot to do. For example, 'Create a lead generation bot for a real estate agency.'</li><li><strong>AI Generates Complete Flow:</strong> The AI creates a conversation flow with welcome messages, questions, branching logic, and response actions.</li><li><strong>Review, Customize &amp; Launch:</strong> Preview the generated chatbot, customize any messages or flows in the visual editor, then publish to your website or channels.</li></ol><h2>Features of the AI Chatbot Builder</h2><ul><li><strong>Natural Language Input:</strong> Describe your chatbot in natural language, and the AI will generate the necessary conversation flow.</li><li><strong>AI-Optimized Design:</strong> The AI follows best practices for conversation design, including concise messages and logical progression.</li><li><strong>Easy Customization:</strong> You can easily refine and customize the chatbot by typing instructions to the AI.</li><li><strong>Zero Learning Curve:</strong> There's no need to learn a visual builder interface. Simply describe what you want.</li><li><strong>Quick Setup:</strong> Create chatbots 10x faster than traditional methods.</li><li><strong>Professional Quality:</strong> Generates professional-grade conversation flows with built-in validation and error handling.</li></ul><h2>Types of Chatbots You Can Build</h2><ul><li><strong>Lead Generation Bot:</strong> Capture user information and schedule demos.</li><li><strong>Support Bot:</strong> Address common support issues with FAQs and ticket creation.</li><li><strong>Booking Bot:</strong> Handle calendar integration and service selection.</li><li><strong>Survey Bot:</strong> Conduct surveys with conditional branching.</li><li><strong>FAQ Bot:</strong> Structure FAQ content into an interactive format.</li><li><strong>Onboarding Bot:</strong> Guide users through onboarding steps.</li></ul><h2>Benefits of Using AI Chatbot Builder</h2><ul><li><strong>Fast Creation:</strong> Build chatbots in seconds without manual flow design.</li><li><strong>Continuous Improvement:</strong> Refine chatbots post-launch by instructing the AI to make adjustments.</li><li><strong>Template Suggestions:</strong> Get recommendations based on your description for industry-specific chatbot designs.</li></ul><p>Conferbot's AI Chatbot Builder simplifies chatbot creation, making it accessible to everyone. Start building your chatbot today, no credit card required.</p>",
+       "category": "6ab7abfcb03f13ff22412c38",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 315,
+       "updatedAt": "2026-09-27T18:35:37.072Z"
+      },
+      {
+       "_id": "6ab7ac0cb03f13ff22412c8d",
+       "slug": "how-to-use-rich-media-in-your-conferbot-chatbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Use Rich Media in Your Conferbot Chatbot",
+       "description": "Enhance your chatbot with rich media for better engagement.",
+       "content": "<p>Enhancing your chatbot with rich media like images, videos, and GIFs can significantly improve user engagement and conversion rates. Conferbot allows you to easily incorporate these elements without needing any design skills.</p><h2>Benefits of Rich Media</h2><ul><li><strong>Instant Visual Impact:</strong> Capture attention quickly with eye-catching visuals.</li><li><strong>Boost Conversions:</strong> Use product carousels and visual CTAs to drive higher click-through rates.</li><li><strong>Mobile-First Design:</strong> All media is optimized for phones, tablets, and desktops.</li><li><strong>CDN-Powered Delivery:</strong> Fast media loading worldwide with automatic compression and caching.</li><li><strong>Cross-Platform Compatibility:</strong> Use rich media on platforms like WhatsApp, Messenger, Instagram, and more.</li><li><strong>No Code Required:</strong> Drag-and-drop media blocks into your chatbot flow.</li></ul><h2>How to Add Rich Media to Your Chatbot</h2><ol><li>Select a pre-built chatbot template and modify it using the drag-and-drop builder.</li><li>Drag the 'Image' or 'Video' block into your conversation flow.</li><li>Upload images or videos from your computer or paste URLs for embedded content.</li><li>Add optional captions, alt text, or descriptions, and configure media settings.</li><li>Preview your changes to ensure everything looks as expected before publishing.</li></ol><h2>Rich Media Use Cases</h2><ul><li><strong>E-Commerce:</strong> Product galleries and video demos.</li><li><strong>Real Estate:</strong> Virtual property tours and floor plans.</li><li><strong>Education:</strong> Video lessons and interactive quizzes.</li><li><strong>Healthcare:</strong> Visual symptom guides and appointment confirmations.</li><li><strong>Restaurants:</strong> Menu carousels and promo videos.</li><li><strong>B2B/SaaS:</strong> Product demos and case studies.</li></ul><h2>Getting Started with Rich Media</h2><p>Begin by exploring the diverse media types available in Conferbot, and see how businesses across various industries use visual chatbot experiences to drive results. Adding rich media to your chatbot is straightforward and can be done in minutes, enhancing both the look and functionality of your interactions.</p>",
+       "category": "6ab7abfcb03f13ff22412c38",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 263,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "rest_kb_categories": {
+  "success": true,
+  "data": {
+   "categories": [
+    {
+     "_id": "6ab7abfcb03f13ff22412c36",
+     "name": "Chatbot Essentials",
+     "description": "Explore plans, templates, integrations, and AI-powered knowledge for your chatbots.",
+     "icon": "plug",
+     "articles": [
+      {
+       "_id": "6ab7ac01b03f13ff22412c4e",
+       "slug": "how-to-integrate-openai-with-conferbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 4,
+       "helpfulCount": 0,
+       "title": "How to Integrate OpenAI with Conferbot",
+       "description": "Learn how to integrate OpenAI with Conferbot for smarter chatbot interactions.",
+       "content": "<p>Integrating OpenAI with Conferbot enhances your chatbot's capabilities, enabling it to deliver intelligent, context-aware conversations. Here's a guide on how to set up OpenAI with Conferbot.</p><h2>Connecting Your OpenAI Model</h2><p>To integrate OpenAI with Conferbot, you need to connect your OpenAI API key. Follow these steps:</p><ol><li>Obtain your OpenAI API key from the OpenAI platform.</li><li>Navigate to your Conferbot dashboard.</li><li>Go to <strong>Settings &gt; Integrations &gt; OpenAI</strong>.</li><li>Paste your API key to establish the connection.</li></ol><p>Once connected, you can select your preferred GPT model and configure settings such as temperature and token limits.</p><h2>Training on Your Business Data</h2><p>For more accurate and brand-consistent responses, train the AI on your business data. You can upload documents, FAQs, and knowledge bases to help the AI understand your business context.</p><h2>Deploying AI-Powered Conversations</h2><p>After setting up the integration, your chatbot can handle complex queries, multi-turn conversations, and nuanced requests. This enhances user interactions and provides a more satisfying customer experience.</p><h2>Advanced Features and Customization</h2><p>Using your own OpenAI API key unlocks advanced features and customization options. You can choose specific GPT models, customize AI behavior, and manage AI usage costs directly.</p><h2>Model Selection and Use Cases</h2><p>Conferbot supports various OpenAI models, each suitable for different use cases:</p><ul><li><strong>Advanced AI models</strong>: Ideal for straightforward customer service tasks.</li><li><strong>Advanced AI</strong>: Best for complex reasoning and nuanced conversations.</li></ul><p>You can switch between models to optimize performance and cost for your specific needs.</p><h2>Benefits of OpenAI Integration</h2><ul><li>Open-ended question handling</li><li>Natural language generation</li><li>Multi-turn context retention</li><li>Summarization and extraction</li><li>Content creation</li><li>Multilingual support</li></ul><p>Conferbot's integration manages technical complexities, allowing you to focus on conversation design.</p>",
+       "category": "6ab7abfcb03f13ff22412c36",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 271,
+       "updatedAt": "2026-09-27T18:57:13.827Z"
+      },
+      {
+       "_id": "6ab7ac02b03f13ff22412c54",
+       "slug": "what-is-an-nlp-chatbot-and-how-does-it-work",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "What is an NLP Chatbot and How Does it Work?",
+       "description": "Learn about NLP chatbots, their features, and benefits for your business.",
+       "content": "<p>An NLP chatbot uses Natural Language Processing to understand and respond to user queries intelligently, enhancing customer interaction.</p><h2>Understanding NLP Chatbots</h2><p>NLP, or Natural Language Processing, is a form of artificial intelligence that enables chatbots to understand, interpret, and respond to human language meaningfully. Unlike simple keyword-based bots, NLP chatbots comprehend the intent behind user inputs, allowing for more natural and effective conversations.</p><h2>Key Features of NLP Chatbots</h2><ul><li><strong>Intent Recognition:</strong> Understands what users mean, handling typos and varied phrasing.</li><li><strong>Entity Extraction:</strong> Identifies key information like names, dates, and locations from conversations.</li><li><strong>Sentiment Analysis:</strong> Detects user emotions to route queries appropriately.</li><li><strong>Context Memory:</strong> Maintains conversation context over multiple interactions.</li><li><strong>Multi-Language Support:</strong> Communicates in over 50 languages with native-level understanding.</li><li><strong>Continuous Learning:</strong> Automatically improves by learning from real conversations.</li></ul><h2>How to Add NLP to Your Chatbot</h2><ol><li>Select a pre-built template from over 1000 choices using the drag-and-drop builder.</li><li>Publish your chatbot as a widget, standalone page, or on WhatsApp.</li><li>Analyze conversation data using the Conferbot dashboard and integrate with your CRM or database.</li></ol><h2>NLP Chatbots Across Industries</h2><p>NLP chatbots are versatile and can be applied across various sectors:</p><ul><li><strong>Customer Support:</strong> Auto-categorizes tickets and routes them efficiently.</li><li><strong>E-Commerce:</strong> Enhances product search and conversational shopping experiences.</li><li><strong>Healthcare:</strong> Understands symptoms and schedules appointments naturally.</li><li><strong>Banking &amp; Finance:</strong> Handles balance inquiries and transaction searches.</li><li><strong>Education:</strong> Facilitates student inquiries and course recommendations.</li><li><strong>Travel &amp; Hospitality:</strong> Manages bookings and offers destination advice.</li></ul>",
+       "category": "6ab7abfcb03f13ff22412c36",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 234,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      }
+     ]
+    },
+    {
+     "_id": "6ab7abfcb03f13ff22412c38",
+     "name": "Chatbot Creation",
+     "description": "Explore tools and insights for building and managing AI chatbots effortlessly.",
+     "icon": "code",
+     "articles": [
+      {
+       "_id": "6ab7ac0bb03f13ff22412c87",
+       "slug": "how-to-use-conferbot-s-ai-chatbot-builder",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 4,
+       "helpfulCount": 1,
+       "title": "How to Use Conferbot's AI Chatbot Builder",
+       "description": "Learn to create chatbots quickly with Conferbot's AI builder.",
+       "content": "<p>Conferbot's AI Chatbot Builder allows you to create chatbots quickly by describing your desired chatbot in plain English. The AI handles conversation flow design, making the process fast and straightforward.</p><h2>Steps to Create a Chatbot</h2><ol><li><strong>Describe Your Chatbot:</strong> Tell the AI what you want your chatbot to do. For example, 'Create a lead generation bot for a real estate agency.'</li><li><strong>AI Generates Complete Flow:</strong> The AI creates a conversation flow with welcome messages, questions, branching logic, and response actions.</li><li><strong>Review, Customize &amp; Launch:</strong> Preview the generated chatbot, customize any messages or flows in the visual editor, then publish to your website or channels.</li></ol><h2>Features of the AI Chatbot Builder</h2><ul><li><strong>Natural Language Input:</strong> Describe your chatbot in natural language, and the AI will generate the necessary conversation flow.</li><li><strong>AI-Optimized Design:</strong> The AI follows best practices for conversation design, including concise messages and logical progression.</li><li><strong>Easy Customization:</strong> You can easily refine and customize the chatbot by typing instructions to the AI.</li><li><strong>Zero Learning Curve:</strong> There's no need to learn a visual builder interface. Simply describe what you want.</li><li><strong>Quick Setup:</strong> Create chatbots 10x faster than traditional methods.</li><li><strong>Professional Quality:</strong> Generates professional-grade conversation flows with built-in validation and error handling.</li></ul><h2>Types of Chatbots You Can Build</h2><ul><li><strong>Lead Generation Bot:</strong> Capture user information and schedule demos.</li><li><strong>Support Bot:</strong> Address common support issues with FAQs and ticket creation.</li><li><strong>Booking Bot:</strong> Handle calendar integration and service selection.</li><li><strong>Survey Bot:</strong> Conduct surveys with conditional branching.</li><li><strong>FAQ Bot:</strong> Structure FAQ content into an interactive format.</li><li><strong>Onboarding Bot:</strong> Guide users through onboarding steps.</li></ul><h2>Benefits of Using AI Chatbot Builder</h2><ul><li><strong>Fast Creation:</strong> Build chatbots in seconds without manual flow design.</li><li><strong>Continuous Improvement:</strong> Refine chatbots post-launch by instructing the AI to make adjustments.</li><li><strong>Template Suggestions:</strong> Get recommendations based on your description for industry-specific chatbot designs.</li></ul><p>Conferbot's AI Chatbot Builder simplifies chatbot creation, making it accessible to everyone. Start building your chatbot today, no credit card required.</p>",
+       "category": "6ab7abfcb03f13ff22412c38",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 315,
+       "updatedAt": "2026-09-27T18:35:37.072Z"
+      },
+      {
+       "_id": "6ab7ac0cb03f13ff22412c8d",
+       "slug": "how-to-use-rich-media-in-your-conferbot-chatbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Use Rich Media in Your Conferbot Chatbot",
+       "description": "Enhance your chatbot with rich media for better engagement.",
+       "content": "<p>Enhancing your chatbot with rich media like images, videos, and GIFs can significantly improve user engagement and conversion rates. Conferbot allows you to easily incorporate these elements without needing any design skills.</p><h2>Benefits of Rich Media</h2><ul><li><strong>Instant Visual Impact:</strong> Capture attention quickly with eye-catching visuals.</li><li><strong>Boost Conversions:</strong> Use product carousels and visual CTAs to drive higher click-through rates.</li><li><strong>Mobile-First Design:</strong> All media is optimized for phones, tablets, and desktops.</li><li><strong>CDN-Powered Delivery:</strong> Fast media loading worldwide with automatic compression and caching.</li><li><strong>Cross-Platform Compatibility:</strong> Use rich media on platforms like WhatsApp, Messenger, Instagram, and more.</li><li><strong>No Code Required:</strong> Drag-and-drop media blocks into your chatbot flow.</li></ul><h2>How to Add Rich Media to Your Chatbot</h2><ol><li>Select a pre-built chatbot template and modify it using the drag-and-drop builder.</li><li>Drag the 'Image' or 'Video' block into your conversation flow.</li><li>Upload images or videos from your computer or paste URLs for embedded content.</li><li>Add optional captions, alt text, or descriptions, and configure media settings.</li><li>Preview your changes to ensure everything looks as expected before publishing.</li></ol><h2>Rich Media Use Cases</h2><ul><li><strong>E-Commerce:</strong> Product galleries and video demos.</li><li><strong>Real Estate:</strong> Virtual property tours and floor plans.</li><li><strong>Education:</strong> Video lessons and interactive quizzes.</li><li><strong>Healthcare:</strong> Visual symptom guides and appointment confirmations.</li><li><strong>Restaurants:</strong> Menu carousels and promo videos.</li><li><strong>B2B/SaaS:</strong> Product demos and case studies.</li></ul><h2>Getting Started with Rich Media</h2><p>Begin by exploring the diverse media types available in Conferbot, and see how businesses across various industries use visual chatbot experiences to drive results. Adding rich media to your chatbot is straightforward and can be done in minutes, enhancing both the look and functionality of your interactions.</p>",
+       "category": "6ab7abfcb03f13ff22412c38",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 263,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "rest_kb_search": {
+  "success": true,
+  "data": [
+   {
+    "_id": "6ab7ac19b03f13ff22412cd5",
+    "slug": "how-to-set-up-live-chat-with-ai-chatbot-handoff",
+    "reviewStatus": "published",
+    "publishedDate": "2026-09-27T06:31:04.520Z",
+    "viewCount": 9,
+    "helpfulCount": 1,
+    "notHelpfulCount": 0,
+    "averageRating": 0,
+    "totalRatings": 1,
+    "title": "How to Set Up Live Chat with AI Chatbot Handoff",
+    "description": "Learn how live chat integrates with AI chatbot for seamless customer support.",
+    "content": "<p>Live chat with AI chatbot handoff combines human empathy with the efficiency of automation, providing a seamless customer support experience. This integration ensures that customers receive timely assistance while allowing human agents to focus on complex issues.</p><h2>Seamless Bot-to-Human Handoff</h2><p>Conversations automatically transfer from the chatbot to a human agent when necessary. The full context and conversation history are preserved, ensuring a smooth transition and a better customer experience.</p><h2>Intelligent Conversation Routing</h2><p>Conversations are directed to the right agent based on skills, department, language, or availability. This ensures that customers receive the most appropriate assistance quickly.</p><h2>Agent Dashboard</h2><p>Agents manage multiple conversations in real-time through a unified dashboard. They can view customer profiles and track queue metrics, enhancing their ability to provide effective support.</p><h2>Multi-Channel Support</h2><p>Handle live conversations from various platforms such as websites, WhatsApp, and Messenger in one inbox, providing customers with a consistent experience no matter the channel.</p><h2>Setting Up Bot-to-Human Handoff</h2><p>Configure when conversations should transfer from chatbot to human agent using escalation triggers based on keywords, sentiment, or user requests. Set up pre-chat forms to collect context, ensuring agents have all the information they need.</p><p>Agents can see incoming conversations with full chatbot transcripts and visitor information, ensuring no context is lost during the handoff.</p><h2>Use Cases Across Industries</h2><ul><li><strong>Customer Support:</strong> The bot handles FAQs and routine queries, escalating complex issues to human agents.</li><li><strong>Sales Assistance:</strong> The bot qualifies leads and books demos, handing off prospects to sales reps.</li><li><strong>Healthcare:</strong> The bot triages patient queries, connecting urgent cases to medical staff.</li><li><strong>Banking:</strong> The bot manages balance checks and FAQs, with live agents handling loan applications and disputes.</li><li><strong>E-Commerce:</strong> The bot provides order tracking and return processing, with agents addressing complex complaints and VIP customers.</li></ul>",
+    "category": {
+     "_id": "6ab7abfcb03f13ff22412c3c",
+     "name": "AI Chatbot Features"
+    },
+    "chatbotId": "6ab686f8d47ff029b76892f7",
+    "author": {
+     "_id": "642d37a520a83e213dcb95b7",
+     "name": "admin"
+    },
+    "readingTime": 2,
+    "wordCount": 289,
+    "createdAt": "2026-09-26T11:27:21.633Z",
+    "updatedAt": "2026-10-11T12:51:45.179Z"
+   },
+   {
+    "_id": "6ab7ac01b03f13ff22412c4e",
+    "slug": "how-to-integrate-openai-with-conferbot",
+    "reviewStatus": "published",
+    "publishedDate": "2026-09-27T06:31:04.520Z",
+    "viewCount": 4,
+    "helpfulCount": 0,
+    "notHelpfulCount": 0,
+    "averageRating": 0,
+    "totalRatings": 0,
+    "title": "How to Integrate OpenAI with Conferbot",
+    "description": "Learn how to integrate OpenAI with Conferbot for smarter chatbot interactions.",
+    "content": "<p>Integrating OpenAI with Conferbot enhances your chatbot's capabilities, enabling it to deliver intelligent, context-aware conversations. Here's a guide on how to set up OpenAI with Conferbot.</p><h2>Connecting Your OpenAI Model</h2><p>To integrate OpenAI with Conferbot, you need to connect your OpenAI API key. Follow these steps:</p><ol><li>Obtain your OpenAI API key from the OpenAI platform.</li><li>Navigate to your Conferbot dashboard.</li><li>Go to <strong>Settings &gt; Integrations &gt; OpenAI</strong>.</li><li>Paste your API key to establish the connection.</li></ol><p>Once connected, you can select your preferred GPT model and configure settings such as temperature and token limits.</p><h2>Training on Your Business Data</h2><p>For more accurate and brand-consistent responses, train the AI on your business data. You can upload documents, FAQs, and knowledge bases to help the AI understand your business context.</p><h2>Deploying AI-Powered Conversations</h2><p>After setting up the integration, your chatbot can handle complex queries, multi-turn conversations, and nuanced requests. This enhances user interactions and provides a more satisfying customer experience.</p><h2>Advanced Features and Customization</h2><p>Using your own OpenAI API key unlocks advanced features and customization options. You can choose specific GPT models, customize AI behavior, and manage AI usage costs directly.</p><h2>Model Selection and Use Cases</h2><p>Conferbot supports various OpenAI models, each suitable for different use cases:</p><ul><li><strong>Advanced AI models</strong>: Ideal for straightforward customer service tasks.</li><li><strong>Advanced AI</strong>: Best for complex reasoning and nuanced conversations.</li></ul><p>You can switch between models to optimize performance and cost for your specific needs.</p><h2>Benefits of OpenAI Integration</h2><ul><li>Open-ended question handling</li><li>Natural language generation</li><li>Multi-turn context retention</li><li>Summarization and extraction</li><li>Content creation</li><li>Multilingual support</li></ul><p>Conferbot's integration manages technical complexities, allowing you to focus on conversation design.</p>",
+    "category": {
+     "_id": "6ab7abfcb03f13ff22412c36",
+     "name": "Chatbot Essentials"
+    },
+    "chatbotId": "6ab686f8d47ff029b76892f7",
+    "author": {
+     "_id": "642d37a520a83e213dcb95b7",
+     "name": "admin"
+    },
+    "readingTime": 2,
+    "wordCount": 271,
+    "createdAt": "2026-09-26T11:26:57.970Z",
+    "updatedAt": "2026-09-27T18:57:13.827Z"
+   }
+  ]
+ },
+ "rest_kb_search_missing_query": {
+  "success": false,
+  "error": "MISSING_QUERY",
+  "message": "Search query is required"
+ },
+ "socket_fetched_chatbot_data": {
+  "chatbotData": {
+   "customizations": {
+    "enableKnowledgeBase": true,
+    "hideRecentArticles": null
+   }
+  },
+  "knowledgeBaseData": {
+   "recentArticles": [
+    {
+     "_id": "6ab7ac0bb03f13ff22412c87",
+     "slug": "how-to-use-conferbot-s-ai-chatbot-builder",
+     "publishedDate": "2026-09-27T06:31:04.520Z",
+     "viewCount": 4,
+     "helpfulCount": 1,
+     "title": "How to Use Conferbot's AI Chatbot Builder",
+     "description": "Learn to create chatbots quickly with Conferbot's AI builder.",
+     "category": {
+      "_id": "6ab7abfcb03f13ff22412c38",
+      "name": "Chatbot Creation"
+     },
+     "chatbotId": "6ab686f8d47ff029b76892f7",
+     "author": {
+      "_id": "642d37a520a83e213dcb95b7",
+      "name": "admin"
+     },
+     "readingTime": 2,
+     "wordCount": 315,
+     "updatedAt": "2026-09-27T18:35:37.072Z"
+    },
+    {
+     "_id": "6ab7ac19b03f13ff22412cd5",
+     "slug": "how-to-set-up-live-chat-with-ai-chatbot-handoff",
+     "publishedDate": "2026-09-27T06:31:04.520Z",
+     "viewCount": 9,
+     "helpfulCount": 1,
+     "title": "How to Set Up Live Chat with AI Chatbot Handoff",
+     "description": "Learn how live chat integrates with AI chatbot for seamless customer support.",
+     "category": {
+      "_id": "6ab7abfcb03f13ff22412c3c",
+      "name": "AI Chatbot Features"
+     },
+     "chatbotId": "6ab686f8d47ff029b76892f7",
+     "author": {
+      "_id": "642d37a520a83e213dcb95b7",
+      "name": "admin"
+     },
+     "readingTime": 2,
+     "wordCount": 289,
+     "updatedAt": "2026-10-11T12:51:45.179Z"
+    },
+    {
+     "_id": "6ab7ac01b03f13ff22412c4e",
+     "slug": "how-to-integrate-openai-with-conferbot",
+     "publishedDate": "2026-09-27T06:31:04.520Z",
+     "viewCount": 4,
+     "helpfulCount": 0,
+     "title": "How to Integrate OpenAI with Conferbot",
+     "description": "Learn how to integrate OpenAI with Conferbot for smarter chatbot interactions.",
+     "category": {
+      "_id": "6ab7abfcb03f13ff22412c36",
+      "name": "Chatbot Essentials"
+     },
+     "chatbotId": "6ab686f8d47ff029b76892f7",
+     "author": {
+      "_id": "642d37a520a83e213dcb95b7",
+      "name": "admin"
+     },
+     "readingTime": 2,
+     "wordCount": 271,
+     "updatedAt": "2026-09-27T18:57:13.827Z"
+    },
+    {
+     "_id": "6ab7ac1cb03f13ff22412ce1",
+     "slug": "how-to-manage-your-chatbot-team-effectively",
+     "publishedDate": "2026-09-27T06:31:04.520Z",
+     "viewCount": 1,
+     "helpfulCount": 0,
+     "title": "How to Manage Your Chatbot Team Effectively",
+     "description": "Organize your support team with role-based access, routing, and analytics.",
+     "category": {
+      "_id": "6ab7abfcb03f13ff22412c3c",
+      "name": "AI Chatbot Features"
+     },
+     "chatbotId": "6ab686f8d47ff029b76892f7",
+     "author": {
+      "_id": "642d37a520a83e213dcb95b7",
+      "name": "admin"
+     },
+     "readingTime": 2,
+     "wordCount": 314,
+     "updatedAt": "2026-09-27T06:31:27.663Z"
+    }
+   ],
+   "categories": [
+    {
+     "_id": "6ab7abfcb03f13ff22412c36",
+     "name": "Chatbot Essentials",
+     "description": "Explore plans, templates, integrations, and AI-powered knowledge for your chatbots.",
+     "icon": "plug",
+     "articles": [
+      {
+       "_id": "6ab7ac01b03f13ff22412c4e",
+       "slug": "how-to-integrate-openai-with-conferbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 4,
+       "helpfulCount": 0,
+       "title": "How to Integrate OpenAI with Conferbot",
+       "description": "Learn how to integrate OpenAI with Conferbot for smarter chatbot interactions.",
+       "category": "6ab7abfcb03f13ff22412c36",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 271,
+       "updatedAt": "2026-09-27T18:57:13.827Z"
+      },
+      {
+       "_id": "6ab7ac02b03f13ff22412c54",
+       "slug": "what-is-an-nlp-chatbot-and-how-does-it-work",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "What is an NLP Chatbot and How Does it Work?",
+       "description": "Learn about NLP chatbots, their features, and benefits for your business.",
+       "category": "6ab7abfcb03f13ff22412c36",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 234,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac02b03f13ff22412c5a",
+       "slug": "understanding-conferbot-s-pricing-plans",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "Understanding Conferbot's Pricing Plans",
+       "description": "Discover Conferbot's pricing tiers and features for businesses.",
+       "category": "6ab7abfcb03f13ff22412c36",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 214,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac03b03f13ff22412c69",
+       "slug": "how-to-build-a-chatbot-knowledge-base",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Build a Chatbot Knowledge Base",
+       "description": "Learn to create a knowledge base for your chatbot with Conferbot.",
+       "category": "6ab7abfcb03f13ff22412c36",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 341,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac06b03f13ff22412c6f",
+       "slug": "how-to-auto-generate-help-articles-with-ai",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Auto-Generate Help Articles with AI",
+       "description": "Learn how to auto-generate your knowledge base with AI for accurate chatbot responses.",
+       "category": "6ab7abfcb03f13ff22412c36",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 296,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac07b03f13ff22412c75",
+       "slug": "free-booking-and-scheduling-chatbot-templates",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "Free Booking and Scheduling Chatbot Templates",
+       "description": "Explore 19 free booking and scheduling chatbot templates with Conferbot.",
+       "category": "6ab7abfcb03f13ff22412c36",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 304,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac07b03f13ff22412c7b",
+       "slug": "how-to-set-up-a-custom-domain-for-your-conferbot-chatbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Set Up a Custom Domain for Your Conferbot Chatbot",
+       "description": "Host your chatbot on your domain with SSL and full branding.",
+       "category": "6ab7abfcb03f13ff22412c36",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 285,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac08b03f13ff22412c81",
+       "slug": "19-free-support-and-faq-chatbot-templates",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "19 Free Support and FAQ Chatbot Templates",
+       "description": "Explore free, no-code chatbot templates for support and FAQs.",
+       "category": "6ab7abfcb03f13ff22412c36",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 271,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      }
+     ]
+    },
+    {
+     "_id": "6ab7abfcb03f13ff22412c38",
+     "name": "Chatbot Creation",
+     "description": "Explore tools and insights for building and managing AI chatbots effortlessly.",
+     "icon": "code",
+     "articles": [
+      {
+       "_id": "6ab7ac0bb03f13ff22412c87",
+       "slug": "how-to-use-conferbot-s-ai-chatbot-builder",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 4,
+       "helpfulCount": 1,
+       "title": "How to Use Conferbot's AI Chatbot Builder",
+       "description": "Learn to create chatbots quickly with Conferbot's AI builder.",
+       "category": "6ab7abfcb03f13ff22412c38",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 315,
+       "updatedAt": "2026-09-27T18:35:37.072Z"
+      },
+      {
+       "_id": "6ab7ac0cb03f13ff22412c8d",
+       "slug": "how-to-use-rich-media-in-your-conferbot-chatbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Use Rich Media in Your Conferbot Chatbot",
+       "description": "Enhance your chatbot with rich media for better engagement.",
+       "category": "6ab7abfcb03f13ff22412c38",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 263,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac0cb03f13ff22412c90",
+       "slug": "how-to-use-chatbot-analytics-in-conferbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Use Chatbot Analytics in Conferbot",
+       "description": "Learn to optimize your chatbot with Conferbot's analytics tools.",
+       "category": "6ab7abfcb03f13ff22412c38",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 306,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac0db03f13ff22412c99",
+       "slug": "how-to-build-a-chatbot-with-a-no-code-visual-builder",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Build a Chatbot with a No-Code Visual Builder",
+       "description": "Learn to create chatbots using Conferbot's no-code visual builder.",
+       "category": "6ab7abfcb03f13ff22412c38",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 3,
+       "wordCount": 404,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac10b03f13ff22412c9f",
+       "slug": "how-to-set-up-a-calendar-booking-chatbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Set Up a Calendar Booking Chatbot",
+       "description": "Learn to automate scheduling with a chatbot that syncs with Google Calendar and Outlook.",
+       "category": "6ab7abfcb03f13ff22412c38",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 319,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac11b03f13ff22412cab",
+       "slug": "9-free-no-code-surveys-chatbot-templates",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "9 Free No-Code Surveys Chatbot Templates",
+       "description": "Discover 9 free no-code surveys chatbot templates for efficient data collection.",
+       "category": "6ab7abfcb03f13ff22412c38",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 385,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac11b03f13ff22412cb1",
+       "slug": "how-to-use-chatbot-version-control-in-conferbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Use Chatbot Version Control in Conferbot",
+       "description": "Learn to manage, compare, and rollback chatbot versions with Conferbot's version control.",
+       "category": "6ab7abfcb03f13ff22412c38",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 3,
+       "wordCount": 442,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      }
+     ]
+    },
+    {
+     "_id": "6ab7abfcb03f13ff22412c3a",
+     "name": "Chatbot Development",
+     "description": "Explore tools and features to build and integrate AI chatbots across platforms.",
+     "icon": "code",
+     "articles": [
+      {
+       "_id": "6ab7ac11b03f13ff22412ca5",
+       "slug": "how-to-get-started-with-conferbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Get Started with Conferbot",
+       "description": "Learn how to quickly deploy an AI chatbot on multiple channels with Conferbot.",
+       "category": "6ab7abfcb03f13ff22412c3a",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 212,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac13b03f13ff22412cb7",
+       "slug": "ai-chatbot-features-no-code-builder-live-chat",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "AI Chatbot Features: No-Code Builder & Live Chat",
+       "description": "Explore Conferbot's no-code builder and live chat features for AI chatbots.",
+       "category": "6ab7abfcb03f13ff22412c3a",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 231,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac15b03f13ff22412cbd",
+       "slug": "how-to-use-the-mobile-chatbot-sdk",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Use the Mobile Chatbot SDK",
+       "description": "Embed and customize chatbots in iOS, Android, and cross-platform apps.",
+       "category": "6ab7abfcb03f13ff22412c3a",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 276,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac16b03f13ff22412cc3",
+       "slug": "how-to-use-the-chatbot-integrations-hub",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Use the Chatbot Integrations Hub",
+       "description": "Connect your chatbot to over 50 business tools easily.",
+       "category": "6ab7abfcb03f13ff22412c3a",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 302,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac17b03f13ff22412cc9",
+       "slug": "how-to-integrate-apis-with-conferbot-chatbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Integrate APIs with Conferbot Chatbot",
+       "description": "Learn to integrate APIs with Conferbot chatbots for seamless automation.",
+       "category": "6ab7abfcb03f13ff22412c3a",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 367,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac18b03f13ff22412ccf",
+       "slug": "how-to-deploy-an-omnichannel-chatbot-with-conferbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Deploy an Omnichannel Chatbot with Conferbot",
+       "description": "Learn how to deploy a chatbot across multiple channels using Conferbot.",
+       "category": "6ab7abfcb03f13ff22412c3a",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 299,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      }
+     ]
+    },
+    {
+     "_id": "6ab7abfcb03f13ff22412c3c",
+     "name": "AI Chatbot Features",
+     "description": "Explore tools for seamless chatbot management and human handoff.",
+     "icon": "message",
+     "articles": [
+      {
+       "_id": "6ab7ac19b03f13ff22412cd5",
+       "slug": "how-to-set-up-live-chat-with-ai-chatbot-handoff",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 9,
+       "helpfulCount": 1,
+       "title": "How to Set Up Live Chat with AI Chatbot Handoff",
+       "description": "Learn how live chat integrates with AI chatbot for seamless customer support.",
+       "category": "6ab7abfcb03f13ff22412c3c",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 289,
+       "updatedAt": "2026-10-11T12:51:45.179Z"
+      },
+      {
+       "_id": "6ab7ac1ab03f13ff22412cd9",
+       "slug": "how-to-set-up-ai-agent-handover-in-conferbot",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Set Up AI Agent Handover in Conferbot",
+       "description": "Learn to configure AI agent handover for seamless chatbot to human support.",
+       "category": "6ab7abfcb03f13ff22412c3c",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 324,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac1bb03f13ff22412cdd",
+       "slug": "how-to-use-conferbot-s-chatbot-ticket-system",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 0,
+       "helpfulCount": 0,
+       "title": "How to Use Conferbot's Chatbot Ticket System",
+       "description": "Manage customer issues with Conferbot's ticket system for efficient resolution.",
+       "category": "6ab7abfcb03f13ff22412c3c",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 294,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      },
+      {
+       "_id": "6ab7ac1cb03f13ff22412ce1",
+       "slug": "how-to-manage-your-chatbot-team-effectively",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 1,
+       "helpfulCount": 0,
+       "title": "How to Manage Your Chatbot Team Effectively",
+       "description": "Organize your support team with role-based access, routing, and analytics.",
+       "category": "6ab7abfcb03f13ff22412c3c",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 314,
+       "updatedAt": "2026-09-27T06:31:27.663Z"
+      }
+     ]
+    },
+    {
+     "_id": "6ab7ad8798529c39f680c570",
+     "name": "Knowledge & Pricing",
+     "description": "Explore pricing plans and learn about AI knowledge base integration and customization.",
+     "icon": "book",
+     "articles": [
+      {
+       "_id": "6ab7ad8b98529c39f680c586",
+       "slug": "what-is-the-conferbot-support-policy",
+       "publishedDate": "2026-09-27T06:31:04.520Z",
+       "viewCount": 1,
+       "helpfulCount": 0,
+       "title": "What is the Conferbot support policy?",
+       "description": "Learn about Conferbot's support hours, refund policy, and data handling.",
+       "category": "6ab7ad8798529c39f680c570",
+       "chatbotId": "6ab686f8d47ff029b76892f7",
+       "author": {
+        "_id": "642d37a520a83e213dcb95b7",
+        "name": "admin"
+       },
+       "readingTime": 2,
+       "wordCount": 259,
+       "updatedAt": "2026-09-27T06:31:04.521Z"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "socket_get_kb_article": {
+  "success": true,
+  "articleId": "6ab7ac0bb03f13ff22412c87",
+  "article": {
+   "_id": "6ab7ac0bb03f13ff22412c87",
+   "slug": "how-to-use-conferbot-s-ai-chatbot-builder",
+   "publishedDate": "2026-09-27T06:31:04.520Z",
+   "viewCount": 4,
+   "helpfulCount": 1,
+   "title": "How to Use Conferbot's AI Chatbot Builder",
+   "description": "Learn to create chatbots quickly with Conferbot's AI builder.",
+   "content": "<p>Conferbot's AI Chatbot Builder allows you to create chatbots quickly by describing your desired chatbot in plain English. The AI handles conversation flow design, making the process fast and straightforward.</p><h2>Steps to Create a Chatbot</h2><ol><li><strong>Describe Your Chatbot:</strong> Tell the AI what you want your chatbot to do. For example, 'Create a lead generation bot for a real estate agency.'</li><li><strong>AI Generates Complete Flow:</strong> The AI creates a conversation flow with welcome messages, questions, branching logic, and response actions.</li><li><strong>Review, Customize &amp; Launch:</strong> Preview the generated chatbot, customize any messages or flows in the visual editor, then publish to your website or channels.</li></ol><h2>Features of the AI Chatbot Builder</h2><ul><li><strong>Natural Language Input:</strong> Describe your chatbot in natural language, and the AI will generate the necessary conversation flow.</li><li><strong>AI-Optimized Design:</strong> The AI follows best practices for conversation design, including concise messages and logical progression.</li><li><strong>Easy Customization:</strong> You can easily refine and customize the chatbot by typing instructions to the AI.</li><li><strong>Zero Learning Curve:</strong> There's no need to learn a visual builder interface. Simply describe what you want.</li><li><strong>Quick Setup:</strong> Create chatbots 10x faster than traditional methods.</li><li><strong>Professional Quality:</strong> Generates professional-grade conversation flows with built-in validation and error handling.</li></ul><h2>Types of Chatbots You Can Build</h2><ul><li><strong>Lead Generation Bot:</strong> Capture user information and schedule demos.</li><li><strong>Support Bot:</strong> Address common support issues with FAQs and ticket creation.</li><li><strong>Booking Bot:</strong> Handle calendar integration and service selection.</li><li><strong>Survey Bot:</strong> Conduct surveys with conditional branching.</li><li><strong>FAQ Bot:</strong> Structure FAQ content into an interactive format.</li><li><strong>Onboarding Bot:</strong> Guide users through onboarding steps.</li></ul><h2>Benefits of Using AI Chatbot Builder</h2><ul><li><strong>Fast Creation:</strong> Build chatbots in seconds without manual flow design.</li><li><strong>Continuous Improvement:</strong> Refine chatbots post-launch by instructing the AI to make adjustments.</li><li><strong>Template Suggestions:</strong> Get recommendations based on your description for industry-specific chatbot designs.</li></ul><p>Conferbot's AI Chatbot Builder simplifies chatbot creation, making it accessible to everyone. Start building your chatbot today, no credit card required.</p>",
+   "category": {
+    "_id": "6ab7abfcb03f13ff22412c38",
+    "name": "Chatbot Creation"
+   },
+   "chatbotId": "6ab686f8d47ff029b76892f7",
+   "author": {
+    "_id": "642d37a520a83e213dcb95b7",
+    "name": "admin"
+   },
+   "readingTime": 2,
+   "wordCount": 315,
+   "updatedAt": "2026-09-27T18:35:37.072Z"
+  }
+ },
+ "socket_search_kb_articles": {
+  "success": true,
+  "query": "chat",
+  "articles": [
+   {
+    "_id": "6ab7ac19b03f13ff22412cd5",
+    "slug": "how-to-set-up-live-chat-with-ai-chatbot-handoff",
+    "title": "How to Set Up Live Chat with AI Chatbot Handoff",
+    "description": "Learn how live chat integrates with AI chatbot for seamless customer support.",
+    "category": {
+     "_id": "6ab7abfcb03f13ff22412c3c",
+     "name": "AI Chatbot Features"
+    },
+    "readingTime": 2,
+    "snippet": "Live chat with AI chatbot handoff combines human empathy with the efficiency of automation, providing a seamless customer support experience. This integration e…"
+   },
+   {
+    "_id": "6ab7ac01b03f13ff22412c4e",
+    "slug": "how-to-integrate-openai-with-conferbot",
+    "title": "How to Integrate OpenAI with Conferbot",
+    "description": "Learn how to integrate OpenAI with Conferbot for smarter chatbot interactions.",
+    "category": {
+     "_id": "6ab7abfcb03f13ff22412c36",
+     "name": "Chatbot Essentials"
+    },
+    "readingTime": 2,
+    "snippet": "…ing OpenAI with Conferbot enhances your chatbot's capabilities, enabling it to deliver intelligent, context-aware conversations. Here's a guide on how to set up…"
+   },
+   {
+    "_id": "6ab7ac0bb03f13ff22412c87",
+    "slug": "how-to-use-conferbot-s-ai-chatbot-builder",
+    "title": "How to Use Conferbot's AI Chatbot Builder",
+    "description": "Learn to create chatbots quickly with Conferbot's AI builder.",
+    "category": {
+     "_id": "6ab7abfcb03f13ff22412c38",
+     "name": "Chatbot Creation"
+    },
+    "readingTime": 2,
+    "snippet": "Conferbot's AI Chatbot Builder allows you to create chatbots quickly by describing your desired chatbot in plain English. The AI handles conversation flow desig…"
+   },
+   {
+    "_id": "6ab7ac1cb03f13ff22412ce1",
+    "slug": "how-to-manage-your-chatbot-team-effectively",
+    "title": "How to Manage Your Chatbot Team Effectively",
+    "description": "Organize your support team with role-based access, routing, and analytics.",
+    "category": {
+     "_id": "6ab7abfcb03f13ff22412c3c",
+     "name": "AI Chatbot Features"
+    },
+    "readingTime": 2,
+    "snippet": "Managing your chatbot support team is crucial for efficient and effective customer service. With Conferbot, you can organize your team using role-based access,…"
+   },
+   {
+    "_id": "6ab7ad8b98529c39f680c586",
+    "slug": "what-is-the-conferbot-support-policy",
+    "title": "What is the Conferbot support policy?",
+    "description": "Learn about Conferbot's support hours, refund policy, and data handling.",
+    "category": {
+     "_id": "6ab7ad8798529c39f680c570",
+     "name": "Knowledge & Pricing"
+    },
+    "readingTime": 2,
+    "snippet": "Conferbot offers support through live chat and email, with different levels of service based on your plan. Support Hours and Channels Conferbot support is avail…"
+   }
+  ]
+ }
+}
