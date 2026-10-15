@@ -161,7 +161,8 @@ void main() {
 
       final resolved = chatState.resolveValue('{{count}}');
 
-      expect(resolved, 10);
+      // Placeholders resolve into text, as the web widget fills them in
+      expect(resolved, '10');
     });
 
     test('should return original value if no variable match', () {
@@ -321,10 +322,11 @@ void main() {
       final serverRecord = chatState.getRecordForServer();
 
       expect(serverRecord.length, 1);
+      expect(serverRecord.first['_id'], 'node_1');
       expect(serverRecord.first['id'], 'node_1');
-      expect(serverRecord.first['shape'], 'bot-message');
       expect(serverRecord.first['type'], 'message-node');
-      expect(serverRecord.first['text'], 'Hello!');
+      // A bot entry nests its data, text included, as the web widget records it
+      expect(serverRecord.first['data'], {'text': 'Hello!'});
     });
 
     test('RecordEntry should serialize to JSON correctly', () {
@@ -342,7 +344,8 @@ void main() {
       expect(json['shape'], 'user-input');
       expect(json['type'], 'ask-name-node');
       expect(json['text'], 'John');
-      expect(json['inputType'], 'name');
+      // A user entry stays flat; only a file or an emailed message lifts its data
+      expect(json.containsKey('inputType'), isFalse);
     });
   });
 
