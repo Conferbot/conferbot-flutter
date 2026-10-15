@@ -139,6 +139,13 @@ class ConferBotEndpoints {
   /// Current socket URL
   static String get socketUrl => _socketUrl;
 
+  /// The server's origin for the bot API (/api/v1/bot/:botId/...): the
+  /// API base URL without its /api/... path.
+  static String get apiOrigin {
+    final i = _apiBaseUrl.indexOf('/api/');
+    return i < 0 ? _apiBaseUrl : _apiBaseUrl.substring(0, i);
+  }
+
   /// Configure custom endpoint URLs.
   ///
   /// Both [apiBaseUrl] and [socketUrl] must use HTTPS if provided.
