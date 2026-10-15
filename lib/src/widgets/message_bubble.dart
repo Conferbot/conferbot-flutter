@@ -119,6 +119,14 @@ class MessageBubble extends StatelessWidget {
       return _buildFileMessage(context, effectiveTheme);
     }
 
+    // A live chat's own line, centred as on the web (cb-sys): "<name>
+    // joined the chat", "Connecting you with the team…" with its dots until
+    // it settles, "You left the queue", and the note after an AI handover.
+    final system = message;
+    if (system is SystemMessageRecord && system.kind != null) {
+      return LiveChatLine(line: system, theme: effectiveTheme);
+    }
+
     // An agent's article, quick replies or card (agent_reply.dart)
     if (message is AgentRichMessageRecord) {
       return RichAgentMessage(
@@ -858,6 +866,98 @@ class _TranslatedTextState extends State<_TranslatedText> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A live chat line in the conversation (web cb-sys): centred quiet text,
+/// the typing dots while a Connecting line waits (they stop once it
+/// settles), and a smaller note under a join after an AI handover.
+class LiveChatLine extends StatelessWidget {
+  final SystemMessageRecord line;
+  final ConferBotTheme theme;
+  const LiveChatLine({super.key, required this.line, required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = theme.colors.textSecondary;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: theme.spacing.chatContentPadding + 12, vertical: 8),
+      child: Semantics(
+        liveRegion: line.handover,
+        label: line.text,
+        child: ExcludeSemantics(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (line.handoverPending) _PendingDots(color: color),
+              Text(
+                line.text,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12.5, color: color, fontWeight: FontWeight.w500),
+              ),
+              if (line.note != null && line.note!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    line.note!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11.5, color: color.withOpacity(0.8)),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The three dots of a pending Connecting line (the web's .cb-sys__typing),
+/// fading in turn on one loop.
+class _PendingDots extends StatefulWidget {
+  final Color color;
+  const _PendingDots({required this.color});
+
+  @override
+  State<_PendingDots> createState() => _PendingDotsState();
+}
+
+class _PendingDotsState extends State<_PendingDots> with SingleTickerProviderStateMixin {
+  late final AnimationController _t = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
+
+  @override
+  void dispose() {
+    _t.dispose();
+    super.dispose();
+  }
+
+  double _opacity(int i, double v) {
+    final peak = (i + 1) / 4;
+    final d = (v - peak).abs() * 4;
+    return d >= 1 ? 0.3 : 1 - 0.7 * d;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: const ValueKey('cb-handover-dots'),
+      padding: const EdgeInsets.only(bottom: 4),
+      child: AnimatedBuilder(
+        animation: _t,
+        builder: (_, __) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < 3; i++)
+              Container(
+                width: 5,
+                height: 5,
+                margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                decoration: BoxDecoration(color: widget.color.withOpacity(_opacity(i, _t.value)), shape: BoxShape.circle),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
