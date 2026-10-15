@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
 import '../config/constants.dart';
+import '../core/customization/customizations.dart';
 
 const String _conferbotUrl = 'https://www.conferbot.com';
 const String _conferbotLogoUrl =
@@ -34,6 +35,9 @@ class ChatBottomBar extends StatefulWidget {
   final String? customBrand;
   final ConferBotTheme? theme;
 
+  /// The bot's look: the widget theme's field and radius, the palette's send colours.
+  final ResolvedCustomizations? look;
+
   const ChatBottomBar({
     super.key,
     required this.onSend,
@@ -48,6 +52,7 @@ class ChatBottomBar extends StatefulWidget {
     this.hideBrand = false,
     this.customBrand,
     this.theme,
+    this.look,
   });
 
   @override
@@ -86,9 +91,15 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
     final canSend =
         _controller.text.trim().isNotEmpty && !widget.disabled && !_isSending;
 
-    // The send button in the header colour, with ink that reads on it.
-    final sendColor = theme.colors.headerBg;
-    final sendInk = sendColor.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+    // The send button in the header colour (or the theme palette's accent),
+    // with ink that reads on it (or the palette's own).
+    final look = widget.look;
+    final sendColor = look?.accentInk != null ? (_hex(look!.accent) ?? theme.colors.headerBg) : theme.colors.headerBg;
+    final sendInk = _hex(look?.accentInk) ?? (sendColor.computeLuminance() > 0.5 ? Colors.black : Colors.white);
+    // The widget theme's field fill and radius (a white pill without one).
+    final tokens = look?.theme.tokens;
+    final fieldColor = _hex(tokens?.field) ?? theme.colors.surface;
+    final fieldRadius = BorderRadius.circular((look?.fieldRadius ?? 25).clamp(0, 25).toDouble());
 
     return Container(
       decoration: BoxDecoration(
@@ -121,8 +132,8 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                         maxHeight: 100,
                       ),
                       decoration: BoxDecoration(
-                        color: theme.colors.surface,
-                        borderRadius: BorderRadius.circular(25),
+                        color: fieldColor,
+                        borderRadius: fieldRadius,
                         border: Border.all(
                           color: theme.colors.border,
                           width: 1,
@@ -255,12 +266,12 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Powered by ',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF56595B),
+                color: _hex(widget.look?.theme.tokens?.muted) ?? const Color(0xFF56595B),
               ),
             ),
             Image.network(
@@ -283,6 +294,12 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
         ),
       ),
     );
+  }
+
+  static Color? _hex(String? v) {
+    if (v == null || !v.startsWith('#') || v.length != 7) return null;
+    final n = int.tryParse(v.substring(1), radix: 16);
+    return n == null ? null : Color(0xFF000000 | n);
   }
 
   void _openConferbotUrl() {
