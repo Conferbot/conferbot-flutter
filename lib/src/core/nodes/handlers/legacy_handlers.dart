@@ -1,624 +1,388 @@
-import '../node_types.dart';
-import '../node_result.dart';
-import '../node_ui_state.dart' show TextInputType;
+/// The v1 steps still found in live bots: two-choices, three-choices,
+/// select-option, user-input, user-range, user-rating and quiz (React
+/// Native src/core/nodes/handlers/LegacyNodeHandlers.ts). Fields and
+/// behaviour follow the flow-node spec and the web widget
+/// (ts/chat/handlers/_legacy.ts, flowOperations.ts, displayStep.ts).
+/// Legacy steps never register an answer variable.
+library;
+
+import '../../flow/inputs.dart';
+import '../../flow/js.dart';
+import '../../flow/text.dart' show nameGreetingHtml;
 import '../../state/chat_state.dart';
+import '../node_handler.dart';
+import '../node_ui_state.dart';
+import 'flow_kit.dart';
 
-// Re-export NodeResult and all its subclasses/aliases from the single source of truth
-export '../node_result.dart';
+String _str(dynamic v) => v == null ? '' : jsString(v);
 
-// Re-export TextInputType so consumers of legacy_handlers.dart get it too
-export '../node_ui_state.dart' show TextInputType;
+/// `Number(x)` where a missing key is undefined (NaN), not 0.
+double _numOf(Map<String, dynamic> data, String key) => data.containsKey(key) ? jsNumber(data[key]) : double.nan;
 
-/// UI state for nodes that require display (legacy variant)
-///
-/// This is the legacy NodeUIState base class used by display_handlers.dart,
-/// choice_ui_states.dart, and integration_handlers.dart.
-/// v2 handlers use the NodeUIState from node_ui_state.dart instead.
-/// Both variants are accepted by NodeResult.displayUI() / DisplayUIResult.
-abstract class NodeUIState {
-  const NodeUIState();
+bool _isInteger(double n) => n.isFinite && n == n.truncateToDouble();
+
+/// Numbered options (choiceText1.., option1..) as buttons, ids "1".."n".
+List<ChoiceOption> _numberedButtons(ChatState state, Map<String, dynamic> data, String key, int count, bool Function(int n) hidden) {
+  final buttons = <ChoiceOption>[];
+  for (var n = 1; n <= count; n++) {
+    if (hidden(n)) continue;
+    buttons.add(ChoiceOption(id: '$n', text: shownLabel(state, data['$key$n']), value: savedText(data['$key$n'])));
+  }
+  return buttons;
 }
 
-/// Text input field
-class TextInputState extends NodeUIState {
-  final String questionText;
-  final TextInputType inputType;
-  final String? placeholder;
-  final String? validationRegex;
-  final String? errorMessage;
-  final String nodeId;
-  final String answerKey;
-
-  const TextInputState({
-    required this.questionText,
-    required this.inputType,
-    this.placeholder,
-    this.validationRegex,
-    this.errorMessage,
-    required this.nodeId,
-    required this.answerKey,
-  });
+/// `Number(pickedId(response))`, NaN when nothing was picked.
+double _pickedNumber(dynamic response) {
+  final id = pickedId(response);
+  return id == null ? double.nan : jsNumber(id);
 }
 
-/// File upload
-class FileUploadState extends NodeUIState {
-  final String questionText;
-  final int maxSizeMb;
-  final List<String>? allowedTypes;
-  final String nodeId;
-  final String answerKey;
+// ========================================
+// TWO / THREE CHOICES
+// ========================================
 
-  const FileUploadState({
-    required this.questionText,
-    this.maxSizeMb = 5,
-    this.allowedTypes,
-    required this.nodeId,
-    required this.answerKey,
-  });
-}
+/// two-choices-node: choiceText1 -> source-1, choiceText2 -> source-2 (disableSecondChoice hides it).
+class TwoChoicesNodeHandler extends BaseNodeHandler {
+  @override
+  String get nodeType => 'two-choices-node';
 
-/// Calendar/Date picker
-class CalendarState extends NodeUIState {
-  final String? questionText;
-  final bool showTimeSelection;
-  final String? timezone;
-  final List<TimeSlot>? availableSlots;
-  final String nodeId;
-  final String answerKey;
+  int get count => 2;
 
-  const CalendarState({
-    this.questionText,
-    required this.showTimeSelection,
-    this.timezone,
-    this.availableSlots,
-    required this.nodeId,
-    required this.answerKey,
-  });
-}
+  bool hidden(Map<String, dynamic> data, int n) => n == 2 && jsTruthy(data['disableSecondChoice']);
 
-/// Time slot for calendar
-class TimeSlot {
-  final String date;
-  final String? time;
-  final bool available;
+  SingleChoiceUIState _ui(FlowNode node, ChatState state) => SingleChoiceUIState(
+        nodeId: node.id,
+        questionText: shownText(state, node.data['choicePrompt']),
+        choices: _numberedButtons(state, node.data, 'choiceText', count, (n) => hidden(node.data, n)),
+      );
 
-  const TimeSlot({
-    required this.date,
-    this.time,
-    this.available = true,
-  });
-}
+  @override
+  Future<NodeResult> handle(FlowNode node, ChatState state) async {
+    final ui = _ui(node, state);
+    botSay(state, ui.questionText ?? '', ui.nodeId, nodeType);
+    return NodeResult.displayUI(ui);
+  }
 
-/// Range slider
-class RangeState extends NodeUIState {
-  final String? questionText;
-  final int minValue;
-  final int maxValue;
-  final int? defaultValue;
-  final String nodeId;
-  final String answerKey;
-
-  const RangeState({
-    this.questionText,
-    required this.minValue,
-    required this.maxValue,
-    this.defaultValue,
-    required this.nodeId,
-    required this.answerKey,
-  });
-}
-
-/// Quiz question
-class QuizState extends NodeUIState {
-  final String questionText;
-  final List<String> options;
-  final int correctAnswerIndex;
-  final String nodeId;
-  final String answerKey;
-
-  const QuizState({
-    required this.questionText,
-    required this.options,
-    required this.correctAnswerIndex,
-    required this.nodeId,
-    required this.answerKey,
-  });
-}
-
-// RecordEntry is imported from chat_state.dart (single source of truth)
-
-/// Chat state interface for handlers to interact with
-abstract class ChatStateInterface {
-  void addAnswerVariable(String nodeId, String answerKey);
-  void setAnswerVariable(String nodeId, dynamic value);
-  void setAnswerVariableByKey(String key, dynamic value);
-  void setUserMetadata(String key, String value);
-  void addToTranscript(String role, String text);
-  void pushToRecord(RecordEntry entry);
-  void setVariable(String name, dynamic value);
-  dynamic resolveValue(String value);
-}
-
-/// Base interface for all node handlers
-abstract class NodeHandler {
-  /// The node type this handler processes
-  String get nodeType;
-
-  /// Process the node and return result
-  Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId);
-
-  /// Handle user response for interactive nodes
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
-    return const Proceed();
+  @override
+  Future<NodeResult> handleResponse(dynamic response, FlowNode node, ChatState state) async {
+    final id = pickedId(response);
+    final n = id != null ? jsNumber(id) : (response is Map ? jsNumber(response['index']) + 1 : double.nan);
+    if (!_isInteger(n) || n < 1 || n > count || hidden(node.data, n.toInt())) return NodeResult.displayUI(_ui(node, state));
+    final i = n.toInt();
+    final text = savedText(node.data['choiceText$i']);
+    pushAnswer(state, {'id': node.id, 'shape': 'user-selected-choice', 'choices': node.data, 'selectedChoice': text},
+        node.ctx.now());
+    userSay(state, text, node.id);
+    return NodeResult.port('source-$i');
   }
 }
 
-/// Base class with common functionality for handlers
-abstract class BaseNodeHandler extends NodeHandler {
-  /// ChatState singleton provides full state access
-  ChatState get state => ChatState.instance;
+/// three-choices-node: choiceText1..3 -> source-1..3.
+class ThreeChoicesNodeHandler extends TwoChoicesNodeHandler {
+  @override
+  String get nodeType => 'three-choices-node';
 
-  /// Resolve ${var} / {var} / {{var}} references in displayed text,
-  /// matching the web widget which substitutes variables in every
-  /// rendered message and option string.
-  String resolveText(String text) {
-    return state.resolveValue(text)?.toString() ?? text;
+  @override
+  int get count => 3;
+
+  @override
+  bool hidden(Map<String, dynamic> data, int n) => false;
+}
+
+// ========================================
+// SELECT OPTION
+// ========================================
+
+/// select-option-node: option1..option5 (disableOption3..5); the first edge 600 ms after the pick.
+class SelectOptionNodeHandler extends BaseNodeHandler {
+  @override
+  String get nodeType => 'select-option-node';
+
+  bool _hidden(Map<String, dynamic> data, int n) => n >= 3 && jsTruthy(data['disableOption$n']);
+
+  SingleChoiceUIState _ui(FlowNode node, ChatState state) => SingleChoiceUIState(
+        nodeId: node.id,
+        questionText: shownText(state, node.data['selectPrompt']),
+        choices: _numberedButtons(state, node.data, 'option', 5, (n) => _hidden(node.data, n)),
+      );
+
+  @override
+  Future<NodeResult> handle(FlowNode node, ChatState state) async {
+    final ui = _ui(node, state);
+    botSay(state, ui.questionText ?? '', ui.nodeId, nodeType);
+    return NodeResult.displayUI(ui);
   }
 
-  /// Record a user response
-  void recordResponse({
-    required String nodeId,
-    required String shape,
-    String? text,
-    String? type,
-    Map<String, dynamic> additionalData = const {},
-  }) {
-    final entry = RecordEntry(
-      id: nodeId,
-      shape: shape,
-      type: type,
-      text: text,
-      data: additionalData,
-    );
-    state.pushToRecord(entry);
-  }
-
-  /// Get string from nodeData with default
-  String getString(Map<String, dynamic> nodeData, String key,
-      [String defaultValue = '']) {
-    return nodeData[key]?.toString() ?? defaultValue;
-  }
-
-  /// Get int from nodeData with default
-  int getInt(Map<String, dynamic> nodeData, String key, [int defaultValue = 0]) {
-    final value = nodeData[key];
-    if (value is num) return value.toInt();
-    if (value is String) return int.tryParse(value) ?? defaultValue;
-    return defaultValue;
-  }
-
-  /// Get boolean from nodeData with default
-  bool getBoolean(Map<String, dynamic> nodeData, String key,
-      [bool defaultValue = false]) {
-    final value = nodeData[key];
-    if (value is bool) return value;
-    if (value is String) return value.toLowerCase() == 'true';
-    return defaultValue;
-  }
-
-  /// Get list from nodeData
-  List<T> getList<T>(Map<String, dynamic> nodeData, String key) {
-    final value = nodeData[key];
-    if (value is List) return List<T>.from(value);
-    return [];
-  }
-
-  /// Get map from nodeData
-  Map<String, dynamic> getMap(Map<String, dynamic> nodeData, String key) {
-    final value = nodeData[key];
-    if (value is Map) return Map<String, dynamic>.from(value);
-    return {};
-  }
-
-  /// Strip HTML tags and decode entities
-  String stripHtml(String text) {
-    return text
-        .replaceAll(RegExp(r'<[^>]*>'), '')
-        .replaceAll('&amp;', '&')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&#39;', "'")
-        .replaceAll('&nbsp;', ' ')
-        .trim();
-  }
-
-  /// Validate email format
-  bool isValidEmail(String email) {
-    final emailRegex =
-        RegExp(r'^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
-    return emailRegex.hasMatch(email.trim());
-  }
-
-  /// Validate phone number format
-  bool isValidPhone(String phone) {
-    final phoneRegex = RegExp(r'^[+]?[0-9]{7,15}$');
-    return phoneRegex.hasMatch(phone.replaceAll(RegExp(r'[\s\-()]'), ''));
-  }
-
-  /// Validate URL format
-  bool isValidUrl(String url) {
-    try {
-      final uri = Uri.parse(url.trim());
-      return uri.scheme.isNotEmpty && uri.host.isNotEmpty;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Validate number format
-  bool isValidNumber(String value) {
-    return double.tryParse(value.trim()) != null;
+  @override
+  Future<NodeResult> handleResponse(dynamic response, FlowNode node, ChatState state) async {
+    final n = _pickedNumber(response);
+    if (!_isInteger(n) || n < 1 || n > 5 || _hidden(node.data, n.toInt())) return NodeResult.displayUI(_ui(node, state));
+    final text = savedText(node.data['option${n.toInt()}']);
+    pushAnswer(state, {'id': node.id, 'shape': 'user-selected-option', 'options': node.data, 'selectedOption': text},
+        node.ctx.now());
+    userSay(state, text, node.id);
+    return NodeResult.delayedProceed(null, 600);
   }
 }
 
-// ============================================================================
-// LEGACY NODE HANDLERS
-// ============================================================================
+// ========================================
+// USER INPUT
+// ========================================
 
-/// Handler for user-input-node (legacy)
-/// Handles various input types: name, email, number, url, phone, file, date
+// The web's /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i, with
+// the nested repeat (same language) flattened so it cannot backtrack forever.
+final RegExp _legacyUrlRe = RegExp(r'^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)\/?$', caseSensitive: false);
+
+/// user-input-node: data.type name | email | number | url | date | file |
+/// phone | mobile. email / number / url are checked (incorrect*Response);
+/// name greets with nameGreet after 1000 ms of typing and moves on at 2000
+/// ms; others at 500 ms; a date or a file at once.
 class UserInputNodeHandler extends BaseNodeHandler {
   @override
-  String get nodeType => NodeTypes.userInput;
+  String get nodeType => 'user-input-node';
+
+  NodeUIState _ui(FlowNode node, ChatState state) {
+    final type = _str(node.data['type']);
+    final question = shownText(state, node.data['inputPrompt']);
+    if (type == 'file') return FileUploadUIState(nodeId: node.id, questionText: question, maxSizeMb: 5);
+    final inputType = switch (type) {
+      'email' => TextInputType.email,
+      'number' => TextInputType.number,
+      'url' => TextInputType.url,
+      'phone' || 'mobile' => TextInputType.phone,
+      _ => TextInputType.text,
+    };
+    return TextInputUIState(nodeId: node.id, questionText: question, inputType: inputType, answerKey: '',
+        extra: type == 'date' ? const {'inputType': 'date'} : const {});
+  }
+
+  String _question(NodeUIState ui) =>
+      ui is FileUploadUIState ? ui.questionText : (ui is TextInputUIState ? ui.questionText : '');
 
   @override
-  Future<NodeResult> process(
-      Map<String, dynamic> nodeData, String nodeId) async {
-    final inputType = getString(nodeData, 'type', 'text');
-    final answerKey = getString(nodeData, 'answerVariable', nodeId);
-
-    state.addAnswerVariable(nodeId, answerKey);
-
-    switch (inputType.toLowerCase()) {
-      case 'name':
-        return DisplayUI(
-          TextInputState(
-            questionText: '',
-            inputType: TextInputType.name,
-            placeholder: 'Enter your name',
-            nodeId: nodeId,
-            answerKey: answerKey,
-          ),
-        );
-
-      case 'email':
-        return DisplayUI(
-          TextInputState(
-            questionText: '',
-            inputType: TextInputType.email,
-            placeholder: 'Enter your email',
-            errorMessage:
-                getString(nodeData, 'incorrectEmailResponse', 'Please enter a valid email'),
-            nodeId: nodeId,
-            answerKey: answerKey,
-          ),
-        );
-
-      case 'number':
-        return DisplayUI(
-          TextInputState(
-            questionText: '',
-            inputType: TextInputType.number,
-            placeholder: 'Enter a number',
-            errorMessage:
-                getString(nodeData, 'incorrectNumberResponse', 'Please enter a valid number'),
-            nodeId: nodeId,
-            answerKey: answerKey,
-          ),
-        );
-
-      case 'url':
-        return DisplayUI(
-          TextInputState(
-            questionText: '',
-            inputType: TextInputType.url,
-            placeholder: 'Enter a URL',
-            errorMessage:
-                getString(nodeData, 'incorrectUrlResponse', 'Please enter a valid URL'),
-            nodeId: nodeId,
-            answerKey: answerKey,
-          ),
-        );
-
-      case 'mobile':
-      case 'phone':
-        return DisplayUI(
-          TextInputState(
-            questionText: '',
-            inputType: TextInputType.phone,
-            placeholder: 'Enter phone number',
-            nodeId: nodeId,
-            answerKey: answerKey,
-          ),
-        );
-
-      case 'file':
-        return DisplayUI(
-          FileUploadState(
-            questionText: '',
-            maxSizeMb: 5,
-            nodeId: nodeId,
-            answerKey: answerKey,
-          ),
-        );
-
-      case 'date':
-        return DisplayUI(
-          CalendarState(
-            questionText: null,
-            showTimeSelection: false,
-            timezone: null,
-            nodeId: nodeId,
-            answerKey: answerKey,
-          ),
-        );
-
-      default:
-        return DisplayUI(
-          TextInputState(
-            questionText: '',
-            inputType: TextInputType.text,
-            placeholder: 'Type here...',
-            nodeId: nodeId,
-            answerKey: answerKey,
-          ),
-        );
-    }
+  Future<NodeResult> handle(FlowNode node, ChatState state) async {
+    final ui = _ui(node, state);
+    botSay(state, _question(ui), ui.nodeId, nodeType);
+    return NodeResult.displayUI(ui);
   }
 
   @override
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
-    final inputType = getString(nodeData, 'type', 'text');
-    final value = response.toString().trim();
+  Future<NodeResult> handleResponse(dynamic response, FlowNode node, ChatState state) async {
+    final data = node.data;
+    final type = data['type'];
+    final ctx = node.ctx;
 
-    // Validate based on type
-    switch (inputType.toLowerCase()) {
-      case 'email':
-        if (!isValidEmail(value)) {
-          return NodeError(
-            getString(nodeData, 'incorrectEmailResponse', 'Please enter a valid email'),
-            shouldProceed: false,
-          );
+    if (type == 'file') {
+      dynamic url = response is Map ? response['url'] : null;
+      if (!jsTruthy(url) && response is Map && response['file'] is Map) {
+        final file = response['file'] as Map;
+        if (jsNumber(file['size']) > 5000000) {
+          return NodeResult.invalid('Please upload a file smaller than 5MB', uiState: _ui(node, state));
         }
-        state.setUserMetadata('email', value);
-
-      case 'number':
-        if (!isValidNumber(value)) {
-          return NodeError(
-            getString(nodeData, 'incorrectNumberResponse', 'Please enter a valid number'),
-            shouldProceed: false,
-          );
-        }
-
-      case 'url':
-        if (!isValidUrl(value)) {
-          return NodeError(
-            getString(nodeData, 'incorrectUrlResponse', 'Please enter a valid URL'),
-            shouldProceed: false,
-          );
-        }
-
-      case 'name':
-        if (value.isEmpty) {
-          return const NodeError('Please enter your name', shouldProceed: false);
-        }
-        state.setUserMetadata('name', value);
-
-      case 'mobile':
-      case 'phone':
-        if (!isValidPhone(value)) {
-          return const NodeError('Please enter a valid phone number',
-              shouldProceed: false);
-        }
-        state.setUserMetadata('phone', value);
-    }
-
-    state.setAnswerVariable(nodeId, value);
-    state.addToTranscript('user', value);
-
-    recordResponse(
-      nodeId: nodeId,
-      shape: 'user-input-response',
-      text: value,
-      type: nodeType,
-      additionalData: {'inputType': inputType},
-    );
-
-    // Handle name greeting
-    if (inputType.toLowerCase() == 'name') {
-      final greetResponse = nodeData['nameGreet']?.toString();
-      if (greetResponse != null && greetResponse.isNotEmpty) {
-        final greeting = greetResponse
-            .replaceAll('{name}', value)
-            .replaceAll('\${name}', value);
-        state.addToTranscript('bot', greeting);
+        final up = await ctx.upload(UploadFile.fromMap(file));
+        if (!up.ok) return NodeResult.invalid("Couldn't upload this file. Please try again.", uiState: _ui(node, state));
+        url = up.url;
       }
-      return const DelayedProceed(delayMs: 2000);
+      if (!jsTruthy(url)) return NodeResult.displayUI(_ui(node, state));
+      pushAnswer(state, {'id': node.id, 'shape': 'user-input-response', 'type': type, 'url': url}, ctx.now());
+      userSay(state, _str(url), node.id);
+      return NodeResult.next();
     }
 
-    return const DelayedProceed(delayMs: 500);
+    final value = typedText(response);
+    if (value.isEmpty) return NodeResult.displayUI(_ui(node, state));
+    if (type == 'email' && !isValidEmail(value)) {
+      return NodeResult.invalid(ownerTextOr(data['incorrectEmailResponse'], en.emailInvalid, ['Please enter a valid email']),
+          uiState: _ui(node, state));
+    }
+    if (type == 'number' && (value.trim().isEmpty || jsNumber(value.trim()).isNaN)) {
+      return NodeResult.invalid(ownerTextOr(data['incorrectNumberResponse'], 'Please enter a valid number'), uiState: _ui(node, state));
+    }
+    if (type == 'url' && !_legacyUrlRe.hasMatch(value.toLowerCase())) {
+      return NodeResult.invalid(ownerTextOr(data['incorrectUrlResponse'], 'Please enter a valid url'), uiState: _ui(node, state));
+    }
+    if (type == 'name') state.setUserName(value);
+    if (type == 'email') state.setUserEmail(value);
+    if (type == 'phone' || type == 'mobile') state.setUserPhone(value);
+
+    pushAnswer(state, {'id': node.id, 'shape': 'user-input-response', 'type': type, 'text': value}, ctx.now());
+    userSay(state, value, node.id);
+
+    if (type == 'date') return NodeResult.next();
+    if (type == 'name') {
+      final greet = data['nameGreet'];
+      final greeting = nameGreetingHtml(jsTruthy(greet) ? greet : null, value);
+      await ctx.typing(1000);
+      if (greeting.isNotEmpty) botSay(state, shownText(state, greeting), node.id, nodeType);
+      return NodeResult.delayedProceed(null, 1000);
+    }
+    return NodeResult.delayedProceed(null, 500);
   }
 }
 
-/// Handler for user-range-node (legacy)
-/// Displays a range slider with 3-way branching
+// ========================================
+// USER RANGE
+// ========================================
+
+/// user-range-node: a number; below minVal -> source-1, within -> source-2, above maxVal -> source-3.
 class UserRangeNodeHandler extends BaseNodeHandler {
   @override
-  String get nodeType => NodeTypes.userRange;
+  String get nodeType => 'user-range-node';
+
+  TextInputUIState _ui(FlowNode node, ChatState state) => TextInputUIState(
+        nodeId: node.id,
+        questionText: shownText(state, node.data['rangePrompt']),
+        inputType: TextInputType.number,
+        answerKey: '',
+      );
 
   @override
-  Future<NodeResult> process(
-      Map<String, dynamic> nodeData, String nodeId) async {
-    final minVal = getInt(nodeData, 'minVal', 0);
-    final maxVal = getInt(nodeData, 'maxVal', 100);
-    final answerKey = getString(nodeData, 'answerVariable', nodeId);
-
-    state.addAnswerVariable(nodeId, answerKey);
-
-    return DisplayUI(
-      RangeState(
-        questionText: null,
-        minValue: minVal,
-        maxValue: maxVal,
-        defaultValue: (minVal + maxVal) ~/ 2,
-        nodeId: nodeId,
-        answerKey: answerKey,
-      ),
-    );
+  Future<NodeResult> handle(FlowNode node, ChatState state) async {
+    final ui = _ui(node, state);
+    botSay(state, ui.questionText, ui.nodeId, nodeType);
+    return NodeResult.displayUI(ui);
   }
 
   @override
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
-    int value;
-    if (response is num) {
-      value = response.toInt();
-    } else if (response is String) {
-      value = int.tryParse(response) ?? 0;
-    } else {
-      value = 0;
-    }
-
-    final minVal = getInt(nodeData, 'minVal', 0);
-    final maxVal = getInt(nodeData, 'maxVal', 100);
-
-    state.setAnswerVariable(nodeId, value);
-    state.addToTranscript('user', value.toString());
-
-    recordResponse(
-      nodeId: nodeId,
-      shape: 'user-range-response',
-      text: value.toString(),
-      type: nodeType,
-      additionalData: {'minVal': minVal, 'maxVal': maxVal},
-    );
-
-    // Route based on value relative to min/max
-    // This provides 3-way branching:
-    // - source-1: value below min (shouldn't normally happen with slider)
-    // - source-2: value within range
-    // - source-3: value above max (shouldn't normally happen with slider)
-    String targetPort;
-    if (value < minVal) {
-      targetPort = 'source-1';
-    } else if (value >= minVal && value <= maxVal) {
-      targetPort = 'source-2';
-    } else {
-      targetPort = 'source-3';
-    }
-
-    return Proceed(targetPort: targetPort);
+  Future<NodeResult> handleResponse(dynamic response, FlowNode node, ChatState state) async {
+    final value = typedText(response);
+    final n = parseNumberInput(value);
+    if (n == null) return NodeResult.invalid(en.numberLike, uiState: _ui(node, state));
+    pushAnswer(state, {'id': node.id, 'shape': 'user-input-response-range', 'type': node.data['type'], 'text': value},
+        node.ctx.now());
+    userSay(state, value, node.id);
+    final handle = n < _numOf(node.data, 'minVal')
+        ? 'source-1'
+        : n > _numOf(node.data, 'maxVal')
+            ? 'source-3'
+            : 'source-2';
+    return NodeResult.port(handle);
   }
 }
 
-/// Handler for quiz-node (legacy)
-/// Displays a quiz question with correct/incorrect routing
+// ========================================
+// USER RATING
+// ========================================
+
+/// user-rating-node: type number (data.range buttons), star or smiley (five); the first edge.
+class UserRatingNodeHandler extends BaseNodeHandler {
+  @override
+  String get nodeType => 'user-rating-node';
+
+  int _count(Map<String, dynamic> data) {
+    if (data['type'] != 'number') return 5;
+    final r = _numOf(data, 'range');
+    final v = (r.isNaN || r == 0) ? 5.0 : r;
+    return v < 1 ? 1 : v.toInt();
+  }
+
+  RatingUIState _ui(FlowNode node, ChatState state) {
+    final type = node.data['type'];
+    return RatingUIState(
+      nodeId: node.id,
+      questionText: shownText(state, node.data['ratingPrompt']),
+      ratingType: type == 'number' ? RatingType.number : (type == 'smiley' ? RatingType.smiley : RatingType.star),
+      minValue: 1,
+      maxValue: _count(node.data),
+    );
+  }
+
+  @override
+  Future<NodeResult> handle(FlowNode node, ChatState state) async {
+    final ui = _ui(node, state);
+    botSay(state, ui.questionText ?? '', ui.nodeId, nodeType);
+    return NodeResult.displayUI(ui);
+  }
+
+  @override
+  Future<NodeResult> handleResponse(dynamic response, FlowNode node, ChatState state) async {
+    final raw = response is Map ? (response['value'] ?? response['rating']) : response;
+    final rating = raw == null && response is Map ? double.nan : jsNumber(raw);
+    if (!_isInteger(rating) || rating < 1 || rating > _count(node.data)) return NodeResult.displayUI(_ui(node, state));
+    final r = rating.toInt();
+    pushAnswer(state, {'id': node.id, 'shape': 'user-selected-rating', 'type': node.data['type'], 'rating': r}, node.ctx.now());
+    userSay(state, '$r', node.id);
+    return NodeResult.next();
+  }
+}
+
+// ========================================
+// QUIZ
+// ========================================
+
+/// quiz-node: option1..5 (disableOption3..5), correctAnswer "optionN".
+/// Wrong -> source-1, right -> source-2. When source-2 leads to a
+/// variable-node, that step is not run: its value is ADDED to the flow
+/// variable (the score) and the flow jumps to the step after it.
 class QuizNodeHandler extends BaseNodeHandler {
   @override
-  String get nodeType => NodeTypes.quiz;
+  String get nodeType => 'quiz-node';
+
+  bool _hidden(Map<String, dynamic> data, int n) => n >= 3 && jsTruthy(data['disableOption$n']);
+
+  SingleChoiceUIState _ui(FlowNode node, ChatState state) => SingleChoiceUIState(
+        nodeId: node.id,
+        questionText: shownText(state, node.data['quizPrompt']),
+        choices: _numberedButtons(state, node.data, 'option', 5, (n) => _hidden(node.data, n)),
+      );
 
   @override
-  Future<NodeResult> process(
-      Map<String, dynamic> nodeData, String nodeId) async {
-    final answerKey = getString(nodeData, 'answerVariable', nodeId);
-    state.addAnswerVariable(nodeId, answerKey);
-
-    // Build options from option1, option2, etc.
-    final options = <String>[];
-    for (int i = 1; i <= 5; i++) {
-      final optionKey = 'option$i';
-      final disableKey = 'disableOption$i';
-
-      if (getBoolean(nodeData, disableKey, false)) continue;
-
-      final optionText = nodeData[optionKey]?.toString();
-      if (optionText != null && optionText.isNotEmpty) {
-        options.add(stripHtml(optionText));
-      }
-    }
-
-    final correctAnswer = getInt(nodeData, 'correctAnswer', 0);
-
-    return DisplayUI(
-      QuizState(
-        questionText: '',
-        options: options,
-        correctAnswerIndex: correctAnswer,
-        nodeId: nodeId,
-        answerKey: answerKey,
-      ),
-    );
+  Future<NodeResult> handle(FlowNode node, ChatState state) async {
+    final ui = _ui(node, state);
+    botSay(state, ui.questionText ?? '', ui.nodeId, nodeType);
+    return NodeResult.displayUI(ui);
   }
 
   @override
-  Future<NodeResult> handleResponse(
-    dynamic response,
-    Map<String, dynamic> nodeData,
-    String nodeId,
-  ) async {
-    int selectedIndex;
-    if (response is num) {
-      selectedIndex = response.toInt();
-    } else if (response is String) {
-      selectedIndex = int.tryParse(response) ?? -1;
-    } else if (response is Map) {
-      selectedIndex =
-          int.tryParse(response['index']?.toString() ?? '') ?? -1;
-    } else {
-      selectedIndex = -1;
+  Future<NodeResult> handleResponse(dynamic response, FlowNode node, ChatState state) async {
+    final data = node.data;
+    final n = _pickedNumber(response);
+    if (!_isInteger(n) || n < 1 || n > 5 || _hidden(data, n.toInt())) return NodeResult.displayUI(_ui(node, state));
+    final option = 'option${n.toInt()}';
+    final correctAnswer = data['correctAnswer'];
+    pushAnswer(
+        state,
+        {
+          'id': node.id,
+          'shape': 'user-selected-quiz-option',
+          'options': data,
+          'selectedOption': data[option],
+          'correctAnswer': correctAnswer,
+          'correct': option == correctAnswer,
+        },
+        node.ctx.now());
+    userSay(state, savedText(data[option]), node.id);
+    if (option != correctAnswer) return NodeResult.port('source-1');
+
+    final ctx = node.ctx;
+    final rightEdge = ctx.edges().where((e) => e['sourceHandle'] == 'source-2').firstOrNull;
+    final nextNode = rightEdge == null ? null : ctx.node(_str(rightEdge['target']));
+    if (nextNode != null && nextNode['type'] == 'variable-node') {
+      final nd = nextNode['data'] is Map ? Map<String, dynamic>.from(nextNode['data'] as Map) : <String, dynamic>{};
+      final name = _str(nd['name']);
+      final current = state.getVariable(name);
+      final add = _numOf(nd, 'value');
+      final value = jsTruthy(current) ? jsNumber(current) + add : add;
+      state.setVariable(name, value.isFinite ? jsNum(value) : value);
+      final after = ctx.edgesOf(_str(nextNode['id'])).firstOrNull;
+      final target = after?['target'];
+      if (jsTruthy(target)) return NodeResult.jumpTo(_str(target));
+      return NodeResult.port('source-1');
     }
-
-    final correctAnswer = getInt(nodeData, 'correctAnswer', 0);
-    final isCorrect = selectedIndex == correctAnswer;
-
-    // Get selected option text
-    final optionKey = 'option${selectedIndex + 1}';
-    final selectedText = nodeData[optionKey]?.toString() ?? 'Unknown';
-
-    state.setAnswerVariable(nodeId, selectedText);
-    state.addToTranscript('user', selectedText);
-
-    recordResponse(
-      nodeId: nodeId,
-      shape: 'user-quiz-response',
-      text: selectedText,
-      type: nodeType,
-      additionalData: {
-        'selectedIndex': selectedIndex,
-        'correctAnswer': correctAnswer,
-        'isCorrect': isCorrect,
-      },
-    );
-
-    // Route based on correct/incorrect
-    if (isCorrect) {
-      // Correct: go to source-2 (may increment a variable node)
-      return const Proceed(targetPort: 'source-2');
-    } else {
-      // Incorrect: go to source-1
-      return const Proceed(targetPort: 'source-1');
-    }
+    return NodeResult.port('source-2');
   }
 }
+
+// ========================================
+// REGISTRATION
+// ========================================
+
+final List<NodeHandler> legacyHandlers = [
+  UserInputNodeHandler(),
+  UserRangeNodeHandler(),
+  QuizNodeHandler(),
+  TwoChoicesNodeHandler(),
+  ThreeChoicesNodeHandler(),
+  SelectOptionNodeHandler(),
+  UserRatingNodeHandler(),
+];
