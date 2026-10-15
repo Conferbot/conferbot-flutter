@@ -63,6 +63,8 @@ class _KnowledgeBaseScreenState extends State<KnowledgeBaseScreen> {
         isRating: provider.isRating,
         ratingError: provider.ratingError,
         ratingSuccess: provider.ratingSuccess,
+        isLoadingContent: provider.isLoadingArticle,
+        contentError: provider.articleError,
         onInsertToChat: widget.onArticleInsertToChat != null
             ? () => widget.onArticleInsertToChat!(provider.selectedArticle!)
             : null,
@@ -205,8 +207,21 @@ class _KnowledgeBaseScreenState extends State<KnowledgeBaseScreen> {
       );
     }
 
+    // The owner's Recent articles above the full list, unless hidden
+    // (hideRecentArticles) or the visitor is searching or in a topic.
+    final recent = !provider.hasSearchQuery && provider.selectedCategoryId == null
+        ? provider.recentArticles
+        : const <KnowledgeBaseArticle>[];
+
     // Show search results or article list
     return ArticleList(
+      header: recent.isEmpty
+          ? null
+          : _RecentArticles(
+              articles: recent,
+              onArticleTap: provider.selectArticle,
+              theme: theme,
+            ),
       articles: provider.articles,
       onArticleTap: (article) => provider.selectArticle(article),
       isLoading: provider.isLoadingArticles,
@@ -426,6 +441,51 @@ class KnowledgeBaseFloatingButton extends StatelessWidget {
       backgroundColor: effectiveTheme.colors.primary,
       foregroundColor: effectiveTheme.colors.surface,
       child: const Icon(Icons.help_outline),
+    );
+  }
+}
+
+/// The help centre's "Recent articles", above the full list.
+class _RecentArticles extends StatelessWidget {
+  final List<KnowledgeBaseArticle> articles;
+  final ValueChanged<KnowledgeBaseArticle> onArticleTap;
+  final ConferBotTheme theme;
+
+  const _RecentArticles({
+    required this.articles,
+    required this.onArticleTap,
+    required this.theme,
+  });
+
+  Widget _label(String text) => Padding(
+        padding: EdgeInsets.fromLTRB(theme.spacing.md, theme.spacing.md, theme.spacing.md, theme.spacing.xs),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: theme.typography.fontSizeSm,
+            fontWeight: theme.typography.fontWeightSemiBold,
+            color: theme.colors.textSecondary,
+          ),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const ValueKey('kb-recent-articles'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _label('Recent articles'),
+        for (final article in articles)
+          ArticleListItem(
+            article: article,
+            onTap: () => onArticleTap(article),
+            showThumbnail: false,
+            showRating: false,
+            theme: theme,
+          ),
+        _label('All articles'),
+      ],
     );
   }
 }
