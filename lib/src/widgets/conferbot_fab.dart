@@ -9,6 +9,7 @@ import '../models/user.dart';
 import '../providers/conferbot_provider.dart';
 import '../theme/conferbot_theme.dart';
 import 'chat_widget.dart';
+import 'launcher_icon_painter.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Part 1 – Config
@@ -1230,7 +1231,6 @@ class _ConferBotFABState extends State<ConferBotFAB>
             bottomLeft: Radius.circular(look.corners.bottomLeft),
           )
         : BorderRadius.circular(_resolveBorderRadius(provider, size));
-    final iconName = _kIconShapes.containsKey(look.iconId) ? look.iconId! : _resolveIconName(provider);
     // Only when the owner turned the greeting on.
     final ctaText = hasLook ? look.ctaText : _resolveCtaText(provider);
     final unreadCount = provider.unreadCount;
@@ -1252,15 +1252,17 @@ class _ConferBotFABState extends State<ConferBotFAB>
     // CTA horizontal offset from edge: beside the button
     final ctaEdgeOffset = offsetX + width + 10;
 
+    // The web's launcher icons (core/customization/launcher_icons.dart).
+    final iconId = hasLook ? look.iconId : _sc(provider)?['widgetIconSVG']?.toString();
     Widget glyph(double s) => CustomPaint(
-          key: ValueKey(iconName),
+          key: ValueKey(iconId),
           size: Size(s, s),
-          painter: _IconPainter(iconName: iconName, color: ink),
+          painter: LauncherIconPainter(iconId: iconId, ink: ink, bg: fabColor),
         );
 
     Widget content;
     if (_isOpen) {
-      content = CustomPaint(key: const ValueKey('close'), size: Size(iconSize, iconSize), painter: _CloseIconPainter(ink));
+      content = CustomPaint(key: const ValueKey('close'), size: Size(size * 0.6, size * 0.6), painter: _CloseIconPainter(ink));
     } else if (imageUrl != null) {
       content = ClipOval(child: Image.network(imageUrl, width: iconSize, height: iconSize, fit: BoxFit.cover));
     } else if (avatar != null) {
