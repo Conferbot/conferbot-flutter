@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:conferbot_flutter/src/core/state/chat_state.dart';
+import 'package:conferbot_flutter/src/models/user.dart';
 
 void main() {
   late ChatState chatState;
@@ -419,6 +420,46 @@ void main() {
       expect(responseData['answerVariables'], isNotEmpty);
       expect(responseData['chatDate'], isNotNull);
       expect(responseData['deviceInfo'], isNotNull);
+    });
+  });
+
+  group('Visitor context', () {
+    tearDown(() => chatState.visitorContext = null);
+
+    test('the signed-in user travels with every response record', () {
+      const user = ConferBotUser(
+        id: 'u-42',
+        name: 'Ada',
+        email: 'ada@example.com',
+        metadata: {'plan': 'pro'},
+        hash: 'abc123',
+      );
+      chatState.visitorContext = user.toVisitorContext();
+
+      final data = chatState.buildResponseData();
+
+      expect(data['visitorContext'], {
+        'plan': 'pro',
+        'id': 'u-42',
+        'name': 'Ada',
+        'email': 'ada@example.com',
+        'hash': 'abc123',
+      });
+      expect(data['visitorName'], 'Ada');
+      expect(data['visitorEmail'], 'ada@example.com');
+    });
+
+    test('no user, no visitor fields', () {
+      chatState.visitorContext = null;
+      final data = chatState.buildResponseData();
+      expect(data.containsKey('visitorContext'), isFalse);
+      expect(data.containsKey('visitorName'), isFalse);
+    });
+
+    test('kept across reset', () {
+      chatState.visitorContext = {'id': 'u-1'};
+      chatState.reset();
+      expect(chatState.visitorContext, {'id': 'u-1'});
     });
   });
 
