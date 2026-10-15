@@ -9,7 +9,7 @@ import 'nodes/handlers/display_handlers.dart' show MessageState, ImageState, Vid
 import 'nodes/handlers/choices/choice_ui_states.dart' show SingleChoiceState, MultipleChoiceState;
 import 'nodes/handlers/integrations/integration_base.dart' show IntegrationNodeHandler;
 import 'state/chat_state.dart';
-import 'live_chat/live_chat.dart';
+import 'agent/agent_handover.dart';
 import 'nodes/handlers/special_handlers.dart' show HumanHandoverNodeHandler;
 import 'errors/conferbot_exceptions.dart';
 import 'errors/error_handler.dart' hide ErrorResult;
@@ -242,6 +242,9 @@ class NodeFlowEngine extends ChangeNotifier {
     _currentNodeId = nodeId;
     _currentNodeData = nodeData;
     _currentNodeType = nodeType;
+    // Kept with the session: a restart knows where the flow stood (and
+    // whether it was waiting on its handover step).
+    _chatState.setCurrentNodeId(nodeId);
 
     // Track node entry in analytics
     final nodeName = nodeData['name']?.toString() ??
@@ -881,6 +884,30 @@ class NodeFlowEngine extends ChangeNotifier {
   /// The handover step's data while the flow is on it (its fallbackMessage...).
   Map<String, dynamic>? get handoverNodeData => isAtHandover ? _currentNodeData : null;
 
+  /// A restored chat back on its handover step, without running the step
+  /// again (which would ask for a person a second time: a second ticket):
+  /// its wait card ([uiState]), or no card while a person has the chat
+  /// (null). The step's handler is told where it stands, so the chat ending
+  /// carries the flow on. False when the step is not in this flow.
+  bool waitAt(String nodeId, dynamic uiState) {
+    final index = _steps.indexWhere((step) => step['id'] == nodeId);
+    if (index < 0) return false;
+    final node = _steps[index];
+    final nodeData = node['data'] as Map<String, dynamic>? ?? {};
+    _chatState.setCurrentIndex(index);
+    _chatState.setCurrentNodeId(nodeId);
+    _currentNodeId = nodeId;
+    _currentNodeData = nodeData;
+    _currentNodeType = nodeData['type']?.toString() ?? node['type']?.toString();
+    final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
+    if (handler is HumanHandoverNodeHandler) {
+      handler.restoreAt(nodeId, uiState is HumanHandoverUIState ? uiState.state : HandoverState.agentConnected);
+    }
+    _setProcessing(false);
+    _setUIState(uiState);
+    return true;
+  }
+
   /// The handover step's card goes (a person joined, or nobody could).
   void clearHandoverUI() {
     if (_currentUIState is HumanHandoverUIState) _setUIState(null);
@@ -1066,57 +1093,13 @@ class NodeFlowEngine extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Emit initiate-handover socket event matching web widget payload format.
-  /// Called when handover handler returns waitingForAgent UI state.
+  /// Emit initiate-handover socket event matching web widget payload format,
+  /// with the step's email, sound and assignment settings
+  /// (core/agent/agent_handover.dart). Called when the handover handler
+  /// returns its waitingForAgent UI state.
   void _emitInitiateHandover(Map<String, dynamic> nodeData) {
-    final chatSessionId = _chatState.chatSessionId;
-    final botId = _chatState.botId ?? '';
-    final workspaceId = _chatState.workspaceId ?? '';
-    final botName = _chatState.getVariable('_botName')?.toString() ?? '';
-    final now = DateTime.now().toUtc().toIso8601String();
-
-    // Build chatMetaData matching web widget format exactly
-    final chatMetaData = {
-      'version': 'v2',
-      'workspaceId': workspaceId,
-      'chatSessionId': chatSessionId,
-      'botId': botId,
-      'botName': botName,
-      'chatDate': now,
-      'deviceInfo': 'Flutter/${_chatState.buildResponseData()['deviceInfo'] ?? 'unknown'}',
-      'location': DateTime.now().timeZoneName,
-      'record': _chatState.getRecordForServer(),
-      'answerVariables': _chatState.getAnswerVariablesMap(),
-      'transcript': _chatState.getTranscriptForGPT(),
-    };
-
-    // Build visitor metaData
-    final metaData = {
-      'visitorId': ChatState.instance.visitorId ?? chatSessionId ?? '',
-      'chatDate': now,
-      'deviceInfo': chatMetaData['deviceInfo'],
-      'location': chatMetaData['location'],
-    };
-
-    // Extract handover config from nodeData
-    // Minutes as the builder wrote them ("0.5" is half a minute).
-    final maxWaitTime = LiveChat.waitMinutes(nodeData['maxWaitTime']);
-
-    final payload = {
-      'workspaceId': workspaceId,
-      'chatbotId': botId,
-      'chatbotName': botName,
-      'chatSessionId': chatSessionId,
-      'chatMetaData': chatMetaData,
-      'metaData': metaData,
-      'priority': nodeData['priority']?.toString() ?? 'normal',
-      'maxWaitTime': maxWaitTime,
-      'assignmentType': nodeData['assignmentType']?.toString() ?? 'auto',
-      'assignmentStrategy': nodeData['agentAssignmentStrategy']?.toString() ?? '',
-      'assignedAgents': nodeData['assignedAgents'] ?? [],
-      'assignedAIAgents': nodeData['assignedAIAgents'] ?? [],
-    };
-
+    final payload = AgentHandover.payload(_chatState, nodeData);
+    if (payload == null) return;
     _socketClient.emit(SocketEvents.initiateHandover, payload);
     flowLogger.debug('Emitted initiate-handover to server');
   }
