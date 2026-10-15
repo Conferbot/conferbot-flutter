@@ -283,6 +283,11 @@ class _ChatWidgetState extends State<ChatWidget> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ConferBotProvider>();
+    // A theme set to "auto" follows the phone's light / dark setting.
+    final systemDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) provider.setSystemDarkMode(systemDark);
+    });
     // Use server-themed colors when available, fall back to widget theme or defaults
     final effectiveTheme = provider.serverCustomizations != null
         ? provider.serverTheme
@@ -383,7 +388,14 @@ class _ChatWidgetState extends State<ChatWidget> {
       children: [
         // The bot's chat background (gradient, image, pattern) behind a see-through list.
         if (provider.serverCustomizations != null)
-          Positioned.fill(child: ChatBackgroundLayer(background: ChatBackgrounds.resolve(provider.serverCustomizations))),
+          Positioned.fill(
+            // A widget theme paints it when the owner kept the default white.
+            child: ChatBackgroundLayer(
+              background: provider.customizations.surface != null
+                  ? SolidBackground(provider.customizations.surface!)
+                  : ChatBackgrounds.resolve(provider.serverCustomizations),
+            ),
+          ),
         // Message history list with interactive node rendered inline at bottom
         widget.enablePagination
             ? _buildPaginatedMessageList(provider, theme)
@@ -692,6 +704,8 @@ class _ChatWidgetState extends State<ChatWidget> {
       hideBrand: provider.serverCustomizations != null && provider.customizations.hideBrand,
       customBrand: provider.serverCustomizations != null ? provider.customizations.customBrand : null,
       theme: theme,
+      // The widget theme's field and the palette's send colours.
+      look: provider.serverCustomizations != null ? provider.customizations : null,
         ),
       ],
     );
