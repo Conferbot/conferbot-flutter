@@ -135,7 +135,7 @@ class HomeScreen extends StatelessWidget {
 }
 ```
 
-`ChatWidget` is the complete chat UI: header with bot name and avatar, message list with pagination, all 51 flow node types, offline banner, live agent handover, knowledge base, and the input bar. It calls `openChat()` on the provider automatically when it appears.
+`ChatWidget` is the complete chat UI: header with bot name and avatar, message list with pagination, every flow node type the web widget runs, offline banner, live agent handover, knowledge base, and the input bar. It calls `openChat()` on the provider automatically when it appears.
 
 ## Floating Bubble (FAB)
 
@@ -352,7 +352,40 @@ provider.sendTypingStatus(true);
 provider.resetConversation();
 ```
 
-For interactive nodes you can either build your own UI from `currentUIState` (typed states like `SingleChoiceUIState`, `RatingUIState`, `CalendarUIState`, ...) or reuse the SDK's `NodeRenderer`. Individual building blocks are also exported: `ChatHeader`, `MessageList`, `SimpleMessageList`, `MessageBubble`, `ChatInput`, `ChatBottomBar`, `TypingIndicator`, `ConnectionStatus`, `OfflineIndicator`, `Avatar`, `EmptyState`.
+For interactive nodes you can either build your own UI from `currentUIState` (typed states like `SingleChoiceUIState`, `RatingUIState`, `CalendarUIState`, `CarouselUIState`, `SliderUIState`, `MatrixUIState`, ...) or reuse the SDK's `NodeRenderer`. Answer with `submitResponse` in the shape the step reads (see "How bot flows run"). Individual building blocks are also exported: `ChatHeader`, `MessageList`, `SimpleMessageList`, `MessageBubble`, `ChatInput`, `ChatBottomBar`, `TypingIndicator`, `ConnectionStatus`, `OfflineIndicator`, `Avatar`, `EmptyState`.
+
+### How bot flows run
+
+The flow engine (`NodeFlowEngine`, driven by the provider) runs a bot the way the web widget does. It is tested against the shared flow-node spec: 156 cases whose outcomes come from running the web widget's own code (`test/parity/flows_test.dart`, all passing).
+
+- The chat starts at the first welcome step. A step that doesn't branch leaves by its first edge. A branch (a choice, a condition, an AI route) leaves by its exact handle; when that handle has no edge, the chat ends. An unknown step shows nothing and continues along its first edge.
+- The steps read the fields the builder saves. A question saves its answer only when it has an answer variable. Logic and integration results are saved by name.
+- Bot text fills `{x}`, `${x}`, `{{x}}`, `${ANSWERS.x}` and `$${x}` from the answers. An unknown variable shows nothing.
+- Typing dots before each step last as long as the web's (by the length of what is said). An image or video moves on once it loads, or after 4 seconds at most.
+- Card numbers, bank accounts, government ids and passwords are masked in the answers and in the record the server gets, unless the bot's `redactSensitive` is off. What the visitor typed stays in their own chat.
+- GPT, AI route, AI extract, knowledge-base answers, OTP, address search and payments go through the bot's server (`/api/v1/bot/:botId/...`). No API key is ever on the device.
+- Payment, OTP and consent steps are gates: typed text does not get past them.
+
+Each step says its own lines: the question, a greeting, an answer, a picture, a video, a file, HTML or a link. They reach the chat through `flowEngine.botMessageStream`, and the visitor's answers through `userMessageStream`. The step waiting for the visitor is `currentUIState`. Answer it with `submitResponse`:
+
+| Step | Answer |
+|---|---|
+| Typed questions (name, email, phone, number, URL, OTP code, AI and knowledge-base questions, typed signature) | the text, as a `String` |
+| Buttons, dropdown, image choice, yes/no, legacy choices | `{'buttonId': id}` |
+| Check options | `{'buttonIds': [ids]}` |
+| Rating, opinion scale, slider, date/time | `{'value': v}` |
+| Calendar | `{'date': 'YYYY-MM-DD', 'slot': 'HH:MM'}` |
+| File | `{'file': {name, size, type, uri}}`, or `{'skip': true}` |
+| Carousel, product card | `{'buttonId': id, 'cardId': id}`, or `{'action': 'continue'}` |
+| Consent | `{'agreed': true}` |
+| Ranking | `{'order': [ids]}` |
+| Matrix | `{'cells': {rowId: colId}}` (a list of column ids for a multiple-choice matrix) |
+| Address | `{'action': 'search', 'q': text}`, `{'action': 'pick', 'index': i}`, or `{'action': 'manual', 'line1': ..., 'city': ..., 'region': ..., 'postal': ..., 'country': ...}` |
+| Payment | `{'action': 'open'}` (Pay now), `{'action': 'check'}`, `{'action': 'cancel'}` |
+| Navigate | `{'buttonId': 'link-<i>'}` to open a link, `{'action': 'done'}` |
+| OTP | an email or a code as text, or `{'action': 'skip'}` |
+
+`NodeRenderer` sends all of these for you.
 
 ### Socket events
 
