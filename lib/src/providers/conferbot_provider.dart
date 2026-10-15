@@ -151,6 +151,7 @@ class ConferBotProvider with ChangeNotifier {
     this.baseUrl,
     this.socketUrl,
   }) {
+    ChatState.instance.visitorContext = user?.toVisitorContext();
     _apiClient = ApiClient(
       apiKey: apiKey,
       botId: botId,
