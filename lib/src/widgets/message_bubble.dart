@@ -6,6 +6,7 @@ import 'agent_reply.dart';
 import 'media/audio_player_widget.dart';
 import '../core/live_chat/live_chat.dart';
 import '../core/customization/customizations.dart';
+import 'bubble_outline.dart';
 import '../config/constants.dart';
 import '../models/message.dart';
 import '../models/queued_message.dart';
@@ -197,6 +198,7 @@ class MessageBubble extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: _getBubbleColor(effectiveTheme),
                       borderRadius: bubbleRadius,
+                      border: bubbleOutline(look),
                       boxShadow: [effectiveTheme.shadows.sm],
                     ),
                     child: Column(
