@@ -2,7 +2,11 @@
 abstract class NodeUIState {
   final String nodeId;
 
-  const NodeUIState({required this.nodeId});
+  /// What a step adds for custom renderers (a consent text, a checkout
+  /// link, an OTP stage...).
+  final Map<String, dynamic> extra;
+
+  const NodeUIState({required this.nodeId, this.extra = const {}});
 }
 
 /// Text input types for ask question handlers
@@ -104,6 +108,7 @@ class TextInputUIState extends NodeUIState {
     this.errorMessage,
     this.answerKey,
     required super.nodeId,
+    super.extra,
   });
 }
 
@@ -114,11 +119,19 @@ class FileUploadUIState extends NodeUIState {
   final List<String>? allowedTypes;
   final String? answerKey;
 
+  /// The visitor may skip it.
+  final bool optional;
+
+  /// The accepted types in words ("PDF or image").
+  final String? typesInWords;
+
   const FileUploadUIState({
     required this.questionText,
     this.maxSizeMb = 10,
     this.allowedTypes,
     this.answerKey,
+    this.optional = false,
+    this.typesInWords,
     required super.nodeId,
   });
 }
@@ -147,10 +160,18 @@ class ChoiceOption {
   final String text;
   final String? description;
 
+  /// What picking it saves (the option's own text, HTML stripped).
+  final dynamic value;
+
+  /// A link the button opens (navigate, carousel and payment steps).
+  final String? url;
+
   const ChoiceOption({
     required this.id,
     required this.text,
     this.description,
+    this.value,
+    this.url,
   });
 }
 
@@ -197,6 +218,7 @@ class SingleChoiceUIState extends NodeUIState {
     this.questionText,
     required this.choices,
     required super.nodeId,
+    super.extra,
   });
 }
 
@@ -213,6 +235,7 @@ class MultipleChoiceUIState extends NodeUIState {
     this.minSelections,
     this.maxSelections,
     required super.nodeId,
+    super.extra,
   });
 }
 
@@ -256,6 +279,12 @@ class RatingUIState extends NodeUIState {
   final String? minLabel;
   final String? maxLabel;
 
+  /// What each value means ("Terrible" ... "Amazing"), in order.
+  final List<String>? labels;
+
+  /// The faces a smiley rating shows, in order.
+  final List<String>? faces;
+
   const RatingUIState({
     this.questionText,
     required this.ratingType,
@@ -263,6 +292,8 @@ class RatingUIState extends NodeUIState {
     this.maxValue = 5,
     this.minLabel,
     this.maxLabel,
+    this.labels,
+    this.faces,
     required super.nodeId,
   });
 }
@@ -301,6 +332,12 @@ class CalendarUIState extends NodeUIState {
   final String? timezone;
   final String? answerKey;
 
+  /// "date", "time" or "datetime".
+  final String mode;
+
+  /// The bookable times per day ("YYYY-MM-DD" -> ["09:30", ...]).
+  final Map<String, List<String>>? availableSlots;
+
   const CalendarUIState({
     this.questionText,
     this.showTimeSelection = false,
@@ -309,7 +346,10 @@ class CalendarUIState extends NodeUIState {
     this.disabledDays,
     this.timezone,
     this.answerKey,
+    this.mode = 'date',
+    this.availableSlots,
     required super.nodeId,
+    super.extra,
   });
 }
 
@@ -411,12 +451,20 @@ class PaymentUIState extends NodeUIState {
   final String? currency;
   final String? description;
 
+  final String? questionText;
+
+  /// The pay button's label ("Pay now · \$12.50").
+  final String? buttonLabel;
+
   const PaymentUIState({
     required this.paymentUrl,
     this.amount,
     this.currency,
     this.description,
+    this.questionText,
+    this.buttonLabel,
     required super.nodeId,
+    super.extra,
   });
 }
 
@@ -427,9 +475,12 @@ class RedirectUIState extends NodeUIState {
   final String url;
   final bool openInNewTab;
 
+  final String? questionText;
+
   const RedirectUIState({
     required this.url,
     this.openInNewTab = true,
+    this.questionText,
     required super.nodeId,
   });
 }
@@ -449,5 +500,145 @@ class VoiceMessageUIState extends NodeUIState {
     this.waveformData,
     this.isUserMessage = false,
     required super.nodeId,
+  });
+}
+
+// ==================== CAROUSEL UI STATE ====================
+
+/// A carousel button: a path (leaves by its own handle) or a link.
+class CarouselButton {
+  final String id;
+  final String label;
+
+  /// Set for a link button: it opens the page and the step keeps waiting.
+  final String? url;
+
+  const CarouselButton({required this.id, required this.label, this.url});
+}
+
+/// One carousel card.
+class CarouselCard {
+  final String id;
+  final String title;
+  final String? description;
+  final String? imageUrl;
+  final String? price;
+  final List<CarouselButton> buttons;
+
+  const CarouselCard({
+    required this.id,
+    required this.title,
+    this.description,
+    this.imageUrl,
+    this.price,
+    this.buttons = const [],
+  });
+}
+
+/// Cards side by side (carousel-node, product-card-node). With no path
+/// button anywhere, a Continue button moves on.
+class CarouselUIState extends NodeUIState {
+  final String? questionText;
+  final List<CarouselCard> cards;
+  final bool showContinue;
+
+  const CarouselUIState({
+    this.questionText,
+    required this.cards,
+    this.showContinue = false,
+    required super.nodeId,
+    super.extra,
+  });
+}
+
+// ==================== SLIDER UI STATE ====================
+
+/// A value on a scale (slider-node), sent with its submit button.
+class SliderUIState extends NodeUIState {
+  final String? questionText;
+  final num min;
+  final num max;
+  final num step;
+  final num defaultValue;
+  final String unit;
+
+  /// "prefix" or "suffix".
+  final String unitPosition;
+  final String submitLabel;
+
+  const SliderUIState({
+    this.questionText,
+    required this.min,
+    required this.max,
+    this.step = 1,
+    required this.defaultValue,
+    this.unit = '',
+    this.unitPosition = 'suffix',
+    this.submitLabel = 'Send',
+    required super.nodeId,
+    super.extra,
+  });
+}
+
+// ==================== RANKING UI STATE ====================
+
+/// Items the visitor puts in order (ranking-node), then submits.
+class RankingUIState extends NodeUIState {
+  final String? questionText;
+  final List<ChoiceOption> items;
+  final String submitLabel;
+
+  const RankingUIState({
+    this.questionText,
+    required this.items,
+    this.submitLabel = 'Send',
+    required super.nodeId,
+    super.extra,
+  });
+}
+
+// ==================== MATRIX UI STATE ====================
+
+/// Rows rated against columns (matrix-node): one column per row, or
+/// several with mode "multiple".
+class MatrixUIState extends NodeUIState {
+  final String? questionText;
+  final List<ChoiceOption> rows;
+  final List<ChoiceOption> columns;
+
+  /// "single" or "multiple".
+  final String mode;
+  final bool requireAll;
+  final String submitLabel;
+
+  const MatrixUIState({
+    this.questionText,
+    required this.rows,
+    required this.columns,
+    this.mode = 'single',
+    this.requireAll = true,
+    this.submitLabel = 'Submit',
+    required super.nodeId,
+    super.extra,
+  });
+}
+
+// ==================== ADDRESS UI STATE ====================
+
+/// An address: searched and picked, or typed field by field (address-node).
+class AddressUIState extends NodeUIState {
+  final String? questionText;
+
+  /// The last search's matches ({line1, city, region, postal, country,
+  /// display...}).
+  final List<Map<String, dynamic>> results;
+  final bool allowManualEntry;
+
+  const AddressUIState({
+    this.questionText,
+    this.results = const [],
+    this.allowManualEntry = true,
+    required super.nodeId,
+    super.extra,
   });
 }
