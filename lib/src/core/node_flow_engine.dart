@@ -1,142 +1,429 @@
+/// Runs a bot flow the way the web widget does. The reference is the shared
+/// flow-node spec (conferbot-react-native scripts/parity/flows/
+/// nodes.spec.json, "engine"), made by running conferbot-widget's own code;
+/// test/parity/flows_test.dart runs every fixture through this engine. A
+/// port of the React Native SDK's src/core/NodeFlowEngine.ts.
+///
+/// - start: the FIRST welcome-node in nodes[].
+/// - next: a step that does not branch leaves by the FIRST edge from it,
+///   whatever its handle. No edge, or a target that does not exist: the
+///   chat ends.
+/// - port: a branching step leaves by an exact handle. No such edge: the
+///   chat ends - never another edge. A wired edge to a missing node stops
+///   the chat where it is (the web throws). Rich steps may name a fallback
+///   handle, taken when only it is wired (web goPort).
+/// - unknown step types (and a welcome-node reached mid-flow) show nothing
+///   and continue along their first edge on the next tick.
+/// - jump: to the target node; a missing target ends the chat.
+/// - end: a sub-flow call returns to its caller; otherwise the chat is over
+///   ("chat-flow-completed").
+/// - pacing: typing dots before each displayed step for paceFor(), unless
+///   a fixed typingDelay is configured.
+library;
+
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
-import 'nodes/node_types.dart';
-import 'nodes/node_result.dart';
-import 'nodes/node_ui_state.dart';
-import 'nodes/node_handler_registry.dart';
-import 'nodes/handlers/legacy_handlers.dart' show NodeHandler;
-import 'nodes/handlers/display_handlers.dart' show MessageState, ImageState, VideoState, AudioState, FileState, HtmlState;
-import 'nodes/handlers/choices/choice_ui_states.dart' show SingleChoiceState, MultipleChoiceState;
-import 'nodes/handlers/integrations/integration_base.dart' show IntegrationNodeHandler;
-import 'state/chat_state.dart';
-import 'agent/agent_handover.dart';
-import 'nodes/handlers/special_handlers.dart' show HumanHandoverNodeHandler;
-import 'errors/conferbot_exceptions.dart';
-import 'errors/error_handler.dart' hide ErrorResult;
-import '../services/socket_client.dart';
-import '../models/socket_events.dart';
-import '../providers/analytics_provider.dart';
+import 'package:http/http.dart' as http;
+
+import '../config/constants.dart';
 import '../models/analytics.dart';
+import '../providers/analytics_provider.dart';
+import '../services/socket_client.dart';
 import '../utils/logger.dart';
+import 'errors/conferbot_exceptions.dart';
+import 'flow/flow_context.dart';
+import 'flow/flow_control.dart';
+import 'flow/js.dart' show jsIsoString;
+import 'flow/text.dart';
+import 'flow/zones.dart' show deviceTimeZone;
+import 'nodes/handlers/special_handlers.dart' show HumanHandoverNodeHandler;
+import 'nodes/node_handler.dart';
+import 'nodes/node_handler_registry.dart';
+import 'nodes/node_types.dart';
+import 'nodes/node_ui_state.dart';
+import 'state/chat_state.dart';
 
-/// Core engine that processes the chatbot flow
-/// Orchestrates node handlers, manages state, and coordinates with socket
-/// Uses ChangeNotifier for reactive Flutter UI updates
+/// What the engine did, step by step (the flow-node spec's `expect`):
+/// `enter` {node, type, via}, `shown` {node}, `port` {node, handle, wired},
+/// `unsupported` {node, type}, `error` {node, message}, `end`, `crash`
+/// {node, reason}.
+class FlowTraceEvent {
+  final String kind;
+  final String? node;
+  final String? type;
+  final String? via;
+  final String? handle;
+  final bool? wired;
+  final String? message;
+  final String? reason;
+
+  const FlowTraceEvent(this.kind, {this.node, this.type, this.via, this.handle, this.wired, this.message, this.reason});
+}
+
+/// How the engine runs.
+class NodeFlowEngineConfig {
+  /// A fixed typing delay (ms) before each displayed step. Unset: the web
+  /// widget's pacing (nodeLogic paceFor), by the length of what is said.
+  final int? typingDelay;
+
+  /// Steps run without the visitor before the engine stops (a runaway loop guard).
+  final int maxNodesPerCycle;
+
+  /// How long a step's handler may take (ms).
+  final int nodeProcessingTimeoutMs;
+
+  /// How long an image or video step waits for its media at most (ms, web: 4000).
+  final int mediaAdvanceMs;
+
+  /// The bot server origin for /api/v1/bot/:id/* (default: the configured endpoint).
+  final String? apiOrigin;
+
+  /// The HTTP client for the bot API (tests script it).
+  final http.Client? httpClient;
+
+  /// The page the chat runs on, when the host app has one ({url, referrer}).
+  final Map<String, String>? page;
+
+  /// The visitor's IANA time zone (default: the device's).
+  final String? visitorTimeZone;
+
+  /// The random source (random-flow).
+  final double Function()? random;
+
+  /// The clock (tests use a virtual one).
+  final DateTime Function()? now;
+
+  /// Every step entered, port taken, step passed and the end.
+  final void Function(FlowTraceEvent event)? onTrace;
+
+  const NodeFlowEngineConfig({
+    this.typingDelay,
+    this.maxNodesPerCycle = 500,
+    this.nodeProcessingTimeoutMs = 90000,
+    this.mediaAdvanceMs = 4000,
+    this.apiOrigin,
+    this.httpClient,
+    this.page,
+    this.visitorTimeZone,
+    this.random,
+    this.now,
+    this.onTrace,
+  });
+}
+
+/// Steps that draw something, after the typing dots (web nodeTypeCategories DISPLAY_NODE_TYPES).
+const Set<String> displayNodeTypes = {
+  'two-choices-node',
+  'three-choices-node',
+  'select-option-node',
+  'user-rating-node',
+  'quiz-node',
+  'user-input-node',
+  'user-range-node',
+  'welcome-node',
+  'message-node',
+  'image-node',
+  'video-node',
+  'audio-node',
+  'file-node',
+  'ask-name-node',
+  'ask-email-node',
+  'ask-phone-number-node',
+  'ask-number-node',
+  'ask-url-node',
+  'ask-file-node',
+  'ask-location-node',
+  'ask-custom-question-node',
+  'ask-multiple-questions-node',
+  'calendar-node',
+  'n-select-option-node',
+  'n-check-options-node',
+  'n-choices-node',
+  'image-choice-node',
+  'carousel-node',
+  'rating-choice-node',
+  'yes-or-no-choice-node',
+  'opinion-scale-choice-node',
+  'user-redirect-node',
+  'html-node',
+  'navigate-node',
+  'dynamic-choices-node',
+  'consent-node',
+  'product-card-node',
+  'slider-node',
+  'datetime-node',
+  'ranking-node',
+  'otp-node',
+  'address-node',
+  'matrix-node',
+  'ai-extract-node',
+  'ai-route-node',
+  'kb-answer-node',
+  'signature-node',
+  'payment-node',
+};
+
+/// Question steps that register data.answerVariable when shown (web _nodeCategorizeHelper).
+const Set<String> _registersAnswer = {
+  'ask-name-node',
+  'ask-email-node',
+  'ask-phone-number-node',
+  'ask-number-node',
+  'ask-url-node',
+  'ask-location-node',
+  'ask-custom-question-node',
+  'ask-file-node',
+  'calendar-node',
+  'n-select-option-node',
+  'n-check-options-node',
+  'n-choices-node',
+  'image-choice-node',
+  'rating-choice-node',
+  'yes-or-no-choice-node',
+  'opinion-scale-choice-node',
+  'carousel-node',
+  // rich steps (richNodesView categorizeRichNode)
+  'dynamic-choices-node',
+  'consent-node',
+  'product-card-node',
+  'slider-node',
+  'datetime-node',
+  'ranking-node',
+  'otp-node',
+  'address-node',
+  'matrix-node',
+  'ai-extract-node',
+  'ai-route-node',
+  'kb-answer-node',
+  'signature-node',
+  'payment-node',
+};
+
+/// Steps whose media decides when the flow moves on (load, or the cap).
+const Set<String> _mediaTypes = {'image-node', 'video-node'};
+
+const Set<String> _flowControlTypes = {loopType, subflowType, runSubflowType, subflowReturnType};
+
+/// Steps that wait for the visitor once drawn.
+const Set<String> _userInteractionNodes = {
+  'ask-name-node',
+  'ask-email-node',
+  'ask-phone-number-node',
+  'ask-number-node',
+  'ask-url-node',
+  'ask-location-node',
+  'ask-custom-question-node',
+  'ask-file-node',
+  'ask-multiple-questions-node',
+  'n-choices-node',
+  'image-choice-node',
+  'rating-choice-node',
+  'yes-or-no-choice-node',
+  'opinion-scale-choice-node',
+  'n-select-option-node',
+  'n-check-options-node',
+  'calendar-node',
+  // Waits on the team: agent-accepted / no-agents-available move it on
+  'human-handover-node',
+  'carousel-node',
+  'navigate-node',
+  'dynamic-choices-node',
+  'consent-node',
+  'product-card-node',
+  'slider-node',
+  'datetime-node',
+  'ranking-node',
+  'otp-node',
+  'address-node',
+  'matrix-node',
+  'ai-extract-node',
+  'ai-route-node',
+  'kb-answer-node',
+  'signature-node',
+  'payment-node',
+  'user-input-node',
+  'user-range-node',
+  'quiz-node',
+  'two-choices-node',
+  'three-choices-node',
+  'select-option-node',
+  'user-rating-node',
+};
+
+/// Whether a step type waits for the visitor once drawn.
+bool requiresUserInteraction(String type) => _userInteractionNodes.contains(type);
+
+/// Core engine that runs the chatbot flow. Uses ChangeNotifier and streams
+/// for the chat UI.
 class NodeFlowEngine extends ChangeNotifier {
-  final SocketClient _socketClient;
-
-  /// Handler registry instance
-  final NodeHandlerRegistry _handlerRegistry = NodeHandlerRegistry.instance;
+  final FlowSocket? _socket;
+  final NodeHandlerRegistry _registry;
+  final NodeFlowEngineConfig _config;
+  http.Client? _ownClient;
 
   /// Analytics provider for tracking
   final AnalyticsProvider _analytics = AnalyticsProvider.instance;
 
-  /// Timeout for processing a single node
-  static const Duration _nodeProcessingTimeout = Duration(seconds: 30);
+  /// The bot's customizations (redactSensitive, chatLeaveMessage...).
+  Map<String, dynamic> _customizations = {};
 
-  /// Visited node tracking for infinite loop protection
-  final Set<String> _visitedNodes = {};
-
-  /// Maximum number of node visits before declaring a cycle
-  static const int _maxNodeVisits = 100;
-
-  /// Constructor
   NodeFlowEngine({
-    required SocketClient socketClient,
-  }) : _socketClient = socketClient {
-    // Inject socket client into all integration handlers that need server communication
-    IntegrationNodeHandler.socketClient = socketClient;
-    // StripeNodeHandler.socketClient setter delegates to IntegrationNodeHandler
-    // for backward compatibility
+    SocketClient? socketClient,
+    FlowSocket? socket,
+    NodeHandlerRegistry? registry,
+    NodeFlowEngineConfig config = const NodeFlowEngineConfig(),
+    Map<String, dynamic>? customizations,
+  })  : _socket = socket ?? (socketClient == null ? null : SocketClientFlowSocket(socketClient)),
+        _registry = registry ?? NodeHandlerRegistry.instance,
+        _config = config {
+    _linesSub = _chatState.flowLines.listen(_onFlowLine);
+    if (customizations != null) setCustomizations(customizations);
   }
 
-  // ========== State Fields ==========
+  ChatState get _chatState => ChatState.instance;
 
-  /// Current UI state to render
-  dynamic _currentUIState;
-  dynamic get currentUIState => _currentUIState;
+  // ========== Flow definition ==========
 
-  /// Question text of the active interactive node, if any. The provider
-  /// persists it into the visible transcript before echoing the answer.
-  String? get currentQuestionText =>
-      _extractInteractiveQuestionText(_currentUIState);
-
-  /// Loading state for typing indicator
-  bool _isProcessing = false;
-  bool get isProcessing => _isProcessing;
-
-  /// Error state (typed exception)
-  ConferBotException? _currentError;
-  ConferBotException? get currentError => _currentError;
-
-  /// Legacy error message getter for backwards compatibility
-  String? get errorMessage => _currentError?.userMessage;
-
-  /// Flow is complete
-  bool _isFlowComplete = false;
-  bool get isFlowComplete => _isFlowComplete;
-
-  /// Current node being processed
-  String? _currentNodeId;
-  String? get currentNodeId => _currentNodeId;
-
-  Map<String, dynamic>? _currentNodeData;
-  Map<String, dynamic>? get currentNodeData => _currentNodeData;
-
-  /// The current node's type (it is on the node, not in its data).
-  String? _currentNodeType;
-
-  /// Reference to steps from server
-  List<Map<String, dynamic>> _steps = [];
-  List<Map<String, dynamic>> get steps => List.unmodifiable(_steps);
-
-  /// Edge mapping for port-based routing
+  final Map<String, Map<String, dynamic>> _nodes = {};
+  List<Map<String, dynamic>> _nodeList = [];
   List<Map<String, dynamic>> _edges = [];
+  String? _startNodeId;
+
+  /// The flow's nodes as saved.
+  List<Map<String, dynamic>> get steps => List.unmodifiable(_nodeList);
+
+  /// The flow's edges as saved.
   List<Map<String, dynamic>> get edges => List.unmodifiable(_edges);
 
-  /// Chat state singleton
-  ChatState get _chatState => ChatState();
+  // ========== Engine state ==========
 
-  // ========== Streams for Reactive Updates ==========
+  bool _isProcessing = false;
+  bool _isWaitingForInput = false;
+  String? _currentNodeId;
+  dynamic _currentUIState;
+  ConferBotException? _currentError;
+  String? _validationMessage;
+  bool _ended = false;
 
-  /// Stream controller for UI state changes
-  final StreamController<dynamic> _uiStateController =
-      StreamController<dynamic>.broadcast();
+  /// Every step entered, in order (pacing reads the one before).
+  final List<Map<String, dynamic>> _visits = [];
+
+  /// Bumped whenever the flow moves: a stale timer or reply does nothing.
+  int _moveToken = 0;
+
+  /// The step whose "shown" was already reported for this visit.
+  int _shownToken = -1;
+
+  /// Media that finished loading: the step moves on before the cap.
+  final Map<String, void Function()> _mediaWaiters = {};
+  FlowControlState _flowControl = emptyFlowControl();
+  int _nodesProcessedInCycle = 0;
+  StreamSubscription<TranscriptEntry>? _linesSub;
+
+  /// Current UI state to render (null while nothing waits for the visitor).
+  dynamic get currentUIState => _currentUIState;
+
+  /// Typing dots: the flow is working on a step.
+  bool get isProcessing => _isProcessing;
+
+  /// The flow waits for the visitor's answer.
+  bool get isWaitingForInput => _isWaitingForInput;
+
+  /// The flow reached its end.
+  bool get isFlowComplete => _ended;
+
+  /// Whether the chat has ended (the flow reached its end).
+  bool isEnded() => _ended;
+
+  /// The step the flow is on.
+  String? get currentNodeId => _currentNodeId;
+
+  /// The current step's data.
+  Map<String, dynamic>? get currentNodeData {
+    final n = _currentNodeId == null ? null : _nodes[_currentNodeId];
+    final d = n?['data'];
+    return d is Map ? Map<String, dynamic>.from(d) : (n == null ? null : <String, dynamic>{});
+  }
+
+  /// The current step's type.
+  String? get currentNodeType => _currentNodeId == null ? null : _nodes[_currentNodeId]?['type']?.toString();
+
+  /// The last error (typed).
+  ConferBotException? get currentError => _currentError;
+
+  /// The last error's message for the visitor.
+  String? get errorMessage => _currentError?.userMessage;
+
+  /// Why the visitor's last answer was refused (the step still waits).
+  String? get validationMessage => _validationMessage;
+
+  /// Question text of the waiting step, if any.
+  String? get currentQuestionText {
+    final ui = _currentUIState;
+    if (ui is SingleChoiceUIState) return ui.questionText;
+    if (ui is MultipleChoiceUIState) return ui.questionText;
+    if (ui is TextInputUIState) return ui.questionText;
+    return null;
+  }
+
+  /// A node of the loaded flow by id.
+  Map<String, dynamic>? getNode(String nodeId) => _nodes[nodeId];
+
+  // ========== Streams for the chat UI ==========
+
+  final StreamController<dynamic> _uiStateController = StreamController<dynamic>.broadcast();
   Stream<dynamic> get currentUIStateStream => _uiStateController.stream;
 
-  /// Stream controller for bot messages to add to chat record
-  final StreamController<Map<String, dynamic>> _botMessageController =
-      StreamController<Map<String, dynamic>>.broadcast();
+  /// A bot line to draw: {text, nodeId, type, imageUrl?, videoUrl?, audioUrl?, fileUrl?, fileName?, html?, link?}.
+  final StreamController<Map<String, dynamic>> _botMessageController = StreamController<Map<String, dynamic>>.broadcast();
   Stream<Map<String, dynamic>> get botMessageStream => _botMessageController.stream;
 
-  /// Stream controller for user messages to add to chat record
-  final StreamController<Map<String, dynamic>> _userMessageController =
-      StreamController<Map<String, dynamic>>.broadcast();
+  /// The visitor's line to draw: {text, nodeId, type}.
+  final StreamController<Map<String, dynamic>> _userMessageController = StreamController<Map<String, dynamic>>.broadcast();
   Stream<Map<String, dynamic>> get userMessageStream => _userMessageController.stream;
 
-  /// Stream controller for processing state
-  final StreamController<bool> _processingController =
-      StreamController<bool>.broadcast();
+  final StreamController<bool> _processingController = StreamController<bool>.broadcast();
   Stream<bool> get isProcessingStream => _processingController.stream;
 
-  /// Stream controller for error messages (legacy string-based)
-  final StreamController<String?> _errorController =
-      StreamController<String?>.broadcast();
+  final StreamController<String?> _errorController = StreamController<String?>.broadcast();
   Stream<String?> get errorMessageStream => _errorController.stream;
 
-  /// Stream controller for typed errors
-  final StreamController<ConferBotException?> _typedErrorController =
-      StreamController<ConferBotException?>.broadcast();
+  final StreamController<ConferBotException?> _typedErrorController = StreamController<ConferBotException?>.broadcast();
   Stream<ConferBotException?> get errorStream => _typedErrorController.stream;
 
-  /// Stream controller for flow completion
-  final StreamController<bool> _flowCompleteController =
-      StreamController<bool>.broadcast();
+  final StreamController<bool> _flowCompleteController = StreamController<bool>.broadcast();
   Stream<bool> get isFlowCompleteStream => _flowCompleteController.stream;
 
-  // ========== Initialization ==========
+  void _onFlowLine(TranscriptEntry e) {
+    if (e.nodeId == null) return;
+    if (e.by == 'user') {
+      if (e.message.isEmpty || _userMessageController.isClosed) return;
+      _userMessageController.add({'text': e.message, 'nodeId': e.nodeId, 'type': 'user-message'});
+      return;
+    }
+    if (e.by != 'bot' || _botMessageController.isClosed) return;
+    final data = e.data ?? const <String, dynamic>{};
+    if (e.message.isEmpty && data.isEmpty) return;
+    _botMessageController.add({
+      'text': e.message,
+      'nodeId': e.nodeId,
+      'type': 'bot-message',
+      if (e.nodeType != null) 'nodeType': e.nodeType,
+      ...data,
+    });
+    if (e.message.isNotEmpty) _analytics.trackMessage(sender: 'bot', text: e.message);
+  }
 
-  /// Initialize the flow engine with bot data from server
+  // ========== Setup ==========
+
+  /// The bot's customizations (redactSensitive, chatLeaveMessage...).
+  void setCustomizations(Map<String, dynamic>? customizations) {
+    _customizations = Map<String, dynamic>.from(customizations ?? const {});
+    _chatState.setRedactSensitive(_customizations['redactSensitive'] != false);
+  }
+
+  /// Initialize the flow engine with bot data from the server.
   void initialize({
     required String chatSessionId,
     required String visitorId,
@@ -144,745 +431,684 @@ class NodeFlowEngine extends ChangeNotifier {
     String? workspaceId,
     required List<Map<String, dynamic>> stepsData,
     required List<Map<String, dynamic>> edgesData,
+    Map<String, dynamic>? customizations,
   }) {
-    _chatState.initialize(
-      chatSessionId: chatSessionId,
-      visitorId: visitorId,
-      botId: botId,
-      workspaceId: workspaceId,
-    );
-    _steps = List.from(stepsData);
-    _edges = List.from(edgesData);
+    _chatState.initialize(chatSessionId: chatSessionId, visitorId: visitorId, botId: botId, workspaceId: workspaceId);
     _chatState.setSteps(stepsData);
-
-    // Reset visited nodes for new flow initialization
-    _visitedNodes.clear();
-
-    // Initialize analytics session
-    _analytics.startSession(
-      sessionId: chatSessionId,
-      visitorId: visitorId,
-      botId: botId,
-      workspaceId: workspaceId,
-    );
-
-    flowLogger.debug('Initialized with ${_steps.length} steps and ${_edges.length} edges');
+    if (customizations != null) setCustomizations(customizations);
+    loadFlow(stepsData, edgesData);
+    _analytics.startSession(sessionId: chatSessionId, visitorId: visitorId, botId: botId, workspaceId: workspaceId);
   }
 
-  // ========== Flow Control ==========
+  /// Loads a flow (`chatbot.elements[0].nodes` / `.edges`).
+  void loadFlow(List<dynamic> nodes, List<dynamic> edges) {
+    _nodes.clear();
+    _nodeList = nodes.whereType<Map>().map((n) => Map<String, dynamic>.from(n)).toList();
+    _edges = edges.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    for (final n in _nodeList) {
+      final id = n['id'];
+      if (id != null) _nodes[id.toString()] = n;
+    }
+    _startNodeId = _findStartNode();
+    flowLogger.debug('Flow loaded: ${_nodes.length} nodes, start $_startNodeId');
+  }
 
-  /// Start processing from the first node
-  void start() {
-    _visitedNodes.clear();
+  /// The first welcome-node in nodes[] starts the chat (web index.ts
+  /// _findAndDisplayNode). A flow without one starts at a node no edge
+  /// leads to, else the first node.
+  String? _findStartNode() {
+    for (final n in _nodeList) {
+      if (n['type'] == 'welcome-node' && n['id'] != null) return n['id'].toString();
+    }
+    final targets = _edges.map((e) => e['target']?.toString()).toSet();
+    for (final id in _nodes.keys) {
+      if (!targets.contains(id)) return id;
+    }
+    return _nodes.keys.isEmpty ? null : _nodes.keys.first;
+  }
 
-    if (_steps.isEmpty) {
-      _setFlowComplete(true);
+  // ========== Running ==========
+
+  /// Starts the flow from the beginning.
+  Future<void> start() async {
+    final startId = _startNodeId;
+    if (startId == null) {
+      _handleFlowComplete('no_start_node');
       return;
     }
-
-    _processNodeAtIndex(0);
+    resetFlow();
+    await _enter(_nodes[startId]!, 'start');
   }
 
-  /// Resume from a specific node by ID (used when restoring session)
-  void resumeFromNode(String nodeId) {
-    _visitedNodes.clear();
-    final index = _steps.indexWhere((step) => step['id'] == nodeId);
-    if (index >= 0) {
-      _processNodeAtIndex(index);
-    } else {
+  /// Resume from a step by id, as if reached along an edge (a restored session).
+  Future<void> resumeFromNode(String nodeId) async {
+    _nodesProcessedInCycle = 0;
+    _ended = false;
+    final node = _nodes[nodeId];
+    if (node == null) {
       flowLogger.warning('Resume target node $nodeId not found, starting from beginning');
-      start();
+      await start();
+      return;
     }
+    await _enter(node, 'edge');
   }
 
-  /// Process node at given index
-  Future<void> _processNodeAtIndex(int index) async {
-    flowLogger.debug('_processNodeAtIndex($index) called, total steps: ${_steps.length}');
-    if (index < 0 || index >= _steps.length) {
-      flowLogger.debug('Index $index out of bounds, marking flow complete');
-      _setFlowComplete(true);
-      return;
-    }
-
-    _chatState.setCurrentIndex(index);
-    final node = _steps[index];
-
-    final nodeId = node['id']?.toString();
-    if (nodeId == null) {
-      flowLogger.debug('Node at index $index has no ID, skipping');
-      _proceedToNextNode(null);
-      return;
-    }
-
-    // HIGH FIX 2: Infinite loop protection
-    if (_visitedNodes.length >= _maxNodeVisits) {
-      flowLogger.error('Flow cycle detected after $_maxNodeVisits nodes');
-      _setTypedError(NodeProcessingException(
-        message: 'Flow cycle detected after $_maxNodeVisits nodes',
-        code: 'NODE_FLOW_CYCLE',
-        nodeId: nodeId,
-      ));
-      _setProcessing(false);
-      _setFlowComplete(true);
-      return;
-    }
-    _visitedNodes.add(nodeId);
-
-    final nodeData = node['data'] as Map<String, dynamic>? ?? {};
-    final nodeType = nodeData['type']?.toString() ?? node['type']?.toString();
-
-    flowLogger.debug('Node[$index] id=$nodeId type=$nodeType dataKeys=${nodeData.keys.toList()}');
-
-    if (nodeType == null) {
-      flowLogger.debug('Node $nodeId has no type, skipping');
-      _proceedToNextNode(null);
-      return;
-    }
-
-    _currentNodeId = nodeId;
-    _currentNodeData = nodeData;
-    _currentNodeType = nodeType;
-    // Kept with the session: a restart knows where the flow stood (and
-    // whether it was waiting on its handover step).
-    _chatState.setCurrentNodeId(nodeId);
-
-    // Track node entry in analytics
-    final nodeName = nodeData['name']?.toString() ??
-                     nodeData['label']?.toString() ??
-                     nodeType;
-    _analytics.trackNodeEntry(
-      nodeId: nodeId,
-      nodeType: nodeType,
-      nodeName: nodeName,
-    );
-
-    await _processNode(nodeId, nodeType, nodeData);
+  /// Resets per-run state when starting a new flow.
+  void resetFlow() {
+    _visits.clear();
+    _ended = false;
+    _nodesProcessedInCycle = 0;
+    _flowControl = emptyFlowControl();
+    _mediaWaiters.clear();
   }
 
-  /// Process a specific node
-  Future<void> _processNode(
-    String nodeId,
-    String nodeType,
-    Map<String, dynamic> nodeData,
-  ) async {
+  String _id(Map<String, dynamic> node) => node['id'].toString();
+  String _type(Map<String, dynamic> node) => (node['type'] ?? '').toString();
+  Map<String, dynamic> _data(Map<String, dynamic> node) {
+    final d = node['data'];
+    return d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{};
+  }
+
+  /// The handler registered for a type.
+  NodeHandler? _handlerFor(String type) => _registry.getHandler(type);
+
+  /// Enter a step: record it, pace it, run its handler.
+  Future<void> _enter(Map<String, dynamic> node, String via) async {
+    if (_ended) return;
+
+    _nodesProcessedInCycle++;
+    if (_nodesProcessedInCycle > _config.maxNodesPerCycle) {
+      _handleError('Max nodes per cycle exceeded (${_config.maxNodesPerCycle})', _id(node));
+      return;
+    }
+
+    final id = _id(node);
+    final type = _type(node);
+    final token = ++_moveToken;
+    _currentNodeId = id;
+    _isWaitingForInput = false;
+    _validationMessage = null;
     _setProcessing(true);
-    _setError(null);
+    _chatState.setCurrentNodeId(id);
+    _visits.add(node);
+    _trace(FlowTraceEvent('enter', node: id, type: type, via: via));
+    _analytics.trackNodeEntry(nodeId: id, nodeType: type, nodeName: _data(node)['name']?.toString() ?? type);
 
-    final handler = _handlerRegistry.getHandler(nodeType);
+    // The step on the record, with its text as the visitor saw it (web _nodeRecord)
+    final renderedText = renderedTextFor(node, _chatState.lookupVariable);
+    _chatState.appendRecord({
+      ...node,
+      '_id': id,
+      'id': id,
+      'type': type,
+      'data': _data(node),
+      if (renderedText != null) 'renderedText': renderedText,
+      'time': jsIsoString(_now()),
+    });
 
-    if (handler == null) {
-      flowLogger.debug('No handler for node type: $nodeType (nodeId: $nodeId), skipping to next');
-      _setProcessing(false);
-
-      // Track node exit with skip
-      _analytics.trackNodeExit(exitType: NodeExitType.skipped);
-
-      // For welcome-node, just proceed — it's a start marker
-      await _proceedToNextNode(null);
+    // A welcome reached again is not a display step there: passed.
+    if (type == 'welcome-node' && via != 'start') {
+      await _passUnknown(node, token);
       return;
     }
 
-    try {
-      // HIGH FIX 1: Node processing timeout
-      final result = await handler.process(nodeData, nodeId).timeout(
-        _nodeProcessingTimeout,
-        onTimeout: () {
-          flowLogger.warning('Node processing timed out for: $nodeId');
-          return ErrorResult(
-            message: 'Node processing timed out',
-            shouldProceed: true,
-          );
-        },
-      );
-      await _handleNodeResult(result, nodeData);
-    } on TimeoutException catch (e, stackTrace) {
-      // HIGH FIX 6: Specific timeout exception handling
-      flowLogger.error('Node processing timeout for $nodeId: $e', e, stackTrace);
+    if (_flowControlTypes.contains(type)) {
+      await _runFlowControl(node, token);
+      return;
+    }
 
-      final typedException = NodeProcessingException(
-        message: 'Node processing timed out',
-        code: 'NODE_TIMEOUT',
-        nodeId: nodeId,
-        nodeType: nodeType,
-        originalError: e,
-        originalStackTrace: stackTrace,
-      );
+    final handler = _handlerFor(type);
+    if (handler == null) {
+      await _passUnknown(node, token);
+      return;
+    }
 
-      _setTypedError(typedException);
-      _setProcessing(false);
-      _analytics.trackNodeExit(exitType: NodeExitType.error);
-      await _proceedToNextNode(null);
-    } on ConferBotException catch (e) {
-      // HIGH FIX 6: Specific ConferBotException handling
-      flowLogger.error('ConferBot error processing node $nodeId: $e', e, e.originalStackTrace);
-
-      _setTypedError(e);
-      _setProcessing(false);
-      _analytics.trackNodeExit(exitType: NodeExitType.error);
-
-      if (e.isRetryable || _shouldProceedOnError(e)) {
-        await _proceedToNextNode(null);
+    if (displayNodeTypes.contains(type)) {
+      // A message with no text or an image with no picture: straight on.
+      if (isEmptyContentStep(node)) {
+        await _next(node, token);
+        return;
       }
-    } catch (e, stackTrace) {
-      flowLogger.error('Error processing node $nodeId: $e', e, stackTrace);
+      _registerAnswerVariables(node);
+      final previous = _visits.length >= 2 ? _visits[_visits.length - 2] : null;
+      final pace = _config.typingDelay ?? paceFor(previous, node, followsAutoAdvanceStep(previous?['type']));
+      if (pace > 0) {
+        _setProcessing(true);
+        await _delay(pace);
+        if (token != _moveToken || _ended) return;
+      }
+      // Drawn now (web: the message sound plays as the step is drawn).
+      _shownToken = token;
+      _trace(FlowTraceEvent('shown', node: id));
+    }
 
-      // Convert to typed exception
-      final typedException = NodeProcessingException.processingFailed(
-        nodeId: nodeId,
-        nodeType: nodeType,
-        phase: 'process',
-        originalError: e,
-        originalStackTrace: stackTrace,
-      );
+    NodeResult result;
+    try {
+      result = await _runHandler(handler, node, via, token);
+    } catch (e, st) {
+      flowLogger.error('Error processing node $id: $e', e, st);
+      _handleError('$e', id);
+      return;
+    }
+    if (token != _moveToken || _ended) return;
+    await _handleNodeResult(result, node, token);
+  }
 
-      _setTypedError(typedException);
-      _setProcessing(false);
+  /// A question step registers {nodeId, key, value: null} when shown.
+  void _registerAnswerVariables(Map<String, dynamic> node) {
+    final d = _data(node);
+    final id = _id(node);
+    if (_type(node) == NodeTypes.askMultiple) {
+      final qs = d['questions'];
+      if (qs is List) {
+        for (var i = 0; i < qs.length; i++) {
+          final q = qs[i];
+          final key = q is Map ? q['answerVariable'] : null;
+          if (key != null && key.toString().isNotEmpty) _chatState.registerAnswerVariable('$id$i', key.toString());
+        }
+      }
+      return;
+    }
+    final key = d['answerVariable'];
+    if (_registersAnswer.contains(_type(node)) && key != null && key.toString().isNotEmpty) {
+      _chatState.registerAnswerVariable(id, key.toString());
+    }
+  }
 
-      // Track node exit with error
-      _analytics.trackNodeExit(exitType: NodeExitType.error);
+  /// Runs a step's handler with the engine's context, under the step timeout.
+  Future<NodeResult> _runHandler(NodeHandler handler, Map<String, dynamic> node, String via, int token) {
+    final flowNode = _flowNode(node, via, token);
+    final timeout = Completer<NodeResult>();
+    final timer = Timer(Duration(milliseconds: _config.nodeProcessingTimeoutMs), () {
+      if (!timeout.isCompleted) {
+        timeout.complete(NodeResult.error('Node processing timed out after ${_config.nodeProcessingTimeoutMs}ms'));
+      }
+    });
+    return Future.any([handler.handle(flowNode, _chatState), timeout.future]).whenComplete(timer.cancel);
+  }
 
-      // Try to proceed anyway for recoverable errors
-      if (typedException.isRetryable || _shouldProceedOnError(typedException)) {
-        await _proceedToNextNode(null);
+  FlowNode _flowNode(Map<String, dynamic> node, String via, int token) =>
+      FlowNode(id: _id(node), type: _type(node), data: _data(node), raw: node, ctx: _contextFor(node, via, token));
+
+  DateTime _now() => (_config.now ?? DateTime.now)();
+
+  http.Client get _client => _config.httpClient ?? (_ownClient ??= http.Client());
+
+  String get _apiOrigin => _config.apiOrigin ?? ConferBotEndpoints.apiOrigin;
+
+  /// What a handler may use: the bot API, the socket, timers, this step's edges.
+  FlowContext _contextFor(Map<String, dynamic> node, String via, int token) {
+    final id = _id(node);
+    final state = _chatState;
+    final botId = state.botId ?? '';
+    final sessionId = state.chatSessionId ?? '';
+    final index = _visits.lastIndexOf(node);
+    return FlowContext(
+      botId: botId,
+      sessionId: sessionId,
+      api: (path, body, {timeoutMs}) => postBotApi(_client, _apiOrigin, botId, path, body, timeoutMs: timeoutMs),
+      upload: (file) => uploadBotMedia(_client, _apiOrigin, botId, sessionId, state.visitorId ?? sessionId, file),
+      emit: _emit,
+      on: _onSocket,
+      typing: (ms) async {
+        if (ms > 0) {
+          _setProcessing(true);
+          await _delay(ms);
+        }
+      },
+      delay: _delay,
+      edges: () => _edges.where((e) => e['source']?.toString() == id).toList(),
+      edgesOf: (other) => _edges.where((e) => e['source']?.toString() == other).toList(),
+      wired: (handle) => _edges.any((e) => e['source']?.toString() == id && e['sourceHandle'] == handle),
+      via: via,
+      stepIndex: index < 0 ? 0 : index,
+      random: _config.random ?? _defaultRandom,
+      now: _now,
+      customizations: _customizations,
+      page: _config.page,
+      visitorTimeZone: _config.visitorTimeZone ?? deviceTimeZone(),
+      respond: (response) {
+        if (_currentNodeId == id && _isWaitingForInput) submitResponse(response);
+      },
+      shown: () {
+        if (_shownToken != token && token == _moveToken) {
+          _shownToken = token;
+          _trace(FlowTraceEvent('shown', node: id));
+        }
+      },
+      isStale: () => token != _moveToken && _currentNodeId != id,
+      node: (other) => _nodes[other],
+      httpClient: _client,
+    );
+  }
+
+  /// Handles what a step's handler returned.
+  Future<void> _handleNodeResult(NodeResult result, Map<String, dynamic> node, int token) async {
+    switch (result) {
+      case DisplayUIResult():
+        await _handleDisplayUI(result.uiState, result.awaitInput, node, token);
+      case ProceedResult():
+        await _handleProceed(result.nextNodeId, result.data, node, token);
+      case DelayedProceedResult():
+        await _delay(result.delayMs);
+        if (token != _moveToken || _ended) return;
+        await _handleProceed(result.nextNodeId, result.data, node, token);
+      case JumpToResult():
+        _sendResponseToServer();
+        await _jump(result.targetNodeId, token);
+      case InvalidResult():
+        await _handleInvalid(result.message, node, token, result.uiState, result.inCard);
+      case EndResult():
+        await _end('completed');
+      case ErrorResult():
+        _handleError(result.message, _id(node));
+    }
+  }
+
+  /// Whether the step waits for the visitor once drawn.
+  bool _awaitsInput(Map<String, dynamic> node, bool awaitInput) => awaitInput || requiresUserInteraction(_type(node));
+
+  Future<void> _handleDisplayUI(Object uiState, bool awaitInput, Map<String, dynamic> node, int token) async {
+    final id = _id(node);
+    if (_shownToken != token && displayNodeTypes.contains(_type(node))) {
+      _shownToken = token;
+      _trace(FlowTraceEvent('shown', node: id));
+    }
+
+    if (_awaitsInput(node, awaitInput)) {
+      _isWaitingForInput = true;
+      _setProcessing(false, notify: false);
+      _setUIState(uiState);
+      return;
+    }
+
+    // Shown and moving on by itself: the step's own line is already in the
+    // chat (the handler said it); no card waits.
+    _setProcessing(false, notify: false);
+    _setUIState(null);
+    _analytics.trackNodeExit(exitType: NodeExitType.proceeded);
+    _sendResponseToServer();
+    if (_mediaTypes.contains(_type(node))) {
+      await _waitForMedia(id, _config.mediaAdvanceMs);
+      if (token != _moveToken || _ended) return;
+    }
+    await _next(node, token);
+  }
+
+  /// Resolves when the media loads ([mediaSettled]) or after `capMs`.
+  Future<void> _waitForMedia(String nodeId, int capMs) {
+    final done = Completer<void>();
+    late Timer timer;
+    void finish() {
+      timer.cancel();
+      _mediaWaiters.remove(nodeId);
+      if (!done.isCompleted) done.complete();
+    }
+
+    timer = Timer(Duration(milliseconds: capMs < 0 ? 0 : capMs), finish);
+    _mediaWaiters[nodeId] = finish;
+    return done.future;
+  }
+
+  /// An image or video step's media loaded (or failed): the flow moves on
+  /// now instead of at the cap (web: load / loadedmetadata / error).
+  void mediaSettled(String nodeId) => _mediaWaiters[nodeId]?.call();
+
+  Future<void> _handleProceed(String? nextNodeId, Map<String, dynamic>? data, Map<String, dynamic> node, int token) async {
+    _setProcessing(false, notify: false);
+    if (data?['flowComplete'] == true) {
+      await _end(data?['completionStatus']?.toString() ?? 'completed');
+      return;
+    }
+    _sendResponseToServer();
+    final effective = nextNodeId ?? (data?['__targetPort'] != null ? '__port:${data!['__targetPort']}' : null);
+    if (effective == null) {
+      await _next(node, token);
+    } else if (effective.startsWith('__port:')) {
+      await _port(node, effective.substring(7), data?['fallbackPort']?.toString(), token);
+    } else {
+      await _jump(effective, token);
+    }
+  }
+
+  // ========== Routing ==========
+
+  /// The FIRST edge from the step, whatever its handle; none ends the chat.
+  Future<void> _next(Map<String, dynamic> node, int token) async {
+    if (_ended || token != _moveToken) return;
+    final id = _id(node);
+    Map<String, dynamic>? edge;
+    for (final e in _edges) {
+      if (e['source']?.toString() == id) {
+        edge = e;
+        break;
+      }
+    }
+    if (edge != null) _chatState.appendRecord({...edge, '_id': edge['id'], 'time': jsIsoString(_now())});
+    final target = edge == null ? null : _nodes[edge['target']?.toString()];
+    if (edge != null && target != null) {
+      final h = edge['sourceHandle'];
+      await _enter(target, h != null && h.toString().isNotEmpty ? 'edge:$h' : 'edge');
+    } else {
+      await _end('no_next_node');
+    }
+  }
+
+  /// The edge from exactly this handle; none ends the chat.
+  Future<void> _port(Map<String, dynamic> node, String handle, String? fallback, int token) async {
+    if (_ended || token != _moveToken) return;
+    final id = _id(node);
+    bool wired(String h) => _edges.any((e) => e['source']?.toString() == id && e['sourceHandle'] == h);
+    final h = fallback != null && !wired(handle) && wired(fallback) ? fallback : handle;
+    Map<String, dynamic>? edge;
+    for (final e in _edges) {
+      if (e['source']?.toString() == id && e['sourceHandle'] == h) {
+        edge = e;
+        break;
+      }
+    }
+    _trace(FlowTraceEvent('port', node: id, handle: h, wired: edge != null));
+    if (edge == null) {
+      await _end('no_next_node');
+      return;
+    }
+    _chatState.appendRecord({...edge, '_id': edge['id'], 'time': jsIsoString(_now())});
+    final target = _nodes[edge['target']?.toString()];
+    if (target == null) {
+      // The web throws on nextNode.type here: the chat stops where it is.
+      _trace(FlowTraceEvent('crash', node: id, reason: 'edge target missing'));
+      _isWaitingForInput = false;
+      _handleError('Edge ${edge['id']} leads to a missing node (${edge['target']})', id);
+      return;
+    }
+    await _enter(target, 'port:$h');
+  }
+
+  /// To a node by id; a missing target ends the chat.
+  Future<void> _jump(String targetNodeId, int token) async {
+    if (_ended || token != _moveToken) return;
+    final target = targetNodeId.isEmpty ? null : _nodes[targetNodeId];
+    if (target == null) {
+      await _end('jump_target_missing');
+      return;
+    }
+    await _enter(target, 'jump');
+  }
+
+  /// A step type this engine does not run: nothing shown, then its first edge.
+  Future<void> _passUnknown(Map<String, dynamic> node, int token) async {
+    flowLogger.warning('step "${_type(node)}" is not supported here; continuing the flow');
+    _trace(FlowTraceEvent('unsupported', node: _id(node), type: _type(node)));
+    _analytics.trackNodeExit(exitType: NodeExitType.skipped);
+    await _delay(0);
+    if (token != _moveToken || _ended) return;
+    await _next(node, token);
+  }
+
+  // ========== Loops and sub-flows (web flowControlRun.ts) ==========
+
+  dynamic _flowLookup(String key) => _chatState.lookupVariable(key);
+
+  void _setVars(Map<String, dynamic> vars) => vars.forEach((k, v) => _chatState.saveVariableByName(k, v));
+
+  /// A trail entry on the step's latest record ("Loop 3 of 5").
+  void _trail(Map<String, dynamic> node, Map<String, dynamic> extra) {
+    final record = _chatState.record;
+    for (var i = record.length - 1; i >= 0; i--) {
+      final r = record[i].toJson();
+      if (r['id'] == _id(node) && r['type'] == _type(node) && r['shape'] == null) {
+        _chatState.addRecord({...r, ...extra});
+        return;
       }
     }
   }
 
-  /// Determine if flow should proceed after an error
-  bool _shouldProceedOnError(ConferBotException error) {
-    // For most node processing errors, try to continue the flow
-    if (error is NodeProcessingException) {
-      return error.code != 'NODE_INVALID_DATA';
+  Future<void> _runFlowControl(Map<String, dynamic> node, int token) async {
+    final d = _data(node);
+    final id = _id(node);
+    switch (_type(node)) {
+      case loopType:
+        final step = stepLoop(id, d, _flowControl, _flowLookup);
+        _setVars(step.vars);
+        _trail(node, {
+          'loop': {...step.trail.toJson(), 'text': loopTrailText(step.trail)},
+        });
+        _sendResponseToServer();
+        await _delay(0);
+        if (token != _moveToken || _ended) return;
+        await _port(node, step.handle, null, token);
+        return;
+      case runSubflowType:
+        final call = callSubflow(node, _nodeList, _flowControl, _flowLookup);
+        if (!call.ok) {
+          _trail(node, {
+            'subflow': {'name': call.name ?? '', 'error': call.error},
+          });
+          _sendResponseToServer();
+          await _delay(0);
+          if (token != _moveToken || _ended) return;
+          final wiredError = _edges.any((e) => e['source']?.toString() == id && e['sourceHandle'] == runErrorHandle);
+          await _port(node, wiredError ? runErrorHandle : 'source', null, token);
+          return;
+        }
+        _setVars(call.vars);
+        _trail(node, {
+          'subflow': {'name': call.name, 'inputs': call.vars, 'depth': call.frame?.depth, 'text': 'Ran sub-flow ${call.name}'},
+        });
+        _sendResponseToServer();
+        await _delay(0);
+        if (token != _moveToken || _ended) return;
+        await _jump(call.startId ?? '', token);
+        return;
+      case subflowType:
+        _trail(node, {
+          'subflow': {'name': subflowName(node), 'entered': true},
+        });
+        await _delay(0);
+        if (token != _moveToken || _ended) return;
+        await _port(node, 'source', null, token);
+        return;
+      case subflowReturnType:
+        if (await _returnFromSubflowPath(token)) return;
+        await _delay(0);
+        if (token != _moveToken || _ended) return;
+        await _next(node, token);
+        return;
+    }
+  }
+
+  /// The end of a path inside a sub-flow: copy the outputs back and carry
+  /// on from Run sub-flow's "source" edge (or one with no handle). True when
+  /// it carried on.
+  Future<bool> _returnFromSubflowPath(int token) async {
+    var ret = returnFromSubflow(_flowControl, _flowLookup);
+    while (ret != null) {
+      _setVars(ret.vars);
+      final runNodeId = ret.frame.runNodeId;
+      Map<String, dynamic>? edge;
+      for (final e in _edges) {
+        final h = e['sourceHandle'];
+        if (e['source']?.toString() == runNodeId && (h == 'source' || h == null || h == '')) {
+          edge = e;
+          break;
+        }
+      }
+      final target = edge?['target']?.toString();
+      if (target != null && target.isNotEmpty) {
+        _sendResponseToServer();
+        await _delay(0);
+        if (token != _moveToken || _ended) return true;
+        await _jump(target, token);
+        return true;
+      }
+      ret = returnFromSubflow(_flowControl, _flowLookup);
     }
     return false;
   }
 
-  /// Handle the result from a node handler
-  Future<void> _handleNodeResult(
-    NodeResult result,
-    Map<String, dynamic> nodeData,
-  ) async {
-    switch (result) {
-      case DisplayUIResult():
-        _setProcessing(false);
-        // uiState can be either canonical NodeUIState or legacy NodeUIState
-        final uiState = result.uiState;
-        flowLogger.debug('DisplayUIResult: setting UI state type=${uiState.runtimeType}');
+  // ========== The visitor's answer ==========
 
-        // Extract text for message-only nodes
-        final text = _extractDisplayText(uiState as dynamic);
-
-        // Push bot message to record (matching web widget format)
-        final nodeId = _currentNodeId;
-        final nodeType = nodeData['type']?.toString();
-        if (nodeId != null && nodeType != null) {
-          final nodeDataSub = (nodeData['data'] as Map<String, dynamic>?) ?? {};
-          final recordData = Map<String, dynamic>.from(nodeDataSub);
-          if (text != null) recordData['text'] = text;
-          _chatState.pushToRecord(RecordEntry(
-            id: nodeId,
-            shape: nodeType,
-            type: nodeType,
-            text: text,
-            data: recordData,
-          ));
-        }
-
-        // For message-only nodes, add to chat record and auto-proceed
-        if (_isMessageOnlyUI(uiState as dynamic)) {
-          // Emit bot message to be added to provider's record
-          if (text != null && text.isNotEmpty) {
-            _botMessageController.add({
-              'text': text,
-              'nodeId': _currentNodeId ?? '',
-              'type': 'bot-message',
-            });
-            flowLogger.debug('Emitted bot message to record: "$text"');
-          }
-
-          // Emit the node's image (welcome GIF, image-node) as a standalone
-          // image entry below the text bubble - web widget parity
-          final dynamic dynUi = uiState;
-          String? imageUrl;
-          if (dynUi is ImageState) {
-            imageUrl = dynUi.url;
-          } else if (dynUi is ImageUIState) {
-            imageUrl = dynUi.url;
-          } else {
-            // nodeData may be the node's data map itself or the full node
-            final dataMap =
-                (nodeData['data'] as Map<String, dynamic>?) ?? nodeData;
-            final nodeImage = dataMap['image']?.toString();
-            final disabled = dataMap['disableImage'] == true;
-            if (!disabled && nodeImage != null && nodeImage.isNotEmpty) {
-              imageUrl = nodeImage;
-            }
-          }
-          if (imageUrl != null && imageUrl.isNotEmpty) {
-            _botMessageController.add({
-              'imageUrl': imageUrl,
-              'nodeId': _currentNodeId ?? '',
-              'type': 'bot-message',
-            });
-            flowLogger.debug('Emitted bot image to record: "$imageUrl"');
-          }
-
-          // Track bot message
-          if (text != null) {
-            _analytics.trackMessage(sender: 'bot', text: text);
-          }
-
-          // Brief delay to show typing, then auto-proceed
-          await Future.delayed(const Duration(milliseconds: 800));
-
-          // Track node exit
-          _analytics.trackNodeExit(exitType: NodeExitType.proceeded);
-
-          _sendResponseToServer();
-          await _proceedToNextNode(null);
-        } else {
-          // Interactive node — set UI state for inline rendering in message list
-          _setUIState(uiState as dynamic);
-
-          // For human handover waiting state, emit initiate-handover socket event
-          // matching the web widget's payload format
-          if (uiState is HumanHandoverUIState &&
-              (uiState as HumanHandoverUIState).state == HandoverState.waitingForAgent) {
-            // Send response-record before handover so the server has the
-            // Response document when creating the ticket/notification
-            _sendResponseToServer();
-            // Re-join room to ensure socket is in the correct room
-            if (_chatState.chatSessionId != null) {
-              _socketClient.joinChatRoomVisitor(_chatState.chatSessionId!);
-            }
-            _emitInitiateHandover(nodeData);
-          }
-
-          // Track bot message
-          if (text != null) {
-            _analytics.trackMessage(sender: 'bot', text: text);
-          }
-        }
-
-      case ProceedResult():
-        _setProcessing(false);
-
-        // Track node exit
-        _analytics.trackNodeExit(exitType: NodeExitType.proceeded);
-
-        _sendResponseToServer();
-        await _proceedToNextNode(result.targetPort);
-
-      case DelayedProceedResult():
-        _setProcessing(true);
-        await Future.delayed(result.delay);
-        _setProcessing(false);
-
-        // Track node exit
-        _analytics.trackNodeExit(exitType: NodeExitType.proceeded);
-
-        _sendResponseToServer();
-        await _proceedToNextNode(result.targetPort);
-
-      case DelayedProceed():
-        // Handler compatibility: convert int ms to Duration
-        _setProcessing(true);
-        await Future.delayed(Duration(milliseconds: result.delayMs));
-        _setProcessing(false);
-
-        // Track node exit
-        _analytics.trackNodeExit(exitType: NodeExitType.proceeded);
-
-        _sendResponseToServer();
-        await _proceedToNextNode(result.targetPort);
-
-      case JumpToResult():
-        _setProcessing(false);
-
-        // Track node exit
-        _analytics.trackNodeExit(exitType: NodeExitType.proceeded);
-
-        _sendResponseToServer();
-        await _jumpToNode(result.targetNodeId);
-
-      case ErrorResult():
-        _setProcessing(false);
-
-        // Convert error result to typed exception
-        final nodeType = nodeData['type']?.toString() ?? 'unknown';
-        final typedException = NodeProcessingException(
-          message: result.message,
-          code: 'NODE_ERROR',
-          nodeId: _currentNodeId,
-          nodeType: nodeType,
-        );
-        _setTypedError(typedException);
-
-        // Track node exit with error
-        _analytics.trackNodeExit(exitType: NodeExitType.error);
-
-        if (result.shouldProceed) {
-          _sendResponseToServer();
-          await _proceedToNextNode(null);
-        }
-    }
-  }
-
-  /// Extract display text from UI state for analytics
-  String? _extractDisplayText(dynamic uiState) {
-    if (uiState is MessageUIState) {
-      return uiState.text;
-    } else if (uiState is MessageState) {
-      return uiState.text;
-    } else if (uiState is TextInputUIState) {
-      return uiState.questionText;
-    } else if (uiState is MultipleChoiceUIState) {
-      return uiState.questionText;
-    }
-    return null;
-  }
-
-  /// Extract question text from interactive node states
-  /// Used to add the question as a bot message in the chat record
-  String? _extractInteractiveQuestionText(dynamic uiState) {
-    if (uiState is SingleChoiceUIState) return uiState.questionText;
-    if (uiState is SingleChoiceState) return uiState.questionText;
-    if (uiState is MultipleChoiceUIState) return uiState.questionText;
-    if (uiState is MultipleChoiceState) return uiState.questionText;
-    if (uiState is TextInputUIState) return uiState.questionText;
-    return null;
-  }
-
-  /// Check if UI state is message-only (auto-proceeds)
-  bool _isMessageOnlyUI(dynamic uiState) {
-    // Check both canonical (node_ui_state.dart) and legacy (display_handlers.dart) types
-    return uiState is MessageUIState ||
-        uiState is MessageState ||
-        uiState is ImageUIState ||
-        uiState is ImageState ||
-        uiState is VideoUIState ||
-        uiState is VideoState ||
-        uiState is AudioUIState ||
-        uiState is AudioState ||
-        uiState is FileUIState ||
-        uiState is FileState ||
-        uiState is HtmlUIState ||
-        uiState is HtmlState;
-  }
-
-  // ========== User Response Handling ==========
-
-  /// Handle user response for current interactive node
-  void submitResponse(dynamic response) {
-    final nodeId = _currentNodeId;
-    final nodeData = _currentNodeData;
-
-    if (nodeId == null || nodeData == null) {
-      flowLogger.debug('Cannot submit response: no current node');
+  /// Submits the visitor's answer for the waiting step. Ignored when no step
+  /// waits; typed text is trimmed and an empty send is ignored (web composer).
+  Future<void> submitResponse(dynamic response) async {
+    final id = _currentNodeId;
+    if (!_isWaitingForInput || id == null) {
+      flowLogger.debug('Not waiting for input, ignoring response');
       return;
     }
+    if (response is String && response.trim().isEmpty) return;
+    final node = _nodes[id];
+    if (node == null) {
+      _handleError('Current node not found: $id', id);
+      return;
+    }
+    final handler = _handlerFor(_type(node));
 
-    _handleResponseAsync(response, nodeId, nodeData);
-  }
-
-  Future<void> _handleResponseAsync(
-    dynamic response,
-    String nodeId,
-    Map<String, dynamic> nodeData,
-  ) async {
+    _isWaitingForInput = false;
+    _validationMessage = null;
+    _nodesProcessedInCycle = 0;
     _setProcessing(true);
-    _setError(null);
-
-    final nodeType = nodeData['type']?.toString();
-    if (nodeType == null) {
-      _setProcessing(false);
-      await _proceedToNextNode(null);
-      return;
-    }
-
-    // Track user message — extract display text from response
-    final String responseText;
-    if (response is String) {
-      responseText = response;
-    } else if (response is Map) {
-      responseText = response['text']?.toString() ??
-          response['label']?.toString() ??
-          response.toString();
-    } else {
-      responseText = response.toString();
-    }
-    _analytics.trackMessage(sender: 'user', text: responseText);
-
-    // Push user response to record (matching web widget format)
-    _chatState.pushToRecord(RecordEntry(
-      id: nodeId,
-      shape: 'user-input-response',
-      type: nodeData['type']?.toString(),
-      text: responseText,
-    ));
-
-    // Track node exit with user input
-    String? selectedOption;
-    if (response is Map && response.containsKey('selectedOption')) {
-      selectedOption = response['selectedOption']?.toString();
-    }
-    _analytics.trackNodeExit(
-      exitType: NodeExitType.proceeded,
-      userInput: response,
-      selectedOption: selectedOption,
-    );
-
-    final handler = _handlerRegistry.getHandler(nodeType);
-    if (handler == null) {
-      _setProcessing(false);
-      await _proceedToNextNode(null);
-      return;
-    }
+    final token = _moveToken;
 
     try {
-      // Snapshot transcript length before handling to detect new user entries
-      final transcriptBefore = _chatState.transcript.length;
-
-      // HIGH FIX 1: Timeout for response handling
-      final result = await handler.handleResponse(response, nodeData, nodeId).timeout(
-        _nodeProcessingTimeout,
-        onTimeout: () {
-          flowLogger.warning('Response handling timed out for node: $nodeId');
-          return ErrorResult(
-            message: 'Response handling timed out',
-            shouldProceed: true,
-          );
-        },
-      );
-
-      // Emit any new user messages added by the handler to the transcript
-      final transcriptAfter = _chatState.transcript;
-      for (var i = transcriptBefore; i < transcriptAfter.length; i++) {
-        final entry = transcriptAfter[i];
-        if (entry.by == 'user' && entry.message.isNotEmpty) {
-          _userMessageController.add({
-            'text': entry.message,
-            'nodeId': nodeId,
-            'type': 'user-message',
-          });
-        }
+      final pending = handler?.handleResponse(response, _flowNode(node, 'edge', token), _chatState);
+      final NodeResult result = pending == null ? NodeResult.next() : await pending;
+      if (token != _moveToken || _ended) return;
+      if (result is! DisplayUIResult && result is! InvalidResult) {
+        _analytics.trackNodeExit(exitType: NodeExitType.proceeded, userInput: response);
       }
-
-      await _handleNodeResult(result, nodeData);
-    } on TimeoutException catch (e, stackTrace) {
-      // HIGH FIX 6: Specific timeout exception handling
-      flowLogger.error('Response handling timeout for $nodeId: $e', e, stackTrace);
-
-      final typedException = NodeProcessingException(
-        message: 'Response handling timed out',
-        code: 'NODE_TIMEOUT',
-        nodeId: nodeId,
-        nodeType: nodeType,
-        originalError: e,
-        originalStackTrace: stackTrace,
-      );
-
-      _setTypedError(typedException);
-      _setProcessing(false);
-    } on ConferBotException catch (e) {
-      // HIGH FIX 6: Specific ConferBotException handling
-      flowLogger.error('ConferBot error handling response: $e', e, e.originalStackTrace);
-
-      _setTypedError(e);
-      _setProcessing(false);
-    } catch (e, stackTrace) {
-      flowLogger.error('Error handling response: $e', e, stackTrace);
-
-      // Convert to typed exception
-      final typedException = NodeProcessingException.processingFailed(
-        nodeId: nodeId,
-        nodeType: nodeType,
-        phase: 'handleResponse',
-        originalError: e,
-        originalStackTrace: stackTrace,
-      );
-
-      _setTypedError(typedException);
-      _setProcessing(false);
+      _sendResponseToServer();
+      await _handleNodeResult(result, node, token);
+    } catch (e, st) {
+      flowLogger.error('Error handling response: $e', e, st);
+      _handleError('$e', id);
     }
   }
 
-  /// Clear current error
-  void clearError() {
-    _setError(null);
+  /// A refused answer: say why, keep waiting at the step. A typed answer's
+  /// reason comes as a bot bubble after 700 ms of typing (web helpers
+  /// _displayErrorMessage); a card shows its own at once.
+  Future<void> _handleInvalid(String message, Map<String, dynamic> node, int token, Object? uiState, bool inCard) async {
+    final id = _id(node);
+    _trace(FlowTraceEvent('error', node: id, message: message));
+    if (message.isNotEmpty && !inCard) {
+      _setProcessing(true);
+      await _delay(700);
+      if (token != _moveToken || _ended) return;
+      _chatState.addBotMessage(bubbleText(message), id, 'validation-error');
+    }
+    _validationMessage = plainText(message);
+    _isWaitingForInput = true;
+    _setProcessing(false, notify: false);
+    _setUIState(uiState ?? _currentUIState);
   }
 
-  // ========== Navigation ==========
+  // ========== Server ==========
 
-  /// Proceed to the next node in the flow
-  Future<void> _proceedToNextNode(String? targetPort) async {
-    final currentId = _currentNodeId;
-    flowLogger.debug('_proceedToNextNode called: currentId=$currentId, targetPort=$targetPort');
-    if (currentId == null) {
-      flowLogger.debug('No currentId, marking flow complete');
-      _setFlowComplete(true);
-      return;
-    }
-
-    // Find next node based on edges
-    String? nextNodeId;
-    if (targetPort != null) {
-      nextNodeId = _findNextNodeByPort(currentId, targetPort);
-    } else {
-      nextNodeId = _findNextNodeByDefaultEdge(currentId);
-    }
-
-    flowLogger.debug('Edge lookup result: nextNodeId=$nextNodeId');
-
-    if (nextNodeId != null) {
-      final nextIndex = _steps.indexWhere((step) => step['id'] == nextNodeId);
-      if (nextIndex >= 0) {
-        flowLogger.debug('Found next node at index $nextIndex, processing...');
-        await _processNodeAtIndex(nextIndex);
-        return;
-      } else {
-        flowLogger.warning('Edge target node $nextNodeId not found in steps, falling back to sequential');
-      }
-    }
-
-    // Try sequential fallback
-    final currentIndex = _chatState.currentIndex;
-    flowLogger.debug('Sequential fallback: currentIndex=$currentIndex, totalSteps=${_steps.length}');
-    if (currentIndex + 1 < _steps.length) {
-      await _processNodeAtIndex(currentIndex + 1);
-    } else {
-      flowLogger.debug('No more steps, marking flow complete');
-      _setFlowComplete(true);
+  bool _emit(String event, dynamic payload) {
+    final s = _socket;
+    if (s == null) return false;
+    try {
+      s.emit(event, payload);
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
-  /// Jump to a specific node by ID
-  Future<void> _jumpToNode(String targetNodeId) async {
-    final targetIndex = _steps.indexWhere((step) => step['id'] == targetNodeId);
-    if (targetIndex >= 0) {
-      await _processNodeAtIndex(targetIndex);
-    } else {
-      // Node not found, proceed sequentially
-      flowLogger.debug('Jump target $targetNodeId not found, proceeding sequentially');
-
-      // Set a warning error (non-blocking)
-      _setTypedError(NodeProcessingException.notFound(targetNodeId));
-
-      await _proceedToNextNode(null);
-    }
+  void Function() _onSocket(String event, void Function(dynamic payload) listener) {
+    final s = _socket;
+    if (s == null) return () {};
+    return s.on(event, listener);
   }
 
-  /// Find next node using edge with specific source port
-  /// HIGH FIX 5: Edge routing validation with logging
-  String? _findNextNodeByPort(String sourceId, String sourcePort) {
-    // Look for edge from this node's specific port
-    final edge = _edges.firstWhere(
-      (edge) {
-        final edgeSource = edge['source'];
-        final edgeSourceHandle = edge['sourceHandle']?.toString();
-        return edgeSource == sourceId &&
-            (edgeSourceHandle == sourcePort ||
-                edgeSourceHandle == sourcePort.replaceFirst('source-', ''));
-      },
-      orElse: () => <String, dynamic>{},
-    );
-
-    final target = edge['target']?.toString();
-    if (target == null) {
-      flowLogger.warning('No edge found for port: $sourcePort on node: $sourceId');
-    }
-    return target;
-  }
-
-  /// Find next node using default edge (any edge from source)
-  /// HIGH FIX 5: Edge routing validation with logging
-  String? _findNextNodeByDefaultEdge(String sourceId) {
-    flowLogger.debug('Looking for default edge from node: $sourceId');
-    flowLogger.debug('Available edges: ${_edges.map((e) => '${e['source']}->${e['target']}').toList()}');
-    final edge = _edges.firstWhere(
-      (edge) => edge['source'] == sourceId,
-      orElse: () => <String, dynamic>{},
-    );
-
-    final target = edge['target']?.toString();
-    if (target == null) {
-      flowLogger.warning('No default edge found for node: $sourceId');
-    } else {
-      flowLogger.debug('Found edge: $sourceId -> $target');
-    }
-    return target;
-  }
-
-  // ========== Server Communication ==========
-
-  /// Send current state to server via socket
+  /// Sends the chat state to the server (web `response-record`).
   void _sendResponseToServer() {
-    final responseData = _chatState.buildResponseData();
-    final chatSessionId = _chatState.chatSessionId;
-
-    if (chatSessionId == null) {
-      flowLogger.debug('Cannot send response: no chat session ID');
-      return;
-    }
-
-    _socketClient.sendResponseRecord(
-      chatSessionId: chatSessionId,
-      record: responseData['record'],
-      answerVariables: responseData['answerVariables'],
-      extra: responseData,
-    );
+    final s = _socket;
+    if (s == null) return;
+    final data = _chatState.buildResponseData();
+    // Never emit without a session id - the server would file the record
+    // under a shared no-session document.
+    if (data['chatSessionId'] == null) return;
+    s.sendResponseRecord(data);
   }
 
-  /// Handle incoming bot message from server
+  /// A message the server pushed (bot-response): its text is drawn.
   void handleServerMessage(Map<String, dynamic> message) {
-    _handleServerMessageAsync(message);
-  }
-
-  Future<void> _handleServerMessageAsync(Map<String, dynamic> message) async {
-    final nodeData = message['nodeData'] as Map<String, dynamic>?;
-    final nodeType =
-        nodeData?['type']?.toString() ?? message['type']?.toString();
-
-    if (nodeType != null && nodeData != null) {
-      final nodeId =
-          message['_id']?.toString() ?? message['id']?.toString() ?? '';
-      _currentNodeId = nodeId;
-      _currentNodeData = nodeData;
-      _currentNodeType = nodeType;
-
-      // Track node entry for server-pushed nodes
-      final nodeName = nodeData['name']?.toString() ??
-                       nodeData['label']?.toString() ??
-                       nodeType;
-      _analytics.trackNodeEntry(
-        nodeId: nodeId,
-        nodeType: nodeType,
-        nodeName: nodeName,
-      );
-
-      await _processNode(nodeId, nodeType, nodeData);
-    } else {
-      // Plain text message
-      final text = message['text']?.toString();
-      if (text != null) {
-        // Track bot message
-        _analytics.trackMessage(sender: 'bot', text: text);
-
-        _setUIState(MessageUIState(
-          text: text,
-          nodeId: message['_id']?.toString() ?? '',
-        ));
-      }
+    final text = message['text']?.toString();
+    if (text != null && text.isNotEmpty && !_botMessageController.isClosed) {
+      _botMessageController.add({'text': text, 'nodeId': message['_id']?.toString() ?? '', 'type': 'bot-message'});
+      _analytics.trackMessage(sender: 'bot', text: text);
     }
   }
 
-  // ========== Agent Event Handlers ==========
+  // ========== Errors and the end ==========
+
+  void _handleError(String message, [String? nodeId]) {
+    flowLogger.error('[NodeFlowEngine] $message (node $nodeId)');
+    _currentError = NodeProcessingException(message: message, code: 'NODE_ERROR', nodeId: nodeId);
+    _isProcessing = false;
+    _errorController.add(_currentError?.userMessage);
+    _typedErrorController.add(_currentError);
+    _processingController.add(false);
+    _analytics.trackNodeExit(exitType: NodeExitType.error);
+    notifyListeners();
+  }
+
+  /// Clear the current error.
+  void clearError() {
+    _currentError = null;
+    _errorController.add(null);
+    _typedErrorController.add(null);
+    notifyListeners();
+  }
+
+  /// The end of a path: a sub-flow returns to its caller; otherwise the
+  /// chat is over (web index.ts: hasChatEnded, record sent, chat-flow-completed).
+  Future<void> _end(String reason) async {
+    if (_ended) return;
+    if (_flowControl.stack.isNotEmpty && await _returnFromSubflowPath(_moveToken)) return;
+    _handleFlowComplete(reason);
+  }
+
+  void _handleFlowComplete(String reason) {
+    if (_ended) return;
+    flowLogger.debug('Flow complete: $reason');
+    _ended = true;
+    _isWaitingForInput = false;
+    _isProcessing = false;
+    _currentUIState = null;
+    _chatState.markConversationComplete(reason);
+    _sendResponseToServer();
+    _emit('chat-flow-completed', {'chatSessionId': _chatState.chatSessionId});
+    _trace(const FlowTraceEvent('end'));
+    _uiStateController.add(null);
+    _processingController.add(false);
+    _flowCompleteController.add(true);
+    _analytics.endSession();
+    notifyListeners();
+  }
+
+  void _trace(FlowTraceEvent event) {
+    try {
+      _config.onTrace?.call(event);
+    } catch (_) {
+      // a listener's error never stops the flow
+    }
+  }
+
+  // ========== The handover step ==========
 
   /// Waiting on its handover step (for a person, or after nobody came).
-  bool get isAtHandover => (_currentNodeType ?? _currentNodeData?['type']?.toString()) == NodeTypes.humanHandover;
+  bool get isAtHandover => currentNodeType == NodeTypes.humanHandover;
 
   /// The handover step's data while the flow is on it (its fallbackMessage...).
-  Map<String, dynamic>? get handoverNodeData => isAtHandover ? _currentNodeData : null;
+  Map<String, dynamic>? get handoverNodeData => isAtHandover ? currentNodeData : null;
+
+  HumanHandoverNodeHandler? get _handoverHandler {
+    final h = _registry.getHandler(NodeTypes.humanHandover);
+    return h is HumanHandoverNodeHandler ? h : null;
+  }
 
   /// A restored chat back on its handover step, without running the step
   /// again (which would ask for a person a second time: a second ticket):
@@ -890,20 +1116,14 @@ class NodeFlowEngine extends ChangeNotifier {
   /// (null). The step's handler is told where it stands, so the chat ending
   /// carries the flow on. False when the step is not in this flow.
   bool waitAt(String nodeId, dynamic uiState) {
-    final index = _steps.indexWhere((step) => step['id'] == nodeId);
-    if (index < 0) return false;
-    final node = _steps[index];
-    final nodeData = node['data'] as Map<String, dynamic>? ?? {};
-    _chatState.setCurrentIndex(index);
-    _chatState.setCurrentNodeId(nodeId);
+    if (!_nodes.containsKey(nodeId)) return false;
+    _moveToken++;
+    _ended = false;
     _currentNodeId = nodeId;
-    _currentNodeData = nodeData;
-    _currentNodeType = nodeData['type']?.toString() ?? node['type']?.toString();
-    final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
-    if (handler is HumanHandoverNodeHandler) {
-      handler.restoreAt(nodeId, uiState is HumanHandoverUIState ? uiState.state : HandoverState.agentConnected);
-    }
-    _setProcessing(false);
+    _isWaitingForInput = true;
+    _chatState.setCurrentNodeId(nodeId);
+    _handoverHandler?.restoreAt(nodeId, uiState is HumanHandoverUIState ? uiState.state : HandoverState.agentConnected);
+    _setProcessing(false, notify: false);
     _setUIState(uiState);
     return true;
   }
@@ -918,118 +1138,40 @@ class NodeFlowEngine extends ChangeNotifier {
   void continueAfterHandover() {
     if (!isAtHandover) return;
     _setUIState(null);
-    _proceedToNextNode(null);
+    _isWaitingForInput = true;
+    submitResponse(const {'action': 'continue'});
   }
 
-  /// Handle agent accepted event (human handover)
+  /// A person accepted the handover.
   void handleAgentAccepted(String agentName) {
-    final nodeId = _currentNodeId;
-    final nodeData = _currentNodeData;
-
-    if (nodeId == null || nodeData == null) return;
-
-    // Track interaction
-    _analytics.trackInteraction(
-      type: 'agent_accepted',
-      data: {'agentName': agentName},
-    );
-
-    if ((_currentNodeType ?? nodeData['type']?.toString()) == NodeTypes.humanHandover) {
-      final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
-
-      // The handover step's own handler (it never implemented
-      // AgentEventHandler, so the check below never matched).
-      if (handler is HumanHandoverNodeHandler) {
-        handler.onAgentAccepted(nodeId, agentName);
-      } else if (handler is AgentEventHandler) {
-        (handler as AgentEventHandler).onAgentAccepted(nodeId, agentName);
-      }
-
-      _setUIState(HumanHandoverUIState(
-        state: HandoverState.agentConnected,
-        agentName: agentName,
-        nodeId: nodeId,
-      ));
-    }
+    final id = _currentNodeId;
+    if (id == null || !isAtHandover) return;
+    _analytics.trackInteraction(type: 'agent_accepted', data: {'agentName': agentName});
+    _handoverHandler?.onAgentAccepted(id, agentName);
+    _setUIState(HumanHandoverUIState(state: HandoverState.agentConnected, agentName: agentName, nodeId: id));
   }
 
-  /// Handle no agents available event
+  /// Nobody is free (the handover step draws its fallback itself).
   void handleNoAgentsAvailable() {
-    final nodeId = _currentNodeId;
-    final nodeData = _currentNodeData;
-
-    if (nodeId == null || nodeData == null) return;
-
-    // Track interaction
-    _analytics.trackInteraction(
-      type: 'no_agents_available',
-      data: {},
-    );
-
-    if ((_currentNodeType ?? nodeData['type']?.toString()) == NodeTypes.humanHandover) {
-      final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
-
-      if (handler is AgentEventHandler) {
-        _handleNoAgentsAsync(handler as AgentEventHandler, nodeId, nodeData);
-      } else {
-        // Default behavior: show no agents available state
-        _setUIState(HumanHandoverUIState(
-          state: HandoverState.noAgentsAvailable,
-          nodeId: nodeId,
-        ));
-      }
-    }
+    if (_currentNodeId == null || !isAtHandover) return;
+    _analytics.trackInteraction(type: 'no_agents_available', data: {});
   }
 
-  Future<void> _handleNoAgentsAsync(
-    AgentEventHandler handler,
-    String nodeId,
-    Map<String, dynamic> nodeData,
-  ) async {
-    final result = await handler.onNoAgentsAvailable(nodeId, nodeData);
-    if (result != null) {
-      await _handleNodeResult(result, nodeData);
-    }
-  }
-
-  /// Handle chat ended event (for handover)
+  /// The live chat ended: a post-chat survey, else the flow carries on
+  /// from the handover step, as the web widget does.
   void handleChatEnded() {
-    final nodeId = _currentNodeId;
-    final nodeData = _currentNodeData;
-
-    if (nodeId == null || nodeData == null) return;
-
-    // Track interaction
-    _analytics.trackInteraction(
-      type: 'chat_ended',
-      data: {},
-    );
-
-    if ((_currentNodeType ?? nodeData['type']?.toString()) == NodeTypes.humanHandover) {
-      final handler = _handlerRegistry.getHandler(NodeTypes.humanHandover);
-
-      // The chat ended: a post-chat survey, else the flow carries on from
-      // the handover step, as the web widget does.
-      if (handler is HumanHandoverNodeHandler) {
-        _handleNodeResult(handler.onChatEnded(nodeId, nodeData), nodeData);
-      } else if (handler is AgentEventHandler) {
-        _handleChatEndedAsync(handler as AgentEventHandler, nodeId, nodeData);
-      }
-    }
+    final id = _currentNodeId;
+    final node = id == null ? null : _nodes[id];
+    if (node == null || !isAtHandover) return;
+    _analytics.trackInteraction(type: 'chat_ended', data: {});
+    final handler = _handoverHandler;
+    if (handler == null) return;
+    final token = _moveToken;
+    _isWaitingForInput = false;
+    _handleNodeResult(handler.onChatEnded(id!, _data(node)), node, token);
   }
 
-  Future<void> _handleChatEndedAsync(
-    AgentEventHandler handler,
-    String nodeId,
-    Map<String, dynamic> nodeData,
-  ) async {
-    final result = await handler.onChatEnded(nodeId, nodeData);
-    if (result != null) {
-      await _handleNodeResult(result, nodeData);
-    }
-  }
-
-  // ========== State Setters (with notifications) ==========
+  // ========== State ==========
 
   void _setUIState(dynamic state) {
     _currentUIState = state;
@@ -1037,79 +1179,42 @@ class NodeFlowEngine extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _setProcessing(bool processing) {
+  void _setProcessing(bool processing, {bool notify = true}) {
+    if (_isProcessing == processing) return;
     _isProcessing = processing;
     _processingController.add(processing);
-    notifyListeners();
+    if (notify) notifyListeners();
   }
 
-  void _setError(String? error) {
-    if (error == null) {
-      _currentError = null;
-    }
-    _errorController.add(error);
-    _typedErrorController.add(_currentError);
-    notifyListeners();
-  }
+  Future<void> _delay(int ms) => Future<void>.delayed(Duration(milliseconds: ms < 0 ? 0 : ms));
 
-  void _setTypedError(ConferBotException? error) {
-    _currentError = error;
-    _errorController.add(error?.userMessage);
-    _typedErrorController.add(error);
-    notifyListeners();
-  }
+  static double _defaultRandom() => _rng.nextDouble();
 
-  void _setFlowComplete(bool complete) {
-    _isFlowComplete = complete;
-    _flowCompleteController.add(complete);
-
-    // End analytics session when flow completes
-    if (complete) {
-      _analytics.endSession();
-    }
-
-    notifyListeners();
-  }
-
-  // ========== Reset & Cleanup ==========
-
-  /// Reset the engine for a new conversation
+  /// Reset the engine for a new conversation.
   void reset() {
-    // End current analytics session
     _analytics.endSession();
-
-    _currentUIState = null;
+    _moveToken++;
     _isProcessing = false;
-    _currentError = null;
-    _isFlowComplete = false;
+    _isWaitingForInput = false;
     _currentNodeId = null;
-    _currentNodeData = null;
-    _currentNodeType = null;
-    _steps = [];
+    _currentUIState = null;
+    _currentError = null;
+    _validationMessage = null;
+    _nodes.clear();
+    _nodeList = [];
     _edges = [];
-    _visitedNodes.clear();
+    _startNodeId = null;
+    resetFlow();
     _chatState.reset();
-
     notifyListeners();
   }
 
-  /// Emit initiate-handover socket event matching web widget payload format,
-  /// with the step's email, sound and assignment settings
-  /// (core/agent/agent_handover.dart). Called when the handover handler
-  /// returns its waitingForAgent UI state.
-  void _emitInitiateHandover(Map<String, dynamic> nodeData) {
-    final payload = AgentHandover.payload(_chatState, nodeData);
-    if (payload == null) return;
-    _socketClient.emit(SocketEvents.initiateHandover, payload);
-    flowLogger.debug('Emitted initiate-handover to server');
-  }
-
-  /// Clean up resources
   @override
   void dispose() {
-    // End analytics session on dispose
     _analytics.endSession();
-
+    _moveToken++;
+    _linesSub?.cancel();
+    _ownClient?.close();
     _uiStateController.close();
     _botMessageController.close();
     _userMessageController.close();
@@ -1117,25 +1222,45 @@ class NodeFlowEngine extends ChangeNotifier {
     _errorController.close();
     _typedErrorController.close();
     _flowCompleteController.close();
-    _chatState.reset();
     super.dispose();
   }
 }
 
-/// Interface for handlers that need to respond to agent events
-abstract class AgentEventHandler {
-  /// Called when an agent accepts the handover
-  void onAgentAccepted(String nodeId, String agentName);
+final _rng = _Lcg();
 
-  /// Called when no agents are available
-  Future<NodeResult?> onNoAgentsAvailable(
-    String nodeId,
-    Map<String, dynamic> nodeData,
-  );
+class _Lcg {
+  int _seed = DateTime.now().microsecondsSinceEpoch & 0x7fffffff;
+  double nextDouble() {
+    _seed = (_seed * 1103515245 + 12345) & 0x7fffffff;
+    return _seed / 0x80000000;
+  }
+}
 
-  /// Called when the chat is ended
-  Future<NodeResult?> onChatEnded(
-    String nodeId,
-    Map<String, dynamic> nodeData,
-  );
+/// The SDK's socket as the flow uses it.
+class SocketClientFlowSocket implements FlowSocket {
+  final SocketClient client;
+
+  SocketClientFlowSocket(this.client);
+
+  @override
+  void emit(String event, dynamic payload) => client.emit(event, payload);
+
+  @override
+  void Function() on(String event, void Function(dynamic payload) listener) {
+    void handler(dynamic data) => listener(data);
+    client.on(event, handler);
+    return () => client.off(event, handler);
+  }
+
+  @override
+  void sendResponseRecord(Map<String, dynamic> responseData) {
+    final sessionId = responseData['chatSessionId']?.toString();
+    if (sessionId == null) return;
+    client.sendResponseRecord(
+      chatSessionId: sessionId,
+      record: responseData['record'],
+      answerVariables: responseData['answerVariables'] as List<dynamic>?,
+      extra: responseData,
+    );
+  }
 }
