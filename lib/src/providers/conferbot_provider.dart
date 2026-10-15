@@ -15,7 +15,6 @@ import '../services/socket_client.dart';
 import '../services/storage_service.dart';
 import '../core/node_flow_engine.dart';
 import '../core/nodes/node_ui_state.dart';
-import '../core/nodes/handlers/choices/choice_ui_states.dart';
 import '../core/state/message_pagination_controller.dart';
 import '../core/state/message_storage_service.dart';
 import '../utils/logger.dart';
@@ -775,22 +774,9 @@ class ConferBotProvider with ChangeNotifier {
       // carries on once it is sent or skipped), or straight on when the
       // owner turned that off.
       if (_flowEngine.isAtHandover) {
-        final fallback = LiveChat.plainText(
-          ChatState.instance.resolveValue(_flowEngine.handoverNodeData?['fallbackMessage']?.toString() ?? '').toString(),
-        );
+        // The step says the owner's fallback itself and carries the flow
+        // on when "leave a message" is off (special_handlers.dart).
         _flowEngine.clearHandoverUI();
-        if (fallback.isNotEmpty) {
-          final id = 'agent-declined-${DateTime.now().millisecondsSinceEpoch}';
-          _addMessageToRecord(BotMessageRecord(id: id, time: DateTime.now(), text: fallback));
-          ChatState.instance.pushToRecord(RecordEntry(
-            id: id,
-            shape: 'agent-declined-message',
-            type: 'agent-declined-message',
-            text: fallback,
-            data: {'message': fallback, 'renderedText': fallback},
-          ));
-        }
-        if (_serverCustomizations?['chatLeaveMessage'] == false) _flowEngine.continueAfterHandover();
         notifyListeners();
         return;
       }
@@ -1219,40 +1205,64 @@ class ConferBotProvider with ChangeNotifier {
   void _setupFlowEngineListeners() {
     _flowEngine.addListener(_onFlowEngineChange);
 
-    // Listen for bot messages from flow engine to add to chat record
+    // The lines the flow's steps say (questions, answers, media, links),
+    // as the web widget draws them.
     _flowEngine.botMessageStream.listen((messageData) {
       final text = messageData['text'] as String? ?? '';
-      final imageUrl = messageData['imageUrl'] as String? ?? '';
       final nodeId = messageData['nodeId'] as String? ?? '';
-      if (text.isNotEmpty || imageUrl.isNotEmpty) {
-        final botMessage = BotMessageRecord(
-          id: 'bot_${nodeId}_${DateTime.now().millisecondsSinceEpoch}',
-          time: DateTime.now(),
-          text: text,
-          nodeData: imageUrl.isNotEmpty ? {'imageUrl': imageUrl} : null,
-        );
-        _addMessageToRecord(botMessage);
-        _logger.debug('Added bot message to record: "$text" image: "$imageUrl"');
-        notifyListeners();
-      }
+      final media = <String, dynamic>{
+        for (final k in _flowMediaKeys)
+          if (messageData[k] != null && messageData[k] != '') k: messageData[k],
+      };
+      // A video, audio, file or HTML line shows the media, not its URL.
+      final mediaOnly = media.containsKey('videoUrl') ||
+          media.containsKey('audioUrl') ||
+          media.containsKey('fileUrl') ||
+          media.containsKey('html') ||
+          media.containsKey('imageUrl');
+      if (text.isEmpty && media.isEmpty) return;
+      _addMessageToRecord(BotMessageRecord(
+        id: 'bot_${nodeId}_${DateTime.now().millisecondsSinceEpoch}_${_lineSeq++}',
+        time: DateTime.now(),
+        text: mediaOnly ? null : text,
+        nodeData: media.isEmpty ? null : {...media, 'nodeId': nodeId},
+      ));
+      notifyListeners();
     });
 
-    // Listen for user messages from flow engine (choice selections, form inputs, etc.)
+    // The visitor's answers, as the steps record them (a choice's label,
+    // a masked card number stays as typed in the chat).
     _flowEngine.userMessageStream.listen((messageData) {
       final text = messageData['text'] as String? ?? '';
       final nodeId = messageData['nodeId'] as String? ?? '';
-      if (text.isNotEmpty) {
-        final userMessage = UserInputResponseRecord(
-          id: 'user_${nodeId}_${DateTime.now().millisecondsSinceEpoch}',
-          time: DateTime.now(),
-          text: text,
-        );
-        _addMessageToRecord(userMessage);
-        _logger.debug('Added user message to record: "$text"');
-        notifyListeners();
-      }
+      if (text.isEmpty) return;
+      _addMessageToRecord(UserInputResponseRecord(
+        id: 'user_${nodeId}_${DateTime.now().millisecondsSinceEpoch}_${_lineSeq++}',
+        time: DateTime.now(),
+        text: text,
+      ));
+      notifyListeners();
     });
   }
+
+  /// The media and link fields a step's line may carry.
+  static const _flowMediaKeys = [
+    'imageUrl',
+    'videoUrl',
+    'audioUrl',
+    'fileUrl',
+    'fileName',
+    'html',
+    'linkUrl',
+    'linkLabel',
+    'openInNewTab',
+    'mediaNodeId',
+    'allowDownload',
+    'sources',
+  ];
+
+  /// Makes line ids unique within a millisecond.
+  int _lineSeq = 0;
 
   /// Handle flow engine state changes
   void _onFlowEngineChange() {
@@ -1360,6 +1370,7 @@ class ConferBotProvider with ChangeNotifier {
           workspaceId: serverWorkspaceId,
           stepsData: _steps,
           edgesData: _edges,
+          customizations: _serverCustomizations,
         );
 
         // Set _botName variable for handover handler
@@ -1487,6 +1498,7 @@ class ConferBotProvider with ChangeNotifier {
       workspaceId: _serverWorkspaceId,
       stepsData: _steps,
       edgesData: _edges,
+      customizations: _serverCustomizations,
     );
     ChatState.instance.setCurrentNodeId(savedNodeId);
     RestoreStep step;
@@ -1679,76 +1691,51 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Submit response for current interactive node
   void submitResponse(dynamic response) {
-    // Show user's selection as a right-aligned user bubble
-    // (matches web widget's _displayUserInputMessage after choice selection)
-    String? displayText;
-    if (response is String) {
-      displayText = response;
-    } else if (response is Map) {
-      displayText = (response['label'] ?? response['text'] ?? response['value'])?.toString();
-    } else if (response is List) {
-      displayText = response.join(', ');
-    } else {
-      displayText = response?.toString();
-    }
-
-    // Web widget parity: keep the question (and, for choice nodes, the
-    // disabled choice chips with the selection highlighted) in the
-    // transcript, so nothing vanishes when the node advances.
-    final questionText = _flowEngine.currentQuestionText;
+    // Web widget parity: a choice step keeps its chips under its question,
+    // disabled, with the pick highlighted. The question and the visitor's
+    // answer are lines the step itself says (botMessageStream /
+    // userMessageStream).
     final uiState = _flowEngine.currentUIState;
-    Map<String, dynamic>? persistedNodeData;
-    if (uiState is SingleChoiceState) {
-      persistedNodeData = {
-        'choices': uiState.choices
-            .map((c) => {'id': c.id, 'text': c.text})
-            .toList(),
-        'selected': displayText,
-      };
-    } else if (uiState is MultipleChoiceState) {
-      persistedNodeData = {
-        'choices': uiState.options
-            .map((o) => {'id': o.id, 'text': o.text})
-            .toList(),
-        'selected': displayText,
-      };
-    } else if (uiState is SingleChoiceUIState) {
-      persistedNodeData = {
-        'choices': uiState.choices
-            .map((c) => {'id': c.id, 'text': c.text})
-            .toList(),
-        'selected': displayText,
-      };
+    final nodeId = _flowEngine.currentNodeId;
+    List<Map<String, dynamic>>? choices;
+    if (uiState is SingleChoiceUIState) {
+      choices = [for (final c in uiState.choices) {'id': c.id, 'text': c.text}];
     } else if (uiState is MultipleChoiceUIState) {
-      persistedNodeData = {
-        'choices': uiState.options
-            .map((o) => {'id': o.id, 'text': o.text})
-            .toList(),
-        'selected': displayText,
-      };
+      choices = [for (final o in uiState.options) {'id': o.id, 'text': o.text}];
     }
-    if ((questionText != null && questionText.isNotEmpty) ||
-        persistedNodeData != null) {
-      _addMessageToRecord(BotMessageRecord(
-        id: 'bot_q_${DateTime.now().millisecondsSinceEpoch}',
-        time: DateTime.now(),
-        // The builder writes questions as rich text (<p>...</p>).
-        text: questionText == null ? null : LiveChat.plainText(questionText),
-        nodeData: persistedNodeData,
-      ));
-    }
-
-    if (displayText != null && displayText.isNotEmpty) {
-      final userMessage = UserInputResponseRecord(
-        id: 'user_choice_${DateTime.now().millisecondsSinceEpoch}',
-        time: DateTime.now(),
-        text: displayText,
-      );
-      _addMessageToRecord(userMessage);
-      notifyListeners();
+    if (choices != null && nodeId != null && _flowEngine.isWaitingForInput) {
+      String? selected;
+      if (response is Map) {
+        final ids = response['buttonIds'];
+        selected = ids is List
+            ? choices.where((c) => ids.map((e) => '$e').contains(c['id'])).map((c) => c['text']).join(', ')
+            : (response['label'] ?? response['text'] ?? response['value'])?.toString();
+      } else {
+        selected = response?.toString();
+      }
+      _attachChoices(nodeId, choices, selected);
     }
 
     _flowEngine.submitResponse(response);
+  }
+
+  /// The choice chips under the step's question line (the last line it said).
+  void _attachChoices(String nodeId, List<Map<String, dynamic>> choices, String? selected) {
+    for (var i = _record.length - 1; i >= 0; i--) {
+      final m = _record[i];
+      if (m is BotMessageRecord && m.id.startsWith('bot_${nodeId}_') && m.nodeData == null) {
+        final updated = BotMessageRecord(
+          id: m.id,
+          time: m.time,
+          text: m.text,
+          nodeData: {'choices': choices, 'selected': selected},
+        );
+        _record[i] = updated;
+        _paginationController?.updateMessage(updated);
+        notifyListeners();
+        return;
+      }
+    }
   }
 
   /// Send text message
@@ -1765,11 +1752,13 @@ class ConferBotProvider with ChangeNotifier {
       return;
     }
 
-    // If flow engine has a current node, submit as response
-    if (_flowEngine.currentNodeId != null) {
+    // A step waiting for the visitor takes it as its answer
+    if (_flowEngine.isWaitingForInput) {
       submitResponse(text);
       return;
     }
+    // A flow still running: the step's own input decides what comes next.
+    if (_flowEngine.currentNodeId != null && !_flowEngine.isFlowComplete) return;
 
     // Legacy fallback: direct socket message
     final userMessage = UserInputResponseRecord(
