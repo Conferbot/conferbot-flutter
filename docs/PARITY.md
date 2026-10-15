@@ -19,18 +19,23 @@ Layout:
 | #18 | 56 icons (CustomPainter) | `launcher_icons.dart`, `widgets/launcher_icon_painter.dart` |
 | #19 | Launcher motion, passes the golden test | `launcher_motion.dart`, `test/fixtures/launcher_motion_golden.json` |
 | #20 | User as `visitorContext` + identity hash (name, email and metadata now reach the server) | `models/user.dart` (`toVisitorContext`), `core/state/chat_state.dart`, provider constructor |
+| #22 | Greeting card: rules, frequency, per-bot state, 11 styles; replaces the old CTA tooltip. Checked with widget-test images, not yet on a device | `core/customization/greeting.dart`, `widgets/greeting_controller.dart`, `widgets/greeting_card.dart`, `widgets/conferbot_fab.dart` |
 
 ## Left in this SDK
 
-1. **Greeting card** (see "Porting the greeting card" below): wired into `conferbot_fab.dart`, stored per bot as `conferbot.greeting.<botId>`.
+1. **Greeting card follow-ups:**
+   - Check it on a device (iOS and Android).
+   - Not drawn yet, as in RN: the word fade-up, the "Online" ping, the exit animations, the mascot and the agent's reply field.
 2. The rest of the list below.
 3. **Test debt:**
    - #16: `media_service_test` fails because MockController is not an AudioPlayer.
+   - `test/core/handlers/*_test.dart` and `node_flow_engine_test.dart` don't compile: they set a `state` that the handlers no longer have.
 4. There's no `identify()` after construction; the user comes only from the provider's `user`.
 
 ## How to test
 
 - **Unit tests:** `flutter test test/core` (skip the media test, #16).
+- **Greeting card images:** `GREETING_GOLDEN_DIR=/abs/dir flutter test --update-goldens test/widgets/greeting_card_test.dart` writes one PNG per style to that directory, outside the repo. It loads Roboto from the Flutter SDK and macOS fonts in place of casual / serif / monospace. Without the variable the image group is skipped.
 - **Example app:**
   - To point it at a local server, add `ConferBotEndpoints.configure(apiBaseUrl: 'http://10.0.2.2:8001/api/v1/mobile', socketUrl: 'http://10.0.2.2:8001')` in `example/lib/main.dart`.
   - Build: `flutter build apk --debug --target-platform android-x64` with gradle 8.7.
@@ -51,7 +56,7 @@ Every web widget feature works the same in the 4 mobile SDKs: customization, lau
 | 56 launcher icons, drawn from the widget SVGs | done | done | done | done |
 | Launcher motion (idle moments, message reaction, ripple) | done | done | done | done |
 | Signed-in user as `visitorContext` + identity hash | done | done | done | done |
-| Greeting card (rules, frequency, 11 styles) | done | logic done, UI on a branch | todo | todo |
+| Greeting card (rules, frequency, 11 styles) | done | logic done, UI on a branch | todo | done (device check pending) |
 | Launcher entrance / attention / idle call | todo | todo | todo | todo |
 | Home screen | todo | todo | todo | todo |
 | Mascots (incl. `mascotInGreeting`) | todo | todo | todo | todo |
