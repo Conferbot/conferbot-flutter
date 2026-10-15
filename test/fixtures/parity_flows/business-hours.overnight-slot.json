@@ -1,0 +1,250 @@
+{
+  "id": "business-hours.overnight-slot",
+  "title": "business-hours-node: at 2026-10-15 10:00 UTC it is 00:00 Friday in Pacific/Kiritimati (UTC+14); Thursday's overnight 22:00-02:00 slot is still open -> source-0",
+  "covers": [
+    "business-hours-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "bh",
+        "type": "business-hours-node",
+        "data": {
+          "timezone": "Pacific/Kiritimati",
+          "excludeDays": [],
+          "excludeDates": [],
+          "weeklyHours": [
+            {
+              "day": 0,
+              "dayName": "Sunday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "22:00",
+                  "end": "02:00"
+                }
+              ]
+            },
+            {
+              "day": 1,
+              "dayName": "Monday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "22:00",
+                  "end": "02:00"
+                }
+              ]
+            },
+            {
+              "day": 2,
+              "dayName": "Tuesday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "22:00",
+                  "end": "02:00"
+                }
+              ]
+            },
+            {
+              "day": 3,
+              "dayName": "Wednesday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "22:00",
+                  "end": "02:00"
+                }
+              ]
+            },
+            {
+              "day": 4,
+              "dayName": "Thursday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "22:00",
+                  "end": "02:00"
+                }
+              ]
+            },
+            {
+              "day": 5,
+              "dayName": "Friday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "22:00",
+                  "end": "02:00"
+                }
+              ]
+            },
+            {
+              "day": 6,
+              "dayName": "Saturday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "22:00",
+                  "end": "02:00"
+                }
+              ]
+            }
+          ]
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "open",
+        "type": "message-node",
+        "data": {
+          "text": "<p>open</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "closed",
+        "type": "message-node",
+        "data": {
+          "text": "<p>closed</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-bh",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "bh",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-bh-source-0-open",
+        "source": "bh",
+        "sourceHandle": "source-0",
+        "target": "open",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-bh-source-1-closed",
+        "source": "bh",
+        "sourceHandle": "source-1",
+        "target": "closed",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "bh",
+        "type": "business-hours-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "open",
+        "type": "message-node",
+        "via": "port:source-0",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "open",
+        "t": 1400
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "open",
+        "text": "open"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "open",
+        "html": "<p>open</p>",
+        "plain": "open"
+      }
+    ],
+    "ports": [
+      {
+        "node": "bh",
+        "handle": "source-0",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>open</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1400
+    }
+  }
+}

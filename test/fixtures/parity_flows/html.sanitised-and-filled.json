@@ -1,0 +1,222 @@
+{
+  "id": "html.sanitised-and-filled",
+  "title": "html-node: data.html with answers filled (escaped), <script> and on* removed; moves on at once",
+  "covers": [
+    "html-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q",
+        "type": "ask-custom-question-node",
+        "data": {
+          "questionText": "<p>?</p>",
+          "answerVariable": "n"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "h",
+        "type": "html-node",
+        "data": {
+          "html": "<div onclick=\"x()\">Hi {n}<script>alert(1)</script></div>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>after</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q-source-h",
+        "source": "q",
+        "sourceHandle": "source",
+        "target": "h",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-h-source-m",
+        "source": "h",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q",
+      "do": "text",
+      "value": "Ana"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q",
+        "type": "ask-custom-question-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "h",
+        "type": "html-node",
+        "via": "edge:source",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 2050
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q",
+        "t": 1350
+      },
+      {
+        "node": "h",
+        "t": 2050
+      },
+      {
+        "node": "m",
+        "t": 2700
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q",
+        "text": "?"
+      },
+      {
+        "node": "h",
+        "text": "Hi Ana"
+      },
+      {
+        "node": "m",
+        "text": "after"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q",
+        "html": "<p>?</p>",
+        "plain": "?"
+      },
+      {
+        "node": "m",
+        "html": "<p>after</p>",
+        "plain": "after"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Ana"
+      },
+      {
+        "by": "bot",
+        "message": "<div onclick=\"x()\">Hi {n}<script>alert(1)</script></div>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>after</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q",
+        "shape": "user-ask-custom-question-response",
+        "text": "Ana"
+      }
+    ],
+    "variables": [
+      {
+        "key": "n",
+        "value": "Ana",
+        "nodeId": "q"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2700
+    }
+  }
+}

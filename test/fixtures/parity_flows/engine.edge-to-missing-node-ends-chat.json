@@ -1,0 +1,103 @@
+{
+  "id": "engine.edge-to-missing-node-ends-chat",
+  "title": "The first edge points at a node that does not exist: the chat ends; the second edge is never tried",
+  "covers": [
+    "message-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "a",
+        "type": "message-node",
+        "data": {
+          "text": "<p>A</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-ghost",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "ghost",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-w-source-a",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "a",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 700
+    }
+  }
+}

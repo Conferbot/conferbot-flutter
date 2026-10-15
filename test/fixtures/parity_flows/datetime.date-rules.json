@@ -1,0 +1,219 @@
+{
+  "id": "datetime.date-rules",
+  "title": "datetime-node (date): a disabled weekday is refused with a message; a valid day is saved as \"YYYY-MM-DD\" with <var>_display",
+  "covers": [
+    "datetime-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "dt",
+        "type": "datetime-node",
+        "data": {
+          "questionText": "<p>When?</p>",
+          "mode": "date",
+          "minDate": "today",
+          "maxDate": "+30",
+          "disabledWeekdays": [
+            0,
+            6
+          ],
+          "minTime": "",
+          "maxTime": "",
+          "timeStep": 30,
+          "locale": "",
+          "submitLabel": "Send",
+          "answerVariable": "picked_date"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{picked_date} | {picked_date_display}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-dt",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "dt",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-dt-source-m",
+        "source": "dt",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "dt",
+      "do": "datetime",
+      "value": "2026-10-17"
+    },
+    {
+      "at": "dt",
+      "do": "datetime",
+      "value": "2026-10-19"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "dt",
+        "type": "datetime-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "dt",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "t": 2294
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "dt",
+        "text": "When? Date Closed on Sundays and Saturdays Send"
+      },
+      {
+        "node": "m",
+        "text": "2026-10-19 | Oct 19, 2026"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "dt",
+        "html": "<p>When?</p>",
+        "plain": "When?"
+      },
+      {
+        "node": "m",
+        "html": "<p>2026-10-19 | Oct 19, 2026</p>",
+        "plain": "2026-10-19 | Oct 19, 2026"
+      }
+    ],
+    "ports": [
+      {
+        "node": "dt",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>When?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Oct 19, 2026"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{picked_date} | {picked_date_display}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "dt",
+        "shape": "user-datetime",
+        "value": "2026-10-19",
+        "display": "Oct 19, 2026",
+        "mode": "date"
+      }
+    ],
+    "variables": [
+      {
+        "key": "picked_date",
+        "value": "2026-10-19",
+        "nodeId": "dt"
+      },
+      {
+        "key": "picked_date_display",
+        "value": "Oct 19, 2026",
+        "nodeId": "column_mapped_picked_date_display"
+      }
+    ],
+    "errors": [
+      {
+        "node": "dt",
+        "message": "Saturdays aren't available. Please pick another day."
+      }
+    ],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2294
+    }
+  }
+}

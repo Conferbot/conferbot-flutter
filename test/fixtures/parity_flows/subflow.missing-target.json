@@ -1,0 +1,169 @@
+{
+  "id": "subflow.missing-target",
+  "title": "run-subflow-node naming a sub-flow that does not exist: source-error when wired, else it carries on by \"source\"",
+  "covers": [
+    "run-subflow-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "run",
+        "type": "run-subflow-node",
+        "data": {
+          "subflowId": "gone"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "err",
+        "type": "message-node",
+        "data": {
+          "text": "<p>error path</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ok",
+        "type": "message-node",
+        "data": {
+          "text": "<p>ok path</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-run",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "run",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-run-source-ok",
+        "source": "run",
+        "sourceHandle": "source",
+        "target": "ok",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-run-source-error-err",
+        "source": "run",
+        "sourceHandle": "source-error",
+        "target": "err",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "run",
+        "type": "run-subflow-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "err",
+        "type": "message-node",
+        "via": "port:source-error",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "err",
+        "t": 1400
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "err",
+        "text": "error path"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "err",
+        "html": "<p>error path</p>",
+        "plain": "error path"
+      }
+    ],
+    "ports": [
+      {
+        "node": "run",
+        "handle": "source-error",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>error path</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1400
+    }
+  }
+}

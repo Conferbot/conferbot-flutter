@@ -1,0 +1,284 @@
+{
+  "id": "ask-multiple.one-by-one",
+  "title": "ask-multiple-questions-node: data.message, then each question in turn (2000 ms typing each); \"email\" / \"phone\" answers are checked; variables registered as nodeId+index",
+  "covers": [
+    "ask-multiple-questions-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "mq",
+        "type": "ask-multiple-questions-node",
+        "data": {
+          "message": "Answer the following questions",
+          "questions": [
+            {
+              "id": "1",
+              "questionText": "<p>First quest</p>",
+              "answerVariable": "multi_first"
+            },
+            {
+              "id": "2",
+              "questionText": "<p>Your email</p>",
+              "answerVariable": "email"
+            },
+            {
+              "id": "3",
+              "questionText": "<p>Phone</p>",
+              "answerVariable": "phone"
+            }
+          ]
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{multi_first} / {email} / {phone}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-mq",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "mq",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-mq-source-m",
+        "source": "mq",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "mq",
+      "do": "text",
+      "value": "alpha"
+    },
+    {
+      "at": "mq",
+      "do": "text",
+      "value": "bad-email"
+    },
+    {
+      "at": "mq",
+      "do": "text",
+      "value": "a@b.co"
+    },
+    {
+      "at": "mq",
+      "do": "text",
+      "value": "+44 20 7946 0958"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "mq",
+        "type": "ask-multiple-questions-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 8180
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "mq",
+        "t": 1480
+      },
+      {
+        "node": "m",
+        "t": 9076
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "mq",
+        "text": "Answer the following questions First quest Your email Please enter a valid email address Phone"
+      },
+      {
+        "node": "m",
+        "text": "alpha / a@b.co / +442079460958"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "mq",
+        "html": "Answer the following questions",
+        "plain": "Answer the following questions"
+      },
+      {
+        "node": "m",
+        "html": "<p>alpha / a@b.co / +442079460958</p>",
+        "plain": "alpha / a@b.co / +442079460958"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "Answer the following questions"
+      },
+      {
+        "by": "bot",
+        "message": "<p>First quest</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Your email</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Phone</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>First quest</p>"
+      },
+      {
+        "by": "user",
+        "message": "alpha"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Your email</p>"
+      },
+      {
+        "by": "user",
+        "message": "a@b.co"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Phone</p>"
+      },
+      {
+        "by": "user",
+        "message": "+442079460958"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{multi_first} / {email} / {phone}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "mq:1",
+        "nodeId": "mq",
+        "questionId": "1",
+        "answerVariable": "multi_first",
+        "shape": "user-ask-multiple-questions-question-response",
+        "type": "user-ask-multiple-questions-question-response",
+        "text": "alpha"
+      },
+      {
+        "id": "mq:2",
+        "nodeId": "mq",
+        "questionId": "2",
+        "answerVariable": "email",
+        "shape": "user-ask-multiple-questions-question-response",
+        "type": "user-ask-multiple-questions-question-response",
+        "text": "a@b.co"
+      },
+      {
+        "id": "mq:3",
+        "nodeId": "mq",
+        "questionId": "3",
+        "answerVariable": "phone",
+        "shape": "user-ask-multiple-questions-question-response",
+        "type": "user-ask-multiple-questions-question-response",
+        "text": "+442079460958"
+      }
+    ],
+    "variables": [
+      {
+        "key": "multi_first",
+        "value": "alpha",
+        "nodeId": "mq0"
+      },
+      {
+        "key": "email",
+        "value": "a@b.co",
+        "nodeId": "mq1"
+      },
+      {
+        "key": "phone",
+        "value": "+442079460958",
+        "nodeId": "mq2"
+      }
+    ],
+    "errors": [
+      {
+        "node": "mq",
+        "message": "Please enter a valid email address"
+      }
+    ],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 9076
+    }
+  }
+}

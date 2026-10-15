@@ -1,0 +1,252 @@
+{
+  "id": "ask-name.default-and-blank-greeting",
+  "title": "No nameGreetResponse at all: the default greeting; a cleared one (\"<p><br></p>\"): no greeting bubble",
+  "covers": [
+    "ask-name-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q1",
+        "type": "ask-name-node",
+        "data": {
+          "questionText": "<p>Name?</p>",
+          "answerVariable": "name"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q2",
+        "type": "ask-name-node",
+        "data": {
+          "questionText": "<p>Again?</p>",
+          "nameGreetResponse": "<p><br></p>",
+          "answerVariable": "name2"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>done</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q1",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q1",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q1-source-q2",
+        "source": "q1",
+        "sourceHandle": "source",
+        "target": "q2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q2-source-m",
+        "source": "q2",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q1",
+      "do": "text",
+      "value": "ana"
+    },
+    {
+      "at": "q2",
+      "do": "text",
+      "value": "bo"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q1",
+        "type": "ask-name-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "q2",
+        "type": "ask-name-node",
+        "via": "edge:source",
+        "t": 3350
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 4050
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q1",
+        "t": 1350
+      },
+      {
+        "node": "q2",
+        "t": 4050
+      },
+      {
+        "node": "m",
+        "t": 4750
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q1",
+        "text": "Name? Nice to meet you, Ana"
+      },
+      {
+        "node": "q2",
+        "text": "Again?"
+      },
+      {
+        "node": "m",
+        "text": "done"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q1",
+        "html": "<p>Name?</p>",
+        "plain": "Name?"
+      },
+      {
+        "node": "q2",
+        "html": "<p>Again?</p>",
+        "plain": "Again?"
+      },
+      {
+        "node": "m",
+        "html": "<p>done</p>",
+        "plain": "done"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Name?</p>"
+      },
+      {
+        "by": "user",
+        "message": "ana"
+      },
+      {
+        "by": "bot",
+        "message": "Nice to meet you, Ana"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Again?</p>"
+      },
+      {
+        "by": "user",
+        "message": "bo"
+      },
+      {
+        "by": "bot",
+        "message": "<p>done</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q1",
+        "shape": "user-ask-name-response",
+        "text": "ana"
+      },
+      {
+        "id": "q2",
+        "shape": "user-ask-name-response",
+        "text": "bo"
+      }
+    ],
+    "variables": [
+      {
+        "key": "name",
+        "value": "ana",
+        "nodeId": "q1"
+      },
+      {
+        "key": "name2",
+        "value": "bo",
+        "nodeId": "q2"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 4750
+    }
+  }
+}

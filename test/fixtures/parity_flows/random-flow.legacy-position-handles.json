@@ -1,0 +1,180 @@
+{
+  "id": "random-flow.legacy-position-handles",
+  "title": "random-flow-node saved before branches had ids: edges use \"source-\" + position (real: branches {id:\"0\"},{id:\"1\"} -> source-0/1)",
+  "covers": [
+    "random-flow-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"Math Op Test\"",
+  "random": [
+    0.1
+  ],
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "r",
+        "type": "random-flow-node",
+        "data": {
+          "branches": [
+            {
+              "weight": 3
+            },
+            {
+              "weight": 1
+            }
+          ]
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "first",
+        "type": "message-node",
+        "data": {
+          "text": "<p>first</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "second",
+        "type": "message-node",
+        "data": {
+          "text": "<p>second</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-r",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "r",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-r-source-0-first",
+        "source": "r",
+        "sourceHandle": "source-0",
+        "target": "first",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-r-source-1-second",
+        "source": "r",
+        "sourceHandle": "source-1",
+        "target": "second",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "r",
+        "type": "random-flow-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "first",
+        "type": "message-node",
+        "via": "port:source-0",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "first",
+        "t": 1400
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "first",
+        "text": "first"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "first",
+        "html": "<p>first</p>",
+        "plain": "first"
+      }
+    ],
+    "ports": [
+      {
+        "node": "r",
+        "handle": "source-0",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>first</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1400
+    }
+  }
+}

@@ -1,0 +1,281 @@
+{
+  "id": "variable.fill-and-number",
+  "title": "variable-node: data.value with {x}/${x} filled; isNumber turns \"42\" into 42; saved by data.name",
+  "covers": [
+    "variable-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q",
+        "type": "ask-custom-question-node",
+        "data": {
+          "questionText": "<p>?</p>",
+          "answerVariable": "first"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "v1",
+        "type": "variable-node",
+        "data": {
+          "name": "greeting",
+          "value": "Hello {first}!",
+          "isNumber": false
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "v2",
+        "type": "variable-node",
+        "data": {
+          "name": "answer",
+          "value": "42",
+          "isNumber": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "v3",
+        "type": "variable-node",
+        "data": {
+          "name": "",
+          "value": "ignored"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{greeting} {answer}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q-source-v1",
+        "source": "q",
+        "sourceHandle": "source",
+        "target": "v1",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-v1-source-v2",
+        "source": "v1",
+        "sourceHandle": "source",
+        "target": "v2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-v2-source-v3",
+        "source": "v2",
+        "sourceHandle": "source",
+        "target": "v3",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-v3-source-m",
+        "source": "v3",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q",
+      "do": "text",
+      "value": "Ana"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q",
+        "type": "ask-custom-question-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "v1",
+        "type": "variable-node",
+        "via": "edge:source",
+        "t": 1350
+      },
+      {
+        "node": "v2",
+        "type": "variable-node",
+        "via": "edge:source",
+        "t": 1350
+      },
+      {
+        "node": "v3",
+        "type": "variable-node",
+        "via": "edge:source",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "t": 2078
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q",
+        "text": "?"
+      },
+      {
+        "node": "m",
+        "text": "Hello Ana! 42"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q",
+        "html": "<p>?</p>",
+        "plain": "?"
+      },
+      {
+        "node": "m",
+        "html": "<p>Hello Ana! 42</p>",
+        "plain": "Hello Ana! 42"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Ana"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{greeting} {answer}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q",
+        "shape": "user-ask-custom-question-response",
+        "text": "Ana"
+      }
+    ],
+    "variables": [
+      {
+        "key": "first",
+        "value": "Ana",
+        "nodeId": "q"
+      },
+      {
+        "key": "greeting",
+        "value": "Hello Ana!",
+        "nodeId": "v1"
+      },
+      {
+        "key": "answer",
+        "value": 42,
+        "nodeId": "v2"
+      }
+    ],
+    "flowVariables": {
+      "greeting": "Hello Ana!",
+      "answer": 42
+    },
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2078
+    }
+  }
+}

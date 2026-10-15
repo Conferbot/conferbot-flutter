@@ -1,0 +1,200 @@
+{
+  "id": "consent.optional-declined",
+  "title": "consent-node required:false: Continue unticked saves false and still leaves by source (there is no \"declined\" handle)",
+  "covers": [
+    "consent-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "cs",
+        "type": "consent-node",
+        "data": {
+          "questionText": "<p>Before we start</p>",
+          "consentText": "I agree to the [Terms](https://example.com/terms) and [Privacy Policy](https://example.com/privacy).",
+          "required": false,
+          "continueLabel": "Continue",
+          "answerVariable": "consent"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>consent={consent}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-cs",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "cs",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-cs-source-m",
+        "source": "cs",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "cs",
+      "do": "consent",
+      "agreed": false
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "cs",
+        "type": "consent-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1440
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "cs",
+        "t": 1390
+      },
+      {
+        "node": "m",
+        "t": 2144
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "cs",
+        "text": "Before we start I agree to the Terms and Privacy Policy . (optional) Continue"
+      },
+      {
+        "node": "m",
+        "text": "consent=false"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "cs",
+        "html": "<p>Before we start</p>",
+        "plain": "Before we start"
+      },
+      {
+        "node": "m",
+        "html": "<p>consent=false</p>",
+        "plain": "consent=false"
+      }
+    ],
+    "ports": [
+      {
+        "node": "cs",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "Before we start I agree to the Terms and Privacy Policy."
+      },
+      {
+        "by": "user",
+        "message": "Didn't agree"
+      },
+      {
+        "by": "bot",
+        "message": "<p>consent={consent}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "cs",
+        "shape": "user-consent",
+        "agreed": false,
+        "consentText": "I agree to the Terms and Privacy Policy.",
+        "documents": [
+          "Terms",
+          "Privacy Policy"
+        ],
+        "required": false,
+        "selectedChoice": "Didn't agree"
+      }
+    ],
+    "variables": [
+      {
+        "key": "consent",
+        "value": false,
+        "nodeId": "cs"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2144
+    }
+  }
+}

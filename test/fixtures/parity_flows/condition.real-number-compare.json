@@ -1,0 +1,356 @@
+{
+  "id": "condition.real-number-compare",
+  "title": "condition-node from a live bot: number_1 = number_2 with both sides variables (isNumber)",
+  "covers": [
+    "condition-node",
+    "ask-number-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"Condition Node Test\"",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ask-number-node-1706197443462",
+        "position": {
+          "x": 880.46875,
+          "y": 227.5
+        },
+        "data": {
+          "questionText": "<p>First num</p>",
+          "enableConditions": {
+            "format": "",
+            "prefix": "",
+            "minVal": "",
+            "maxVal": ""
+          },
+          "answerVariable": "number_1"
+        },
+        "type": "ask-number-node",
+        "width": 250,
+        "height": 89,
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "data": {
+          "questionText": "<p>Second num</p>",
+          "enableConditions": {
+            "format": "",
+            "prefix": "",
+            "minVal": "",
+            "maxVal": ""
+          },
+          "answerVariable": "number_2"
+        },
+        "id": "node-1706197504665",
+        "position": {
+          "x": 1248.7775735294117,
+          "y": 102.05882352941177
+        },
+        "type": "ask-number-node",
+        "width": 250,
+        "height": 89,
+        "selected": false,
+        "positionAbsolute": {
+          "x": 1248.7775735294117,
+          "y": 102.05882352941177
+        },
+        "dragging": false
+      },
+      {
+        "id": "condition-node-1706197521460",
+        "position": {
+          "x": 1666.71875,
+          "y": -23.75
+        },
+        "data": {
+          "isNumber": true,
+          "customLeftValue": false,
+          "leftValue": "number_1",
+          "operator": "=",
+          "customRightValue": false,
+          "rightValue": "number_2"
+        },
+        "type": "condition-node",
+        "width": 250,
+        "height": 175,
+        "selected": false,
+        "positionAbsolute": {
+          "x": 1666.71875,
+          "y": -23.75
+        },
+        "dragging": false
+      },
+      {
+        "id": "message-node-1706197547971",
+        "position": {
+          "x": 2086.71875,
+          "y": -116.25
+        },
+        "data": {
+          "text": "<p>True</p>"
+        },
+        "type": "message-node",
+        "width": 270,
+        "height": 89,
+        "selected": false,
+        "dragging": false,
+        "positionAbsolute": {
+          "x": 2086.71875,
+          "y": -116.25
+        }
+      },
+      {
+        "data": {
+          "text": "<p>False</p>"
+        },
+        "id": "node-1706197553524",
+        "position": {
+          "x": 2129.21875,
+          "y": 38.75
+        },
+        "type": "message-node",
+        "width": 270,
+        "height": 89,
+        "selected": false,
+        "positionAbsolute": {
+          "x": 2129.21875,
+          "y": 38.75
+        },
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-ask-number-node-1706197443462",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "ask-number-node-1706197443462",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "animated": true,
+        "source": "ask-number-node-1706197443462",
+        "sourceHandle": "source",
+        "target": "node-1706197504665",
+        "targetHandle": "target",
+        "type": "customedge",
+        "id": "reactflow__edge-ask-number-node-1706197443462source-node-1706197504665target",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "node-1706197504665",
+        "sourceHandle": "source",
+        "target": "condition-node-1706197521460",
+        "targetHandle": "target",
+        "type": "customedge",
+        "id": "reactflow__edge-node-1706197504665source-condition-node-1706197521460target",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "condition-node-1706197521460",
+        "sourceHandle": "source-0",
+        "target": "message-node-1706197547971",
+        "targetHandle": "target",
+        "type": "customedge",
+        "id": "reactflow__edge-condition-node-1706197521460source-0-message-node-1706197547971target",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "condition-node-1706197521460",
+        "sourceHandle": "source-1",
+        "target": "node-1706197553524",
+        "targetHandle": "target",
+        "type": "customedge",
+        "id": "reactflow__edge-condition-node-1706197521460source-1-node-1706197553524target",
+        "selected": false
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "do": "text",
+      "value": "7"
+    },
+    {
+      "do": "text",
+      "value": "7.0"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "ask-number-node-1706197443462",
+        "type": "ask-number-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "node-1706197504665",
+        "type": "ask-number-node",
+        "via": "edge:source",
+        "t": 1354
+      },
+      {
+        "node": "condition-node-1706197521460",
+        "type": "condition-node",
+        "via": "edge:source",
+        "t": 2054
+      },
+      {
+        "node": "message-node-1706197547971",
+        "type": "message-node",
+        "via": "port:source-0",
+        "t": 2054
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "ask-number-node-1706197443462",
+        "t": 1354
+      },
+      {
+        "node": "node-1706197504665",
+        "t": 2054
+      },
+      {
+        "node": "message-node-1706197547971",
+        "t": 2754
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "ask-number-node-1706197443462",
+        "text": "First num"
+      },
+      {
+        "node": "node-1706197504665",
+        "text": "Second num"
+      },
+      {
+        "node": "message-node-1706197547971",
+        "text": "True"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "ask-number-node-1706197443462",
+        "html": "<p>First num</p>",
+        "plain": "First num"
+      },
+      {
+        "node": "node-1706197504665",
+        "html": "<p>Second num</p>",
+        "plain": "Second num"
+      },
+      {
+        "node": "message-node-1706197547971",
+        "html": "<p>True</p>",
+        "plain": "True"
+      }
+    ],
+    "ports": [
+      {
+        "node": "condition-node-1706197521460",
+        "handle": "source-0",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>First num</p>"
+      },
+      {
+        "by": "user",
+        "message": "7"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Second num</p>"
+      },
+      {
+        "by": "user",
+        "message": "7.0"
+      },
+      {
+        "by": "bot",
+        "message": "<p>True</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "ask-number-node-1706197443462",
+        "shape": "user-ask-number-response",
+        "text": "7"
+      },
+      {
+        "id": "node-1706197504665",
+        "shape": "user-ask-number-response",
+        "text": "7"
+      }
+    ],
+    "variables": [
+      {
+        "key": "number_1",
+        "value": 7,
+        "nodeId": "ask-number-node-1706197443462"
+      },
+      {
+        "key": "number_2",
+        "value": 7,
+        "nodeId": "node-1706197504665"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2754
+    }
+  }
+}

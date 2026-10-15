@@ -1,0 +1,290 @@
+{
+  "id": "payment.paid",
+  "title": "payment-node: POST pay/start; the visitor opens Checkout; the status poll (POST pay/status, every 5 s) reports \"paid\" -> source; saves <var> {status,amount,currency,...}, <var>_status, <var>_amount",
+  "covers": [
+    "payment-node"
+  ],
+  "provenance": "executed",
+  "server": {
+    "http": {
+      "pay/start": {
+        "status": 200,
+        "body": {
+          "paymentId": "pi_1",
+          "url": "https://checkout.stripe.com/c/pay/cs_1",
+          "amount": 2500,
+          "currency": "usd",
+          "status": "open"
+        }
+      },
+      "pay/status": {
+        "status": 200,
+        "body": {
+          "status": "paid",
+          "paymentId": "pi_1",
+          "amount": 2500,
+          "currency": "usd",
+          "receiptUrl": "https://pay.stripe.com/receipts/r1"
+        }
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "pay",
+        "type": "payment-node",
+        "data": {
+          "questionText": "<p>You're almost done - complete the payment below.</p>",
+          "credentialId": "cred",
+          "amountMode": "fixed",
+          "amount": "25",
+          "currency": "usd",
+          "productName": "Setup fee",
+          "buttonLabel": "Pay now",
+          "timeoutMinutes": 15,
+          "answerVariable": "payment"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ok",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Paid {payment_amount} {payment_currency}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "no",
+        "type": "message-node",
+        "data": {
+          "text": "<p>failed</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-pay",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "pay",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-pay-source-ok",
+        "source": "pay",
+        "sourceHandle": "source",
+        "target": "ok",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-pay-source-failed-no",
+        "source": "pay",
+        "sourceHandle": "source-failed",
+        "target": "no",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "pay",
+      "do": "payOpen"
+    },
+    {
+      "at": "pay",
+      "do": "wait",
+      "waitMs": 6000
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "pay",
+        "type": "payment-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "ok",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 6648
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "pay",
+        "t": 1588
+      },
+      {
+        "node": "ok",
+        "t": 7628
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "pay",
+        "text": "You're almost done - complete the payment below. Paid $25.00 View receipt"
+      },
+      {
+        "node": "ok",
+        "text": "Paid 25 USD"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "ok",
+        "html": "<p>Paid 25 USD</p>",
+        "plain": "Paid 25 USD"
+      }
+    ],
+    "ports": [
+      {
+        "node": "pay",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "You're almost done - complete the payment below. Setup fee"
+      },
+      {
+        "by": "user",
+        "message": "Paid $25.00"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Paid {payment_amount} {payment_currency}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "pay",
+        "shape": "user-payment",
+        "outcome": "paid",
+        "status": "paid",
+        "amount": 2500,
+        "currency": "usd",
+        "amountText": "$25.00",
+        "receiptUrl": "https://pay.stripe.com/receipts/r1",
+        "paymentId": "pi_1"
+      }
+    ],
+    "variables": [
+      {
+        "key": "payment",
+        "value": {
+          "status": "paid",
+          "amount": 25,
+          "currency": "USD",
+          "receiptUrl": "https://pay.stripe.com/receipts/r1",
+          "paymentId": "pi_1"
+        },
+        "nodeId": "pay"
+      },
+      {
+        "key": "payment_status",
+        "value": "paid",
+        "nodeId": "column_mapped_payment_status"
+      },
+      {
+        "key": "payment_amount",
+        "value": 25,
+        "nodeId": "column_mapped_payment_amount"
+      },
+      {
+        "key": "payment_currency",
+        "value": "USD",
+        "nodeId": "column_mapped_payment_currency"
+      },
+      {
+        "key": "payment_receipt_url",
+        "value": "https://pay.stripe.com/receipts/r1",
+        "nodeId": "column_mapped_payment_receipt_url"
+      }
+    ],
+    "errors": [],
+    "http": [
+      {
+        "path": "pay/start",
+        "body": {
+          "nodeId": "pay",
+          "sessionId": "qa-session",
+          "step": "1"
+        }
+      },
+      {
+        "path": "pay/status",
+        "body": {
+          "nodeId": "pay",
+          "sessionId": "qa-session",
+          "paymentId": "pi_1",
+          "action": "peek"
+        }
+      }
+    ],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 7628
+    }
+  }
+}

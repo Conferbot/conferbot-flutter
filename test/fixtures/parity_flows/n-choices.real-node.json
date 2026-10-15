@@ -1,0 +1,233 @@
+{
+  "id": "n-choices.real-node",
+  "title": "n-choices-node from a live bot: stored answer is the choice text without HTML",
+  "covers": [
+    "n-choices-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"all nodes test\"",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "c",
+        "type": "n-choices-node",
+        "data": {
+          "choicePrompt": "<p>Choose Ask question node to testsdfdsfsdf sdfs dfsdfsdfsdfsdfsdf sdfsdf sdf</p>",
+          "choices": [
+            {
+              "id": "1",
+              "choiceText": "<p>`ask name</p>"
+            },
+            {
+              "id": "2",
+              "choiceText": "<p>Ask email</p>"
+            },
+            {
+              "id": "e9237c34-a051-4c2a-84bb-e46659ec9729",
+              "choiceText": "<p>Ask phone number df dsfsd fsdf sdfsdf sdfsd</p>"
+            },
+            {
+              "id": "bc224f05-3785-429a-b339-a582d9682f47",
+              "choiceText": "<p>Ask file</p>"
+            },
+            {
+              "id": "3e13e231-66d1-48ee-ae8a-a7dca214f8d9",
+              "choiceText": "<p>Ask number</p>"
+            },
+            {
+              "id": "312f5785-f2ef-41dd-9fe9-09ef963e2692",
+              "choiceText": "<p>Ask URL</p>"
+            },
+            {
+              "id": "fc6762b0-5cef-42bb-876b-c463803ce0cd",
+              "choiceText": "<p>Ask multi questions</p>"
+            },
+            {
+              "id": "c0e2f993-bf43-4edd-bf6c-6d01694c071e",
+              "choiceText": "<p>N check options</p>"
+            },
+            {
+              "id": "6c085b5b-8bb6-4633-aabc-c861ef47d320",
+              "choiceText": "<p>N select options</p>"
+            },
+            {
+              "id": "6a53f532-521a-4305-aa4f-1ac1d4241d4b",
+              "choiceText": "<p>Calendar</p>"
+            }
+          ],
+          "answerVariable": "ask_questions_node"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "next",
+        "type": "message-node",
+        "data": {
+          "text": "<p>next</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-c",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "c",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-c-source-2-next",
+        "source": "c",
+        "sourceHandle": "source-2",
+        "target": "next",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "c",
+      "do": "choose",
+      "id": "2"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "c",
+        "type": "n-choices-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "next",
+        "type": "message-node",
+        "via": "port:source-2",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "c",
+        "t": 1350
+      },
+      {
+        "node": "next",
+        "t": 2050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "c",
+        "text": "Choose Ask question node to testsdfdsfsdf sdfs dfsdfsdfsdfsdfsdf sdfsdf sdf `ask name Ask email Ask phone number df dsfsd fsdf sdfsdf sdfsd Ask file Ask number Ask URL Ask multi questions N check options N select options Calendar"
+      },
+      {
+        "node": "next",
+        "text": "next"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "c",
+        "html": "<p>Choose Ask question node to testsdfdsfsdf sdfs dfsdfsdfsdfsdfsdf sdfsdf sdf</p>",
+        "plain": "Choose Ask question node to testsdfdsfsdf sdfs dfsdfsdfsdfsdfsdf sdfsdf sdf"
+      },
+      {
+        "node": "next",
+        "html": "<p>next</p>",
+        "plain": "next"
+      }
+    ],
+    "ports": [
+      {
+        "node": "c",
+        "handle": "source-2",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Choose Ask question node to testsdfdsfsdf sdfs dfsdfsdfsdfsdfsdf sdfsdf sdf</p>"
+      },
+      {
+        "by": "user",
+        "message": "Ask email"
+      },
+      {
+        "by": "bot",
+        "message": "<p>next</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "c",
+        "shape": "user-selected-choice",
+        "selectedChoice": "Ask email"
+      }
+    ],
+    "variables": [
+      {
+        "key": "ask_questions_node",
+        "value": "Ask email",
+        "nodeId": "c"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2050
+    }
+  }
+}

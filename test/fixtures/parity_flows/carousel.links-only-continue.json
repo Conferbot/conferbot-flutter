@@ -1,0 +1,202 @@
+{
+  "id": "carousel.links-only-continue",
+  "title": "carousel-node with only link buttons: a Continue row leaves by the plain \"source\" handle and saves no answer",
+  "covers": [
+    "carousel-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "car",
+        "type": "carousel-node",
+        "data": {
+          "questionText": "",
+          "cards": [
+            {
+              "id": "c1",
+              "title": "Read more",
+              "description": "",
+              "image": "",
+              "buttons": [
+                {
+                  "id": "l1",
+                  "label": "Open",
+                  "action": "link",
+                  "url": "https://example.com"
+                }
+              ]
+            }
+          ],
+          "answerVariable": "carousel_choice"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>[{carousel_choice}]</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-car",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "car",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-car-source-m",
+        "source": "car",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "car",
+      "do": "choose"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "car",
+        "type": "carousel-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "car",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "t": 2078
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "car",
+        "text": "Read more Open Continue"
+      },
+      {
+        "node": "m",
+        "text": "[]"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "m",
+        "html": "<p>[]</p>",
+        "plain": "[]"
+      }
+    ],
+    "ports": [
+      {
+        "node": "car",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "Read more"
+      },
+      {
+        "by": "user",
+        "message": "Continue"
+      },
+      {
+        "by": "bot",
+        "message": "<p>[{carousel_choice}]</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "car",
+        "shape": "user-selected-carousel",
+        "selectedChoice": "Continue",
+        "selectedCardId": null,
+        "selectedButtonId": null
+      }
+    ],
+    "variables": [
+      {
+        "key": "carousel_choice",
+        "value": null,
+        "nodeId": "car"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2078
+    }
+  }
+}

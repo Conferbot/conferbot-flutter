@@ -1,0 +1,311 @@
+{
+  "id": "ai-route.source-last-message",
+  "title": "ai-route-node with source \"last_message\": asks nothing, reads the visitor's latest message",
+  "covers": [
+    "ai-route-node"
+  ],
+  "provenance": "executed",
+  "server": {
+    "http": {
+      "ai/route": {
+        "status": 200,
+        "body": {
+          "intentId": "i1",
+          "intent": "Sales",
+          "confidence": 0.7
+        }
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q",
+        "type": "ask-custom-question-node",
+        "data": {
+          "questionText": "<p>What do you need?</p>",
+          "answerVariable": "need"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ar",
+        "type": "ai-route-node",
+        "data": {
+          "questionText": "<p>What can we help with today?</p>",
+          "source": "last_message",
+          "intents": [
+            {
+              "id": "i1",
+              "name": "Sales",
+              "description": "Pricing, plans, buying, demos"
+            },
+            {
+              "id": "i2",
+              "name": "Support",
+              "description": "Something isn't working, how-to questions"
+            },
+            {
+              "id": "i3",
+              "name": "Billing",
+              "description": "Invoices, refunds, payment methods"
+            }
+          ],
+          "minConfidence": 0.5,
+          "apiKey": "<redacted>",
+          "selectedModel": "gpt-4o-mini",
+          "answerVariable": "intent"
+        },
+        "position": {
+          "x": 80,
+          "y": 1380
+        }
+      },
+      {
+        "id": "arSales",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Routed to Sales ({intent}, {intent_confidence}).</p>"
+        },
+        "position": {
+          "x": 440,
+          "y": 1380
+        }
+      },
+      {
+        "id": "arNo",
+        "type": "message-node",
+        "data": {
+          "text": "<p>No match - routing to a human.</p>"
+        },
+        "position": {
+          "x": 1520,
+          "y": 1380
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q-source-ar",
+        "source": "q",
+        "sourceHandle": "source",
+        "target": "ar",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar-source-i1-arSales",
+        "source": "ar",
+        "sourceHandle": "source-i1",
+        "target": "arSales",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar-source-fallback-arNo",
+        "source": "ar",
+        "sourceHandle": "source-fallback",
+        "target": "arNo",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q",
+      "do": "text",
+      "value": "pricing for 20 seats"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q",
+        "type": "ask-custom-question-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "ar",
+        "type": "ai-route-node",
+        "via": "edge:source",
+        "t": 1402
+      },
+      {
+        "node": "arSales",
+        "type": "message-node",
+        "via": "port:source-i1",
+        "t": 2738
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q",
+        "t": 1402
+      },
+      {
+        "node": "ar",
+        "t": 2238
+      },
+      {
+        "node": "arSales",
+        "t": 3814
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q",
+        "text": "What do you need?"
+      },
+      {
+        "node": "ar",
+        "text": ""
+      },
+      {
+        "node": "arSales",
+        "text": "Routed to Sales (Sales, 0.7)."
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q",
+        "html": "<p>What do you need?</p>",
+        "plain": "What do you need?"
+      },
+      {
+        "node": "ar",
+        "html": "<p>What can we help with today?</p>",
+        "plain": "What can we help with today?"
+      },
+      {
+        "node": "arSales",
+        "html": "<p>Routed to Sales (Sales, 0.7).</p>",
+        "plain": "Routed to Sales (Sales, 0.7)."
+      }
+    ],
+    "ports": [
+      {
+        "node": "ar",
+        "handle": "source-i1",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>What do you need?</p>"
+      },
+      {
+        "by": "user",
+        "message": "pricing for 20 seats"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Routed to Sales ({intent}, {intent_confidence}).</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q",
+        "shape": "user-ask-custom-question-response",
+        "text": "pricing for 20 seats"
+      },
+      {
+        "id": "ar",
+        "shape": "user-ai-route",
+        "asked": false,
+        "input": "pricing for 20 seats",
+        "intentId": "i1",
+        "intent": "Sales",
+        "confidence": 0.7,
+        "fallback": false
+      }
+    ],
+    "variables": [
+      {
+        "key": "need",
+        "value": "pricing for 20 seats",
+        "nodeId": "q"
+      },
+      {
+        "key": "intent",
+        "value": "Sales",
+        "nodeId": "ar"
+      },
+      {
+        "key": "intent_confidence",
+        "value": 0.7,
+        "nodeId": "column_mapped_intent_confidence"
+      }
+    ],
+    "errors": [],
+    "http": [
+      {
+        "path": "ai/route",
+        "body": {
+          "nodeId": "ar",
+          "text": "pricing for 20 seats"
+        }
+      }
+    ],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 3814
+    }
+  }
+}

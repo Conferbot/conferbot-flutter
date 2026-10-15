@@ -1,0 +1,257 @@
+{
+  "id": "rating-choice.stars",
+  "title": "rating-choice-node (ratingType 5): 4 stars leaves by source-3 (value-1) and saves the NUMBER 4",
+  "covers": [
+    "rating-choice-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "r",
+        "type": "rating-choice-node",
+        "data": {
+          "questionText": "<p>Rate us</p>",
+          "ratingType": 5,
+          "answerVariable": "rating_choice"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "r3",
+        "type": "message-node",
+        "data": {
+          "text": "<p>r3</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "r4",
+        "type": "message-node",
+        "data": {
+          "text": "<p>r4</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{rating_choice}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-r",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "r",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-r-source-2-r3",
+        "source": "r",
+        "sourceHandle": "source-2",
+        "target": "r3",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-r-source-3-r4",
+        "source": "r",
+        "sourceHandle": "source-3",
+        "target": "r4",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-r4-source-m",
+        "source": "r4",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "r",
+      "do": "choose",
+      "value": 4
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "r",
+        "type": "rating-choice-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "r4",
+        "type": "message-node",
+        "via": "port:source-3",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 2050
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "r",
+        "t": 1350
+      },
+      {
+        "node": "r4",
+        "t": 2050
+      },
+      {
+        "node": "m",
+        "t": 2740
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "r",
+        "text": "Rate us"
+      },
+      {
+        "node": "r4",
+        "text": "r4"
+      },
+      {
+        "node": "m",
+        "text": "4"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "r",
+        "html": "<p>Rate us</p>",
+        "plain": "Rate us"
+      },
+      {
+        "node": "r4",
+        "html": "<p>r4</p>",
+        "plain": "r4"
+      },
+      {
+        "node": "m",
+        "html": "<p>4</p>",
+        "plain": "4"
+      }
+    ],
+    "ports": [
+      {
+        "node": "r",
+        "handle": "source-3",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Rate us</p>"
+      },
+      {
+        "by": "user",
+        "message": "⭐⭐⭐⭐"
+      },
+      {
+        "by": "bot",
+        "message": "<p>r4</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{rating_choice}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "r",
+        "shape": "user-selected-rating-choice",
+        "selectedRatingChoice": "⭐⭐⭐⭐",
+        "value": 4,
+        "label": "Good",
+        "ratingType": 5
+      }
+    ],
+    "variables": [
+      {
+        "key": "rating_choice",
+        "value": 4,
+        "nodeId": "r"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2740
+    }
+  }
+}

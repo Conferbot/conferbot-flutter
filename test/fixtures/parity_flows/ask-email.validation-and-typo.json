@@ -1,0 +1,204 @@
+{
+  "id": "ask-email.validation-and-typo",
+  "title": "ask-email-node: an invalid address shows incorrectEmailResponse; \"gmial.com\" is refused once with the fix offered, the same address sent again is kept",
+  "covers": [
+    "ask-email-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q",
+        "type": "ask-email-node",
+        "data": {
+          "questionText": "<p>Email?</p>",
+          "incorrectEmailResponse": "<p>Correct email pampu</p>",
+          "answerVariable": "email"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{email}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q-source-m",
+        "source": "q",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q",
+      "do": "text",
+      "value": "not-an-email"
+    },
+    {
+      "at": "q",
+      "do": "text",
+      "value": "ana@gmial.com"
+    },
+    {
+      "at": "q",
+      "do": "text",
+      "value": "ana@gmial.com"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q",
+        "type": "ask-email-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 2750
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "t": 3450
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q",
+        "text": "Email? Correct email pampu Did you mean ana@gmail.com? Press Enter to send it, or edit it."
+      },
+      {
+        "node": "m",
+        "text": "ana@gmial.com"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q",
+        "html": "<p>Email?</p>",
+        "plain": "Email?"
+      },
+      {
+        "node": "m",
+        "html": "<p>ana@gmial.com</p>",
+        "plain": "ana@gmial.com"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Email?</p>"
+      },
+      {
+        "by": "user",
+        "message": "ana@gmial.com"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{email}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q",
+        "shape": "user-ask-email-response",
+        "text": "ana@gmial.com"
+      }
+    ],
+    "variables": [
+      {
+        "key": "email",
+        "value": "ana@gmial.com",
+        "nodeId": "q"
+      }
+    ],
+    "errors": [
+      {
+        "node": "q",
+        "message": "<p>Correct email pampu</p>"
+      },
+      {
+        "node": "q",
+        "message": "Did you mean ana@gmail.com? Press Enter to send it, or edit it."
+      }
+    ],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 3450
+    }
+  }
+}

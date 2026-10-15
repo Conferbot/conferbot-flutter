@@ -1,0 +1,205 @@
+{
+  "id": "n-check.list-order",
+  "title": "n-check-options-node: the ticked options, in LIST order (not click order), joined \", \"; first edge after 600 ms",
+  "covers": [
+    "n-check-options-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "k",
+        "type": "n-check-options-node",
+        "data": {
+          "checkOptionsPrompt": "<p>Which?</p>",
+          "options": [
+            {
+              "id": "1",
+              "optionText": "Red"
+            },
+            {
+              "id": "2",
+              "optionText": ""
+            },
+            {
+              "id": "g",
+              "optionText": "Green"
+            },
+            {
+              "id": "b",
+              "optionText": "<p>Blue</p>"
+            }
+          ],
+          "answerVariable": "selected_options"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{selected_options}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-k",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "k",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-k-source-m",
+        "source": "k",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "k",
+      "do": "check",
+      "ids": [
+        "b",
+        "1"
+      ]
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "k",
+        "type": "n-check-options-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1950
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "k",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "t": 2666
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "k",
+        "text": "Which? Choose all that apply Red Green Blue Continue 2"
+      },
+      {
+        "node": "m",
+        "text": "Red, Blue"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "k",
+        "html": "<p>Which?</p>",
+        "plain": "Which?"
+      },
+      {
+        "node": "m",
+        "html": "<p>Red, Blue</p>",
+        "plain": "Red, Blue"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Which?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Red, Blue"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{selected_options}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "k",
+        "shape": "user-selected-check-options",
+        "selectedCheckOptions": "Red, Blue"
+      }
+    ],
+    "variables": [
+      {
+        "key": "selected_options",
+        "value": "Red, Blue",
+        "nodeId": "k"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2666
+    }
+  }
+}

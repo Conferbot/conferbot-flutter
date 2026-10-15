@@ -1,0 +1,300 @@
+{
+  "id": "payment.timeout-falls-to-failed",
+  "title": "payment-node timed out with no source-timeout edge: source-failed",
+  "covers": [
+    "payment-node"
+  ],
+  "provenance": "executed",
+  "server": {
+    "http": {
+      "pay/start": {
+        "status": 200,
+        "body": {
+          "paymentId": "pi_3",
+          "url": "https://checkout.stripe.com/c/pay/cs_3",
+          "amount": 2500,
+          "currency": "usd",
+          "status": "open"
+        }
+      },
+      "pay/status": [
+        {
+          "status": 200,
+          "body": {
+            "status": "open",
+            "paymentId": "pi_3"
+          }
+        },
+        {
+          "status": 200,
+          "body": {
+            "status": "expired",
+            "paymentId": "pi_3"
+          }
+        }
+      ]
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "pay",
+        "type": "payment-node",
+        "data": {
+          "questionText": "<p>You're almost done - complete the payment below.</p>",
+          "credentialId": "cred",
+          "amountMode": "fixed",
+          "amount": "25",
+          "currency": "usd",
+          "productName": "Setup fee",
+          "buttonLabel": "Pay now",
+          "timeoutMinutes": 1,
+          "answerVariable": "payment"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ok",
+        "type": "message-node",
+        "data": {
+          "text": "<p>paid</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "fail",
+        "type": "message-node",
+        "data": {
+          "text": "<p>failed path</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-pay",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "pay",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-pay-source-ok",
+        "source": "pay",
+        "sourceHandle": "source",
+        "target": "ok",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-pay-source-failed-fail",
+        "source": "pay",
+        "sourceHandle": "source-failed",
+        "target": "fail",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "pay",
+      "do": "wait",
+      "waitMs": 70000
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "pay",
+        "type": "payment-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "fail",
+        "type": "message-node",
+        "via": "port:source-failed",
+        "t": 67588
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "pay",
+        "t": 1588
+      },
+      {
+        "node": "fail",
+        "t": 68288
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "pay",
+        "text": "You're almost done - complete the payment below. Payment timed out $25.00 - not charged"
+      },
+      {
+        "node": "fail",
+        "text": "failed path"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "fail",
+        "html": "<p>failed path</p>",
+        "plain": "failed path"
+      }
+    ],
+    "ports": [
+      {
+        "node": "pay",
+        "handle": "source-failed",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "You're almost done - complete the payment below. Setup fee"
+      },
+      {
+        "by": "user",
+        "message": "Payment timed out"
+      },
+      {
+        "by": "bot",
+        "message": "<p>failed path</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "pay",
+        "shape": "user-payment",
+        "outcome": "timeout",
+        "status": "expired",
+        "amount": 2500,
+        "currency": "usd",
+        "amountText": "$25.00",
+        "paymentId": "pi_3"
+      }
+    ],
+    "variables": [
+      {
+        "key": "payment",
+        "value": {
+          "status": "expired",
+          "amount": 25,
+          "currency": "USD",
+          "receiptUrl": "",
+          "paymentId": "pi_3"
+        },
+        "nodeId": "pay"
+      },
+      {
+        "key": "payment_status",
+        "value": "expired",
+        "nodeId": "column_mapped_payment_status"
+      },
+      {
+        "key": "payment_amount",
+        "value": 25,
+        "nodeId": "column_mapped_payment_amount"
+      },
+      {
+        "key": "payment_currency",
+        "value": "USD",
+        "nodeId": "column_mapped_payment_currency"
+      },
+      {
+        "key": "payment_receipt_url",
+        "value": "",
+        "nodeId": "column_mapped_payment_receipt_url"
+      }
+    ],
+    "errors": [],
+    "http": [
+      {
+        "path": "pay/start",
+        "body": {
+          "nodeId": "pay",
+          "sessionId": "qa-session",
+          "step": "1"
+        }
+      },
+      {
+        "path": "pay/status",
+        "body": {
+          "nodeId": "pay",
+          "sessionId": "qa-session",
+          "paymentId": "pi_3",
+          "action": "timeout"
+        }
+      },
+      {
+        "path": "pay/status",
+        "body": {
+          "nodeId": "pay",
+          "sessionId": "qa-session",
+          "paymentId": "pi_3",
+          "action": "timeout"
+        }
+      }
+    ],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 68288
+    }
+  }
+}

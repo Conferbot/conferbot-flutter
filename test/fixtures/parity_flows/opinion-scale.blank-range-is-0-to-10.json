@@ -1,0 +1,193 @@
+{
+  "id": "opinion-scale.blank-range-is-0-to-10",
+  "title": "opinion-scale-choice-node with blank from/to: 0 to 10; picking 10 leaves by source-10",
+  "covers": [
+    "opinion-scale-choice-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "o",
+        "type": "opinion-scale-choice-node",
+        "data": {
+          "questionText": "<p>Score?</p>",
+          "from": "",
+          "to": "",
+          "answerVariable": "score"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ten",
+        "type": "message-node",
+        "data": {
+          "text": "<p>ten</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-o",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "o",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-o-source-10-ten",
+        "source": "o",
+        "sourceHandle": "source-10",
+        "target": "ten",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "o",
+      "do": "choose",
+      "value": 10
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "o",
+        "type": "opinion-scale-choice-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "ten",
+        "type": "message-node",
+        "via": "port:source-10",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "o",
+        "t": 1350
+      },
+      {
+        "node": "ten",
+        "t": 2050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "o",
+        "text": "Score? 0 1 2 3 4 5 6 7 8 9 10"
+      },
+      {
+        "node": "ten",
+        "text": "ten"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "o",
+        "html": "<p>Score?</p>",
+        "plain": "Score?"
+      },
+      {
+        "node": "ten",
+        "html": "<p>ten</p>",
+        "plain": "ten"
+      }
+    ],
+    "ports": [
+      {
+        "node": "o",
+        "handle": "source-10",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Score?</p>"
+      },
+      {
+        "by": "user",
+        "message": "10"
+      },
+      {
+        "by": "bot",
+        "message": "<p>ten</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "o",
+        "shape": "user-selected-opinion-scale-choice",
+        "selectedOpinionScaleChoice": "10",
+        "value": 10
+      }
+    ],
+    "variables": [
+      {
+        "key": "score",
+        "value": 10,
+        "nodeId": "o"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2050
+    }
+  }
+}

@@ -1,0 +1,278 @@
+{
+  "id": "address.search-and-pick",
+  "title": "address-node (real): search answered by POST geo/search; the picked result (with lat/lng, country code) is saved",
+  "covers": [
+    "address-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"QA - All Nodes\"",
+  "server": {
+    "http": {
+      "geo/search": {
+        "status": 200,
+        "body": {
+          "results": [
+            {
+              "formatted": "Marina Walk, Dubai Marina, Dubai, United Arab Emirates",
+              "line1": "Marina Walk",
+              "city": "Dubai",
+              "region": "Dubai",
+              "postal": "",
+              "country": "United Arab Emirates",
+              "countryCode": "AE",
+              "lat": 25.0805,
+              "lng": 55.1403
+            }
+          ]
+        }
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "addr",
+        "type": "address-node",
+        "data": {
+          "questionText": "<p>Where should we ship it?</p>",
+          "countryCodes": "ae",
+          "allowMyLocation": true,
+          "showMap": true,
+          "allowManual": true,
+          "placeholder": "Start typing your address",
+          "answerVariable": "ship"
+        },
+        "position": {
+          "x": 440,
+          "y": 540
+        }
+      },
+      {
+        "id": "addrMsg",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Shipping to {ship} | city {ship_city} | country {ship_country_code} | {ship_lat},{ship_lng}</p>"
+        },
+        "position": {
+          "x": 800,
+          "y": 540
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-addr",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "addr",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-addr-source-addrMsg",
+        "source": "addr",
+        "sourceHandle": "source",
+        "target": "addrMsg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "addr",
+      "do": "addressSearch",
+      "q": "marina walk"
+    },
+    {
+      "at": "addr",
+      "do": "addressPick",
+      "index": 0
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "addr",
+        "type": "address-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "addrMsg",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1794
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "addr",
+        "t": 1444
+      },
+      {
+        "node": "addrMsg",
+        "t": 3386
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "addr",
+        "text": "Where should we ship it? Marina Walk Dubai Marina, Dubai, United Arab Emirates"
+      },
+      {
+        "node": "addrMsg",
+        "text": "Shipping to Marina Walk, Dubai Marina, Dubai, United Arab Emirates | city Dubai | country ae | 25.0805,55.1403"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "addr",
+        "html": "<p>Where should we ship it?</p>",
+        "plain": "Where should we ship it?"
+      },
+      {
+        "node": "addrMsg",
+        "html": "<p>Shipping to Marina Walk, Dubai Marina, Dubai, United Arab Emirates | city Dubai | country ae | 25.0805,55.1403</p>",
+        "plain": "Shipping to Marina Walk, Dubai Marina, Dubai, United Arab Emirates | city Dubai | country ae | 25.0805,55.1403"
+      }
+    ],
+    "ports": [
+      {
+        "node": "addr",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Where should we ship it?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Marina Walk, Dubai Marina, Dubai, United Arab Emirates"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Shipping to {ship} | city {ship_city} | country {ship_country_code} | {ship_lat},{ship_lng}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "addr",
+        "shape": "user-address",
+        "value": {
+          "formatted": "Marina Walk, Dubai Marina, Dubai, United Arab Emirates",
+          "line1": "Marina Walk",
+          "city": "Dubai",
+          "region": "Dubai",
+          "postal": "",
+          "country": "United Arab Emirates",
+          "countryCode": "ae",
+          "lat": 25.0805,
+          "lng": 55.1403
+        },
+        "display": "Marina Walk, Dubai Marina, Dubai, United Arab Emirates",
+        "source": "search"
+      }
+    ],
+    "variables": [
+      {
+        "key": "ship",
+        "value": "Marina Walk, Dubai Marina, Dubai, United Arab Emirates",
+        "nodeId": "addr"
+      },
+      {
+        "key": "ship_line1",
+        "value": "Marina Walk",
+        "nodeId": "column_mapped_ship_line1"
+      },
+      {
+        "key": "ship_city",
+        "value": "Dubai",
+        "nodeId": "column_mapped_ship_city"
+      },
+      {
+        "key": "ship_region",
+        "value": "Dubai",
+        "nodeId": "column_mapped_ship_region"
+      },
+      {
+        "key": "ship_country",
+        "value": "United Arab Emirates",
+        "nodeId": "column_mapped_ship_country"
+      },
+      {
+        "key": "ship_country_code",
+        "value": "ae",
+        "nodeId": "column_mapped_ship_country_code"
+      },
+      {
+        "key": "ship_lat",
+        "value": 25.0805,
+        "nodeId": "column_mapped_ship_lat"
+      },
+      {
+        "key": "ship_lng",
+        "value": 55.1403,
+        "nodeId": "column_mapped_ship_lng"
+      }
+    ],
+    "errors": [],
+    "http": [
+      {
+        "path": "geo/search",
+        "body": {
+          "nodeId": "addr",
+          "q": "marina walk"
+        }
+      }
+    ],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 3386
+    }
+  }
+}

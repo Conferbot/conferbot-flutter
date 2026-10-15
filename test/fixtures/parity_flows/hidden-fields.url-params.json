@@ -1,0 +1,190 @@
+{
+  "id": "hidden-fields.url-params",
+  "title": "hidden-fields-node: shows nothing; saves query parameters of the page (utm_source...), the page URL and the referrer by name; -> source",
+  "covers": [
+    "hidden-fields-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "h",
+        "type": "hidden-fields-node",
+        "data": {
+          "params": [
+            {
+              "id": "p1",
+              "name": "utm_source",
+              "variable": "utm_source"
+            },
+            {
+              "id": "p2",
+              "name": "gclid",
+              "variable": "gclid"
+            },
+            {
+              "id": "p3",
+              "name": "utm_campaign",
+              "variable": "campaign"
+            }
+          ],
+          "capturePageUrl": true,
+          "pageUrlVariable": "page_url",
+          "captureReferrer": true,
+          "referrerVariable": "referrer"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{utm_source} / {campaign} / [{gclid}] / {page_url} / {referrer}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-h",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "h",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-h-source-m",
+        "source": "h",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "h",
+        "type": "hidden-fields-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "t": 1956
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "m",
+        "text": "newsletter / fall / [] / https://shop.example/pricing?utm_source=newsletter&utm_campaign=fall / https://www.google.com/"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "m",
+        "html": "<p>newsletter / fall / [] / https://shop.example/pricing?utm_source=newsletter&amp;utm_campaign=fall / https://www.google.com/</p>",
+        "plain": "newsletter / fall / [] / https://shop.example/pricing?utm_source=newsletter&utm_campaign=fall / https://www.google.com/"
+      }
+    ],
+    "ports": [
+      {
+        "node": "h",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{utm_source} / {campaign} / [{gclid}] / {page_url} / {referrer}</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "utm_source",
+        "value": "newsletter",
+        "nodeId": "column_mapped_utm_source"
+      },
+      {
+        "key": "campaign",
+        "value": "fall",
+        "nodeId": "column_mapped_campaign"
+      },
+      {
+        "key": "page_url",
+        "value": "https://shop.example/pricing?utm_source=newsletter&utm_campaign=fall",
+        "nodeId": "column_mapped_page_url"
+      },
+      {
+        "key": "referrer",
+        "value": "https://www.google.com/",
+        "nodeId": "column_mapped_referrer"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1956
+    }
+  }
+}

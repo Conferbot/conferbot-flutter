@@ -1,0 +1,185 @@
+{
+  "id": "ask-location.no-validation",
+  "title": "ask-location-node takes any text",
+  "covers": [
+    "ask-location-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"Answer Vars Test\"",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q",
+        "type": "ask-location-node",
+        "data": {
+          "questionText": "<p>Ask location</p>",
+          "answerVariable": "location"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{location}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q-source-m",
+        "source": "q",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q",
+      "do": "text",
+      "value": "12 Marina Walk, Dubai"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q",
+        "type": "ask-location-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1372
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q",
+        "t": 1372
+      },
+      {
+        "node": "m",
+        "t": 2072
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q",
+        "text": "Ask location"
+      },
+      {
+        "node": "m",
+        "text": "12 Marina Walk, Dubai"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q",
+        "html": "<p>Ask location</p>",
+        "plain": "Ask location"
+      },
+      {
+        "node": "m",
+        "html": "<p>12 Marina Walk, Dubai</p>",
+        "plain": "12 Marina Walk, Dubai"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Ask location</p>"
+      },
+      {
+        "by": "user",
+        "message": "12 Marina Walk, Dubai"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{location}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q",
+        "shape": "user-ask-location-response",
+        "text": "12 Marina Walk, Dubai"
+      }
+    ],
+    "variables": [
+      {
+        "key": "location",
+        "value": "12 Marina Walk, Dubai",
+        "nodeId": "q"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2072
+    }
+  }
+}

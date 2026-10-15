@@ -1,0 +1,201 @@
+{
+  "id": "slider.value",
+  "title": "slider-node: min/max/step/unit; the picked value snapped to the step is saved as a number; -> source",
+  "covers": [
+    "slider-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "s",
+        "type": "slider-node",
+        "data": {
+          "questionText": "<p>Team size?</p>",
+          "min": 0,
+          "max": 50,
+          "step": 5,
+          "defaultValue": null,
+          "unit": "people",
+          "unitPosition": "suffix",
+          "submitLabel": "Send",
+          "answerVariable": "slider_value"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{slider_value}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-s",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "s",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-s-source-m",
+        "source": "s",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "s",
+      "do": "slider",
+      "value": 23
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "s",
+        "type": "slider-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1410
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "s",
+        "t": 1360
+      },
+      {
+        "node": "m",
+        "t": 2110
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "s",
+        "text": "Team size? Send"
+      },
+      {
+        "node": "m",
+        "text": "25"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "s",
+        "html": "<p>Team size?</p>",
+        "plain": "Team size?"
+      },
+      {
+        "node": "m",
+        "html": "<p>25</p>",
+        "plain": "25"
+      }
+    ],
+    "ports": [
+      {
+        "node": "s",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Team size?</p>"
+      },
+      {
+        "by": "user",
+        "message": "25 people"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{slider_value}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "s",
+        "shape": "user-slider",
+        "value": 25,
+        "display": "25 people",
+        "min": 0,
+        "max": 50,
+        "unit": "people"
+      }
+    ],
+    "variables": [
+      {
+        "key": "slider_value",
+        "value": 25,
+        "nodeId": "s"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2110
+    }
+  }
+}

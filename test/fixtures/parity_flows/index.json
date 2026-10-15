@@ -1,0 +1,1289 @@
+{
+  "note": "One conformance case per file. See README.md for the format and how each SDK runs them.",
+  "count": 156,
+  "executed": 156,
+  "read": 0,
+  "cases": [
+    {
+      "id": "engine.start-first-welcome",
+      "file": "engine.start-first-welcome.json",
+      "covers": [
+        "welcome-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "engine.next-is-first-edge-any-handle",
+      "file": "engine.next-is-first-edge-any-handle.json",
+      "covers": [
+        "message-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "engine.no-edge-ends-chat",
+      "file": "engine.no-edge-ends-chat.json",
+      "covers": [
+        "message-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "engine.edge-to-missing-node-ends-chat",
+      "file": "engine.edge-to-missing-node-ends-chat.json",
+      "covers": [
+        "message-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "engine.unknown-type-continues-on-first-edge",
+      "file": "engine.unknown-type-continues-on-first-edge.json",
+      "covers": [
+        "unknown"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "engine.unknown-type-without-edge-ends",
+      "file": "engine.unknown-type-without-edge-ends.json",
+      "covers": [
+        "unknown"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "engine.port-not-wired-ends-chat",
+      "file": "engine.port-not-wired-ends-chat.json",
+      "covers": [
+        "n-choices-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "engine.port-to-missing-node-crashes",
+      "file": "engine.port-to-missing-node-crashes.json",
+      "covers": [
+        "n-choices-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "engine.welcome-mid-flow-is-passed",
+      "file": "engine.welcome-mid-flow-is-passed.json",
+      "covers": [
+        "welcome-node",
+        "unknown"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "jump-to.node-id",
+      "file": "jump-to.node-id.json",
+      "covers": [
+        "jump-to-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "jump-to.fallback-keys",
+      "file": "jump-to.fallback-keys.json",
+      "covers": [
+        "jump-to-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "jump-to.missing-target-ends",
+      "file": "jump-to.missing-target-ends.json",
+      "covers": [
+        "jump-to-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "jump-to.into-email-step-sends-nothing",
+      "file": "jump-to.into-email-step-sends-nothing.json",
+      "covers": [
+        "jump-to-node",
+        "email-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "interpolation.all-spellings",
+      "file": "interpolation.all-spellings.json",
+      "covers": [
+        "message-node",
+        "ask-custom-question-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "interpolation.unknown-is-blank-and-gaps-close",
+      "file": "interpolation.unknown-is-blank-and-gaps-close.json",
+      "covers": [
+        "message-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "interpolation.values-are-escaped",
+      "file": "interpolation.values-are-escaped.json",
+      "covers": [
+        "message-node",
+        "ask-custom-question-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "interpolation.prompts-and-options",
+      "file": "interpolation.prompts-and-options.json",
+      "covers": [
+        "n-choices-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "variables.no-answer-variable-stores-nothing",
+      "file": "variables.no-answer-variable-stores-nothing.json",
+      "covers": [
+        "ask-custom-question-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "variables.same-key-first-wins",
+      "file": "variables.same-key-first-wins.json",
+      "covers": [
+        "ask-custom-question-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "variables.sensitive-values-masked",
+      "file": "variables.sensitive-values-masked.json",
+      "covers": [
+        "ask-custom-question-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "variables.masking-off",
+      "file": "variables.masking-off.json",
+      "covers": [
+        "ask-custom-question-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "welcome.image-and-pacing",
+      "file": "welcome.image-and-pacing.json",
+      "covers": [
+        "welcome-node",
+        "message-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "message.blank-is-skipped",
+      "file": "message.blank-is-skipped.json",
+      "covers": [
+        "message-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "image.shows-then-advances",
+      "file": "image.shows-then-advances.json",
+      "covers": [
+        "image-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "image.empty-is-skipped",
+      "file": "image.empty-is-skipped.json",
+      "covers": [
+        "image-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "video.reads-data-video",
+      "file": "video.reads-data-video.json",
+      "covers": [
+        "video-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "audio.reads-data-audio",
+      "file": "audio.reads-data-audio.json",
+      "covers": [
+        "audio-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "audio.real-list-shape",
+      "file": "audio.real-list-shape.json",
+      "covers": [
+        "audio-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "file.reads-data-file",
+      "file": "file.reads-data-file.json",
+      "covers": [
+        "file-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "html.sanitised-and-filled",
+      "file": "html.sanitised-and-filled.json",
+      "covers": [
+        "html-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "user-redirect.shows-link-and-moves-on",
+      "file": "user-redirect.shows-link-and-moves-on.json",
+      "covers": [
+        "user-redirect-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "navigate.links-then-done",
+      "file": "navigate.links-then-done.json",
+      "covers": [
+        "navigate-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-name.greets-by-first-name",
+      "file": "ask-name.greets-by-first-name.json",
+      "covers": [
+        "ask-name-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-name.default-and-blank-greeting",
+      "file": "ask-name.default-and-blank-greeting.json",
+      "covers": [
+        "ask-name-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-email.validation-and-typo",
+      "file": "ask-email.validation-and-typo.json",
+      "covers": [
+        "ask-email-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-email.valid",
+      "file": "ask-email.valid.json",
+      "covers": [
+        "ask-email-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-phone.normalised",
+      "file": "ask-phone.normalised.json",
+      "covers": [
+        "ask-phone-number-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-number.parse-and-bounds",
+      "file": "ask-number.parse-and-bounds.json",
+      "covers": [
+        "ask-number-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-url.bare-host-gets-https",
+      "file": "ask-url.bare-host-gets-https.json",
+      "covers": [
+        "ask-url-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-location.no-validation",
+      "file": "ask-location.no-validation.json",
+      "covers": [
+        "ask-location-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-custom.empty-send-ignored",
+      "file": "ask-custom.empty-send-ignored.json",
+      "covers": [
+        "ask-custom-question-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-file.upload",
+      "file": "ask-file.upload.json",
+      "covers": [
+        "ask-file-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-file.rules-and-skip",
+      "file": "ask-file.rules-and-skip.json",
+      "covers": [
+        "ask-file-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-file.upload-fails",
+      "file": "ask-file.upload-fails.json",
+      "covers": [
+        "ask-file-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ask-multiple.one-by-one",
+      "file": "ask-multiple.one-by-one.json",
+      "covers": [
+        "ask-multiple-questions-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "calendar.date-only",
+      "file": "calendar.date-only.json",
+      "covers": [
+        "calendar-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "calendar.with-slots",
+      "file": "calendar.with-slots.json",
+      "covers": [
+        "calendar-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "n-choices.port-is-choice-id",
+      "file": "n-choices.port-is-choice-id.json",
+      "covers": [
+        "n-choices-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "n-choices.real-node",
+      "file": "n-choices.real-node.json",
+      "covers": [
+        "n-choices-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "n-select.first-edge-after-600ms",
+      "file": "n-select.first-edge-after-600ms.json",
+      "covers": [
+        "n-select-option-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "n-check.list-order",
+      "file": "n-check.list-order.json",
+      "covers": [
+        "n-check-options-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "image-choice.port-is-image-id",
+      "file": "image-choice.port-is-image-id.json",
+      "covers": [
+        "image-choice-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "yes-no.default-ids",
+      "file": "yes-no.default-ids.json",
+      "covers": [
+        "yes-or-no-choice-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "rating-choice.stars",
+      "file": "rating-choice.stars.json",
+      "covers": [
+        "rating-choice-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "rating-choice.smiley-and-ten",
+      "file": "rating-choice.smiley-and-ten.json",
+      "covers": [
+        "rating-choice-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "opinion-scale.port-is-offset-from-start",
+      "file": "opinion-scale.port-is-offset-from-start.json",
+      "covers": [
+        "opinion-scale-choice-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "opinion-scale.blank-range-is-0-to-10",
+      "file": "opinion-scale.blank-range-is-0-to-10.json",
+      "covers": [
+        "opinion-scale-choice-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "carousel.path-button",
+      "file": "carousel.path-button.json",
+      "covers": [
+        "carousel-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "carousel.links-only-continue",
+      "file": "carousel.links-only-continue.json",
+      "covers": [
+        "carousel-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.equals-string",
+      "file": "condition.equals-string.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.equals-numeric-text",
+      "file": "condition.equals-numeric-text.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.case-sensitive-by-default",
+      "file": "condition.case-sensitive-by-default.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.case-insensitive",
+      "file": "condition.case-insensitive.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.not-equals-alias",
+      "file": "condition.not-equals-alias.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.greater-number-mode",
+      "file": "condition.greater-number-mode.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.greater-text-not-numeric-is-false",
+      "file": "condition.greater-text-not-numeric-is-false.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.lte-word-alias",
+      "file": "condition.lte-word-alias.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.contains",
+      "file": "condition.contains.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.does-not-contain",
+      "file": "condition.does-not-contain.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.starts-ends",
+      "file": "condition.starts-ends.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.ends-with-snake",
+      "file": "condition.ends-with-snake.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.matches-regex",
+      "file": "condition.matches-regex.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.bad-regex-false",
+      "file": "condition.bad-regex-false.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.is-set",
+      "file": "condition.is-set.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.is-not-set-unknown-var",
+      "file": "condition.is-not-set-unknown-var.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.wrapped-left-name",
+      "file": "condition.wrapped-left-name.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.right-is-variable",
+      "file": "condition.right-is-variable.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.unknown-left-literal-number",
+      "file": "condition.unknown-left-literal-number.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.right-literal-interpolated",
+      "file": "condition.right-literal-interpolated.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.unknown-operator-false",
+      "file": "condition.unknown-operator-false.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.rating-stars-compare-as-number",
+      "file": "condition.rating-stars-compare-as-number.json",
+      "covers": [
+        "condition-node",
+        "rating-choice-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.real-number-compare",
+      "file": "condition.real-number-compare.json",
+      "covers": [
+        "condition-node",
+        "ask-number-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "condition.legacy-shape-is-true",
+      "file": "condition.legacy-shape-is-true.json",
+      "covers": [
+        "condition-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "boolean-logic.operators",
+      "file": "boolean-logic.operators.json",
+      "covers": [
+        "boolean-logic-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "boolean-logic.false-branch",
+      "file": "boolean-logic.false-branch.json",
+      "covers": [
+        "boolean-logic-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "math.operations",
+      "file": "math.operations.json",
+      "covers": [
+        "math-operation-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "math.counter-in-a-loop-back",
+      "file": "math.counter-in-a-loop-back.json",
+      "covers": [
+        "math-operation-node",
+        "variable-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "variable.fill-and-number",
+      "file": "variable.fill-and-number.json",
+      "covers": [
+        "variable-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "random-flow.by-branch-id",
+      "file": "random-flow.by-branch-id.json",
+      "covers": [
+        "random-flow-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "random-flow.legacy-position-handles",
+      "file": "random-flow.legacy-position-handles.json",
+      "covers": [
+        "random-flow-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "random-flow.unwired-branch-skipped",
+      "file": "random-flow.unwired-branch-skipped.json",
+      "covers": [
+        "random-flow-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "business-hours.open",
+      "file": "business-hours.open.json",
+      "covers": [
+        "business-hours-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "business-hours.closed-and-excluded",
+      "file": "business-hours.closed-and-excluded.json",
+      "covers": [
+        "business-hours-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "business-hours.overnight-slot",
+      "file": "business-hours.overnight-slot.json",
+      "covers": [
+        "business-hours-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "delay.waits-then-first-edge",
+      "file": "delay.waits-then-first-edge.json",
+      "covers": [
+        "delay-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "legacy.two-choices",
+      "file": "legacy.two-choices.json",
+      "covers": [
+        "two-choices-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "legacy.three-choices",
+      "file": "legacy.three-choices.json",
+      "covers": [
+        "three-choices-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "legacy.select-option",
+      "file": "legacy.select-option.json",
+      "covers": [
+        "select-option-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "legacy.user-input-email",
+      "file": "legacy.user-input-email.json",
+      "covers": [
+        "user-input-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "legacy.user-input-name-greet",
+      "file": "legacy.user-input-name-greet.json",
+      "covers": [
+        "user-input-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "legacy.user-range",
+      "file": "legacy.user-range.json",
+      "covers": [
+        "user-range-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "legacy.user-rating",
+      "file": "legacy.user-rating.json",
+      "covers": [
+        "user-rating-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "legacy.quiz-scoring-real-bot",
+      "file": "legacy.quiz-scoring-real-bot.json",
+      "covers": [
+        "quiz-node",
+        "variable-node",
+        "condition-node",
+        "two-choices-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "dynamic-choices.from-variable",
+      "file": "dynamic-choices.from-variable.json",
+      "covers": [
+        "dynamic-choices-node",
+        "variable-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "dynamic-choices.empty-list",
+      "file": "dynamic-choices.empty-list.json",
+      "covers": [
+        "dynamic-choices-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "hidden-fields.url-params",
+      "file": "hidden-fields.url-params.json",
+      "covers": [
+        "hidden-fields-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "consent.required",
+      "file": "consent.required.json",
+      "covers": [
+        "consent-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "consent.optional-declined",
+      "file": "consent.optional-declined.json",
+      "covers": [
+        "consent-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "product-card.buy-button",
+      "file": "product-card.buy-button.json",
+      "covers": [
+        "product-card-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "slider.value",
+      "file": "slider.value.json",
+      "covers": [
+        "slider-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "datetime.date-rules",
+      "file": "datetime.date-rules.json",
+      "covers": [
+        "datetime-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "datetime.time-mode",
+      "file": "datetime.time-mode.json",
+      "covers": [
+        "datetime-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ranking.reorder",
+      "file": "ranking.reorder.json",
+      "covers": [
+        "ranking-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "otp.verified",
+      "file": "otp.verified.json",
+      "covers": [
+        "otp-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "otp.wrong-code-then-locked",
+      "file": "otp.wrong-code-then-locked.json",
+      "covers": [
+        "otp-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "otp.skip-without-failed-edge-takes-source",
+      "file": "otp.skip-without-failed-edge-takes-source.json",
+      "covers": [
+        "otp-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "otp.send-fails-network",
+      "file": "otp.send-fails-network.json",
+      "covers": [
+        "otp-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "address.manual",
+      "file": "address.manual.json",
+      "covers": [
+        "address-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "address.search-and-pick",
+      "file": "address.search-and-pick.json",
+      "covers": [
+        "address-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "matrix.single-require-all",
+      "file": "matrix.single-require-all.json",
+      "covers": [
+        "matrix-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "matrix.multiple",
+      "file": "matrix.multiple.json",
+      "covers": [
+        "matrix-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "matrix.nothing-to-rate",
+      "file": "matrix.nothing-to-rate.json",
+      "covers": [
+        "matrix-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ai-extract.ok",
+      "file": "ai-extract.ok.json",
+      "covers": [
+        "ai-extract-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ai-extract.missing",
+      "file": "ai-extract.missing.json",
+      "covers": [
+        "ai-extract-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ai-route.intent",
+      "file": "ai-route.intent.json",
+      "covers": [
+        "ai-route-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ai-route.no-match-fallback",
+      "file": "ai-route.no-match-fallback.json",
+      "covers": [
+        "ai-route-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ai-route.intent-not-wired-no-fallback-ends",
+      "file": "ai-route.intent-not-wired-no-fallback-ends.json",
+      "covers": [
+        "ai-route-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "ai-route.source-last-message",
+      "file": "ai-route.source-last-message.json",
+      "covers": [
+        "ai-route-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "kb-answer.found",
+      "file": "kb-answer.found.json",
+      "covers": [
+        "kb-answer-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "kb-answer.not-found-falls-back",
+      "file": "kb-answer.not-found-falls-back.json",
+      "covers": [
+        "kb-answer-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "signature.typed",
+      "file": "signature.typed.json",
+      "covers": [
+        "signature-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "payment.paid",
+      "file": "payment.paid.json",
+      "covers": [
+        "payment-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "payment.cancelled-without-failed-edge-ends",
+      "file": "payment.cancelled-without-failed-edge-ends.json",
+      "covers": [
+        "payment-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "payment.timeout-falls-to-failed",
+      "file": "payment.timeout-falls-to-failed.json",
+      "covers": [
+        "payment-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "payment.not-configured",
+      "file": "payment.not-configured.json",
+      "covers": [
+        "payment-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "loop.count",
+      "file": "loop.count.json",
+      "covers": [
+        "loop-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "loop.each-list",
+      "file": "loop.each-list.json",
+      "covers": [
+        "loop-node",
+        "variable-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "loop.safety-cap",
+      "file": "loop.safety-cap.json",
+      "covers": [
+        "loop-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "subflow.run-and-return",
+      "file": "subflow.run-and-return.json",
+      "covers": [
+        "run-subflow-node",
+        "subflow-node",
+        "subflow-return-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "subflow.path-end-returns",
+      "file": "subflow.path-end-returns.json",
+      "covers": [
+        "run-subflow-node",
+        "subflow-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "subflow.missing-target",
+      "file": "subflow.missing-target.json",
+      "covers": [
+        "run-subflow-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "subflow.return-outside-a-subflow",
+      "file": "subflow.return-outside-a-subflow.json",
+      "covers": [
+        "subflow-return-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "email-node.sends-and-continues",
+      "file": "email-node.sends-and-continues.json",
+      "covers": [
+        "email-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "webhook.fire-and-forget",
+      "file": "webhook.fire-and-forget.json",
+      "covers": [
+        "webhook-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "zapier.continues",
+      "file": "zapier.continues.json",
+      "covers": [
+        "zapier-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "gpt.reply-shown",
+      "file": "gpt.reply-shown.json",
+      "covers": [
+        "gpt-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "gpt.error-continues",
+      "file": "gpt.error-continues.json",
+      "covers": [
+        "gpt-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "native-integration.background",
+      "file": "native-integration.background.json",
+      "covers": [
+        "hubspot-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "result-integration.success",
+      "file": "result-integration.success.json",
+      "covers": [
+        "mailchimp-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "result-integration.failure-and-fallback",
+      "file": "result-integration.failure-and-fallback.json",
+      "covers": [
+        "segment-node",
+        "salesforce-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "human-handover.pre-chat-then-no-agents",
+      "file": "human-handover.pre-chat-then-no-agents.json",
+      "covers": [
+        "human-handover-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "native-integration.chain",
+      "file": "native-integration.chain.json",
+      "covers": [
+        "gmail-node",
+        "google-sheets-node",
+        "google-docs-node",
+        "google-drive-node",
+        "slack-node",
+        "discord-node",
+        "airtable-node",
+        "notion-node",
+        "zohocrm-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "stripe-node.link-is-not-a-gate",
+      "file": "stripe-node.link-is-not-a-gate.json",
+      "covers": [
+        "stripe-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "google-calendar.list-continues",
+      "file": "google-calendar.list-continues.json",
+      "covers": [
+        "google-calendar-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "google-meet.create",
+      "file": "google-meet.create.json",
+      "covers": [
+        "google-meet-node"
+      ],
+      "provenance": "executed"
+    },
+    {
+      "id": "real.qa-all-nodes-tour",
+      "file": "real.qa-all-nodes-tour.json",
+      "covers": [
+        "otp-node",
+        "address-node",
+        "matrix-node",
+        "ai-extract-node",
+        "ai-route-node",
+        "kb-answer-node",
+        "signature-node",
+        "message-node",
+        "welcome-node"
+      ],
+      "provenance": "executed"
+    }
+  ]
+}

@@ -1,0 +1,167 @@
+{
+  "id": "webhook.fire-and-forget",
+  "title": "webhook-node: called from the page (token then request) without waiting - the flow moves on at once; its answerVariable is filled later if the call works",
+  "covers": [
+    "webhook-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "wh",
+        "type": "webhook-node",
+        "data": {
+          "authentication": {
+            "username": "u",
+            "password": "p",
+            "tokenUrl": "https://api.example.com/token"
+          },
+          "url": "https://api.example.com/x",
+          "method": "POST",
+          "headers": [],
+          "body": "",
+          "includeAnswerVariables": true,
+          "answerVariable": "webhookresponse"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>[{webhookresponse}]</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-wh",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "wh",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-wh-source-m",
+        "source": "wh",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "wh",
+        "type": "webhook-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "t": 1428
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "m",
+        "text": "[]"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "m",
+        "html": "<p>[]</p>",
+        "plain": "[]"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>[{webhookresponse}]</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "webhookresponse",
+        "value": null,
+        "nodeId": "wh"
+      }
+    ],
+    "errors": [],
+    "http": [
+      {
+        "path": "https://api.example.com/token",
+        "body": {
+          "username": "u",
+          "password": "p"
+        }
+      }
+    ],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1428
+    }
+  }
+}

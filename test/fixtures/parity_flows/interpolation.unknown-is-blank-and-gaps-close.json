@@ -1,0 +1,203 @@
+{
+  "id": "interpolation.unknown-is-blank-and-gaps-close",
+  "title": "An unknown (or unanswered) variable shows nothing and the space/comma it leaves is tidied",
+  "covers": [
+    "message-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m1",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Hey ${name}, welcome</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m2",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Hi {name} there</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m3",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{name}</p><p>Thanks {{nobody}}!</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-m1",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "m1",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-m1-source-m2",
+        "source": "m1",
+        "sourceHandle": "source",
+        "target": "m2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-m2-source-m3",
+        "source": "m2",
+        "sourceHandle": "source",
+        "target": "m3",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "m1",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m2",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1420
+      },
+      {
+        "node": "m3",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 2200
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "m1",
+        "t": 1420
+      },
+      {
+        "node": "m2",
+        "t": 2200
+      },
+      {
+        "node": "m3",
+        "t": 2950
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "m1",
+        "text": "Hey, welcome"
+      },
+      {
+        "node": "m2",
+        "text": "Hi there"
+      },
+      {
+        "node": "m3",
+        "text": "Thanks!"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "m1",
+        "html": "<p>Hey, welcome</p>",
+        "plain": "Hey, welcome"
+      },
+      {
+        "node": "m2",
+        "html": "<p>Hi there</p>",
+        "plain": "Hi there"
+      },
+      {
+        "node": "m3",
+        "html": "<p></p><p>Thanks!</p>",
+        "plain": "Thanks!"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Hey ${name}, welcome</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Hi {name} there</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{name}</p><p>Thanks {{nobody}}!</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2950
+    }
+  }
+}

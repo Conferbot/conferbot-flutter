@@ -1,0 +1,268 @@
+{
+  "id": "matrix.single-require-all",
+  "title": "matrix-node (real): Submit with a row missing is refused; all rows -> saves {row text: column text}; -> source",
+  "covers": [
+    "matrix-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"QA - All Nodes\"",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "mx",
+        "type": "matrix-node",
+        "data": {
+          "questionText": "<p>How did we do?</p>",
+          "rows": [
+            {
+              "id": "r0",
+              "text": "Ease of use"
+            },
+            {
+              "id": "r1",
+              "text": "Speed"
+            },
+            {
+              "id": "r2",
+              "text": "Support"
+            }
+          ],
+          "columns": [
+            {
+              "id": "c0",
+              "text": "Poor"
+            },
+            {
+              "id": "c1",
+              "text": "Fair"
+            },
+            {
+              "id": "c2",
+              "text": "Good"
+            },
+            {
+              "id": "c3",
+              "text": "Great"
+            }
+          ],
+          "mode": "single",
+          "requireAll": true,
+          "submitLabel": "Submit",
+          "answerVariable": "rating_grid"
+        },
+        "position": {
+          "x": 1880,
+          "y": 540
+        }
+      },
+      {
+        "id": "mxMsg",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Grid: {rating_grid}</p>"
+        },
+        "position": {
+          "x": 80,
+          "y": 960
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-mx",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "mx",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-mx-source-mxMsg",
+        "source": "mx",
+        "sourceHandle": "source",
+        "target": "mxMsg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "mx",
+      "do": "matrix",
+      "cells": {
+        "r0": "c3",
+        "r1": "c2"
+      }
+    },
+    {
+      "at": "mx",
+      "do": "matrix",
+      "cells": {
+        "r2": "c1"
+      }
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "mx",
+        "type": "matrix-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "mxMsg",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1384
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "mx",
+        "t": 1384
+      },
+      {
+        "node": "mxMsg",
+        "t": 2112
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "mx",
+        "text": "How did we do? Poor Fair Good Great Ease of use Speed Support"
+      },
+      {
+        "node": "mxMsg",
+        "text": "Grid: Ease of use: Great · Speed: Good · Support: Fair"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "mx",
+        "html": "<p>How did we do?</p>",
+        "plain": "How did we do?"
+      },
+      {
+        "node": "mxMsg",
+        "html": "<p>Grid: Ease of use: Great · Speed: Good · Support: Fair</p>",
+        "plain": "Grid: Ease of use: Great · Speed: Good · Support: Fair"
+      }
+    ],
+    "ports": [
+      {
+        "node": "mx",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>How did we do?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Ease of use: Great · Speed: Good · Support: Fair"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Grid: {rating_grid}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "mx",
+        "shape": "user-matrix",
+        "value": {
+          "Ease of use": "Great",
+          "Speed": "Good",
+          "Support": "Fair"
+        },
+        "rows": [
+          {
+            "id": "r0",
+            "text": "Ease of use",
+            "answer": "Great"
+          },
+          {
+            "id": "r1",
+            "text": "Speed",
+            "answer": "Good"
+          },
+          {
+            "id": "r2",
+            "text": "Support",
+            "answer": "Fair"
+          }
+        ],
+        "mode": "single",
+        "display": "Ease of use: Great · Speed: Good · Support: Fair"
+      }
+    ],
+    "variables": [
+      {
+        "key": "rating_grid",
+        "value": {
+          "Ease of use": "Great",
+          "Speed": "Good",
+          "Support": "Fair"
+        },
+        "nodeId": "mx"
+      }
+    ],
+    "errors": [
+      {
+        "node": "mx",
+        "message": "Answer every row - 1 left"
+      }
+    ],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2112
+    }
+  }
+}

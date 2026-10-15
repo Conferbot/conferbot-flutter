@@ -1,0 +1,156 @@
+{
+  "id": "video.reads-data-video",
+  "title": "video-node plays data.video (mp4 <source>) and moves on at loadedmetadata, or after 4000 ms",
+  "covers": [
+    "video-node"
+  ],
+  "provenance": "executed",
+  "source": "real node shape (anonymised)",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "v",
+        "type": "video-node",
+        "data": {
+          "video": "https://cdn.example.com/media/1c5e826f.mp4"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>after video</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-v",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "v",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-v-source-m",
+        "source": "v",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "v",
+        "type": "video-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 5350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "v",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "t": 6016
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "v",
+        "text": ""
+      },
+      {
+        "node": "m",
+        "text": "after video"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "m",
+        "html": "<p>after video</p>",
+        "plain": "after video"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "https://cdn.example.com/media/1c5e826f.mp4"
+      },
+      {
+        "by": "bot",
+        "message": "<p>after video</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 6016
+    }
+  }
+}

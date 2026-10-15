@@ -1,0 +1,247 @@
+{
+  "id": "variables.same-key-first-wins",
+  "title": "Two questions with the same answerVariable: reads see the FIRST entry with that key",
+  "covers": [
+    "ask-custom-question-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q1",
+        "type": "ask-custom-question-node",
+        "data": {
+          "questionText": "<p>?</p>",
+          "answerVariable": "x"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q2",
+        "type": "ask-custom-question-node",
+        "data": {
+          "questionText": "<p>?</p>",
+          "answerVariable": "x"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>x={x}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q1",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q1",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q1-source-q2",
+        "source": "q1",
+        "sourceHandle": "source",
+        "target": "q2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q2-source-m",
+        "source": "q2",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q1",
+      "do": "text",
+      "value": "first"
+    },
+    {
+      "at": "q2",
+      "do": "text",
+      "value": "second"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q1",
+        "type": "ask-custom-question-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "q2",
+        "type": "ask-custom-question-node",
+        "via": "edge:source",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 2050
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q1",
+        "t": 1350
+      },
+      {
+        "node": "q2",
+        "t": 2050
+      },
+      {
+        "node": "m",
+        "t": 2750
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q1",
+        "text": "?"
+      },
+      {
+        "node": "q2",
+        "text": "?"
+      },
+      {
+        "node": "m",
+        "text": "x=first"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q1",
+        "html": "<p>?</p>",
+        "plain": "?"
+      },
+      {
+        "node": "q2",
+        "html": "<p>?</p>",
+        "plain": "?"
+      },
+      {
+        "node": "m",
+        "html": "<p>x=first</p>",
+        "plain": "x=first"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>?</p>"
+      },
+      {
+        "by": "user",
+        "message": "first"
+      },
+      {
+        "by": "bot",
+        "message": "<p>?</p>"
+      },
+      {
+        "by": "user",
+        "message": "second"
+      },
+      {
+        "by": "bot",
+        "message": "<p>x={x}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q1",
+        "shape": "user-ask-custom-question-response",
+        "text": "first"
+      },
+      {
+        "id": "q2",
+        "shape": "user-ask-custom-question-response",
+        "text": "second"
+      }
+    ],
+    "variables": [
+      {
+        "key": "x",
+        "value": "first",
+        "nodeId": "q1"
+      },
+      {
+        "key": "x",
+        "value": "second",
+        "nodeId": "q2"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2750
+    }
+  }
+}

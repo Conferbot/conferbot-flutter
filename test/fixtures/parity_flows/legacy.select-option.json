@@ -1,0 +1,179 @@
+{
+  "id": "legacy.select-option",
+  "title": "select-option-node: option1..option5 (disableOption3..5), saved text; FIRST edge after 600 ms",
+  "covers": [
+    "select-option-node"
+  ],
+  "provenance": "executed",
+  "source": "real node shape (anonymised)",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "s",
+        "type": "select-option-node",
+        "data": {
+          "selectPrompt": "Size?",
+          "option1": "S",
+          "option2": "M",
+          "option3": "L",
+          "disableOption3": false,
+          "disableOption4": true,
+          "disableOption5": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "next",
+        "type": "message-node",
+        "data": {
+          "text": "<p>next</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-s",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "s",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-s-source-1-next",
+        "source": "s",
+        "sourceHandle": "source-1",
+        "target": "next",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "s",
+      "do": "choose",
+      "index": 2
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "s",
+        "type": "select-option-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "next",
+        "type": "message-node",
+        "via": "edge:source-1",
+        "t": 1950
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "s",
+        "t": 1350
+      },
+      {
+        "node": "next",
+        "t": 2650
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "s",
+        "text": "Size? S M L"
+      },
+      {
+        "node": "next",
+        "text": "next"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "next",
+        "html": "<p>next</p>",
+        "plain": "next"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "Size?"
+      },
+      {
+        "by": "user",
+        "message": "L"
+      },
+      {
+        "by": "bot",
+        "message": "<p>next</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "s",
+        "shape": "user-selected-option",
+        "selectedOption": "L"
+      }
+    ],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2650
+    }
+  }
+}

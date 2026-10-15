@@ -1,0 +1,253 @@
+{
+  "id": "kb-answer.found",
+  "title": "kb-answer-node (real): POST kb/answer; the answer is shown with its sources; saves <var>, <var>_found=true, <var>_sources; -> source",
+  "covers": [
+    "kb-answer-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"QA - All Nodes\"",
+  "server": {
+    "http": {
+      "kb/answer": {
+        "status": 200,
+        "body": {
+          "found": true,
+          "answer": "Refunds are issued within 7 days.",
+          "sources": [
+            {
+              "title": "Refund policy",
+              "url": "https://help.example.com/refunds"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "kb",
+        "type": "kb-answer-node",
+        "data": {
+          "questionText": "<p>Ask me anything about our policies.</p>",
+          "source": "ask",
+          "showSources": true,
+          "maxSources": 3,
+          "notFoundMessage": "<p>I couldn't find that in our help articles.</p>",
+          "answerVariable": "kb_answer"
+        },
+        "position": {
+          "x": 800,
+          "y": 1800
+        }
+      },
+      {
+        "id": "kbOk",
+        "type": "message-node",
+        "data": {
+          "text": "<p>(answered: {kb_answer_found})</p>"
+        },
+        "position": {
+          "x": 1160,
+          "y": 1800
+        }
+      },
+      {
+        "id": "kbNo",
+        "type": "message-node",
+        "data": {
+          "text": "<p>(not found: {kb_answer_found})</p>"
+        },
+        "position": {
+          "x": 1520,
+          "y": 1800
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-kb",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "kb",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-kb-source-kbOk",
+        "source": "kb",
+        "sourceHandle": "source",
+        "target": "kbOk",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-kb-source-notfound-kbNo",
+        "source": "kb",
+        "sourceHandle": "source-notfound",
+        "target": "kbNo",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "kb",
+      "do": "text",
+      "value": "how do refunds work?"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "kb",
+        "type": "kb-answer-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "kbOk",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 2010
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "kb",
+        "t": 1510
+      },
+      {
+        "node": "kbOk",
+        "t": 2858
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "kb",
+        "text": "Ask me anything about our policies. Refunds are issued within 7 days. help.example.com Refund policy"
+      },
+      {
+        "node": "kbOk",
+        "text": "(answered: true)"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "kb",
+        "html": "<p>Ask me anything about our policies.</p>",
+        "plain": "Ask me anything about our policies."
+      },
+      {
+        "node": "kbOk",
+        "html": "<p>(answered: true)</p>",
+        "plain": "(answered: true)"
+      }
+    ],
+    "ports": [
+      {
+        "node": "kb",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Ask me anything about our policies.</p>"
+      },
+      {
+        "by": "user",
+        "message": "how do refunds work?"
+      },
+      {
+        "by": "bot",
+        "message": "Refunds are issued within 7 days."
+      },
+      {
+        "by": "bot",
+        "message": "<p>(answered: {kb_answer_found})</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "kb_answer",
+        "value": "Refunds are issued within 7 days.",
+        "nodeId": "kb"
+      },
+      {
+        "key": "kb_answer_found",
+        "value": true,
+        "nodeId": "column_mapped_kb_answer_found"
+      },
+      {
+        "key": "kb_answer_sources",
+        "value": [
+          {
+            "title": "Refund policy",
+            "url": "https://help.example.com/refunds"
+          }
+        ],
+        "nodeId": "column_mapped_kb_answer_sources"
+      }
+    ],
+    "errors": [],
+    "http": [
+      {
+        "path": "kb/answer",
+        "body": {
+          "nodeId": "kb",
+          "question": "how do refunds work?"
+        }
+      }
+    ],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2858
+    }
+  }
+}

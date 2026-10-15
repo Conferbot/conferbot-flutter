@@ -1,0 +1,165 @@
+{
+  "id": "native-integration.background",
+  "title": "hubspot-node: emits execute-integration and moves on at once (it does not wait); when integration-result arrives its answerVariable/answerValue is saved by name",
+  "covers": [
+    "hubspot-node"
+  ],
+  "provenance": "executed",
+  "server": {
+    "integration": {
+      "hubspot": {
+        "success": true,
+        "answerVariable": "hubspot_data",
+        "answerValue": {
+          "id": "901"
+        }
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "hubspot",
+        "type": "hubspot-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "createContact",
+          "answerVariable": "hubspot_data"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{hubspot_data}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-hubspot",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "hubspot",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-hubspot-source-m",
+        "source": "hubspot",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "hubspot",
+        "type": "hubspot-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "t": 1400
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "m",
+        "text": "id: 901"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "m",
+        "html": "<p></p>",
+        "plain": ""
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{hubspot_data}</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "hubspot_data",
+        "value": {
+          "id": "901"
+        },
+        "nodeId": "column_mapped_hubspot_data"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "execute-integration",
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1400
+    }
+  }
+}

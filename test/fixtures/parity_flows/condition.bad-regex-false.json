@@ -1,0 +1,241 @@
+{
+  "id": "condition.bad-regex-false",
+  "title": "condition-node \"matches\" with an invalid pattern is false (no error)",
+  "covers": [
+    "condition-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q",
+        "type": "ask-custom-question-node",
+        "data": {
+          "questionText": "<p>?</p>",
+          "answerVariable": "v"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "cd",
+        "type": "condition-node",
+        "data": {
+          "isNumber": false,
+          "customLeftValue": false,
+          "operator": "matches",
+          "customRightValue": true,
+          "leftValue": "v",
+          "rightValue": "(["
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "yes",
+        "type": "message-node",
+        "data": {
+          "text": "<p>yes</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "no",
+        "type": "message-node",
+        "data": {
+          "text": "<p>no</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q-source-cd",
+        "source": "q",
+        "sourceHandle": "source",
+        "target": "cd",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-cd-source-0-yes",
+        "source": "cd",
+        "sourceHandle": "source-0",
+        "target": "yes",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-cd-source-1-no",
+        "source": "cd",
+        "sourceHandle": "source-1",
+        "target": "no",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q",
+      "do": "text",
+      "value": "x"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q",
+        "type": "ask-custom-question-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "cd",
+        "type": "condition-node",
+        "via": "edge:source",
+        "t": 1350
+      },
+      {
+        "node": "no",
+        "type": "message-node",
+        "via": "port:source-1",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q",
+        "t": 1350
+      },
+      {
+        "node": "no",
+        "t": 2050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q",
+        "text": "?"
+      },
+      {
+        "node": "no",
+        "text": "no"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q",
+        "html": "<p>?</p>",
+        "plain": "?"
+      },
+      {
+        "node": "no",
+        "html": "<p>no</p>",
+        "plain": "no"
+      }
+    ],
+    "ports": [
+      {
+        "node": "cd",
+        "handle": "source-1",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>?</p>"
+      },
+      {
+        "by": "user",
+        "message": "x"
+      },
+      {
+        "by": "bot",
+        "message": "<p>no</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q",
+        "shape": "user-ask-custom-question-response",
+        "text": "x"
+      }
+    ],
+    "variables": [
+      {
+        "key": "v",
+        "value": "x",
+        "nodeId": "q"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2050
+    }
+  }
+}

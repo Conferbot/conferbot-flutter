@@ -1,0 +1,191 @@
+{
+  "id": "otp.send-fails-network",
+  "title": "otp-node: otp/send unreachable shows an error and keeps waiting (no path taken)",
+  "covers": [
+    "otp-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "otp",
+        "type": "otp-node",
+        "data": {
+          "questionText": "<p>Let's confirm your email first.</p>",
+          "channel": "email",
+          "emailSource": "ask",
+          "emailVariable": "",
+          "emailSubject": "Your Acme Cloud code",
+          "maxAttempts": 3,
+          "allowSkip": false,
+          "skipLabel": "Skip",
+          "answerVariable": "work_email"
+        },
+        "position": {
+          "x": 440,
+          "y": 120
+        }
+      },
+      {
+        "id": "otpOk",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Verified: {work_email} ({work_email_verified}).</p>"
+        },
+        "position": {
+          "x": 800,
+          "y": 120
+        }
+      },
+      {
+        "id": "otpFail",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Not verified ({work_email_verified}).</p>"
+        },
+        "position": {
+          "x": 1160,
+          "y": 120
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-otp",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "otp",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-otp-source-otpOk",
+        "source": "otp",
+        "sourceHandle": "source",
+        "target": "otpOk",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-otp-source-failed-otpFail",
+        "source": "otp",
+        "sourceHandle": "source-failed",
+        "target": "otpFail",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "otp",
+      "do": "otpEmail",
+      "email": "ana@acme.io"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "otp",
+        "type": "otp-node",
+        "via": "edge:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "otp",
+        "t": 1486
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "otp",
+        "text": "Let's confirm your email first. Email address We'll email you a 6-digit code. Something went wrong. Please try again. Send code Resend in 0:30 Change email Verify"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "otp",
+        "html": "<p>Let's confirm your email first.</p>",
+        "plain": "Let's confirm your email first."
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Let's confirm your email first.</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "work_email",
+        "value": null,
+        "nodeId": "otp"
+      }
+    ],
+    "errors": [
+      {
+        "node": "otp",
+        "message": "Something went wrong. Please try again."
+      }
+    ],
+    "http": [
+      {
+        "path": "otp/send",
+        "body": {
+          "nodeId": "otp",
+          "sessionId": "qa-session",
+          "email": "ana@acme.io"
+        }
+      }
+    ],
+    "emits": [],
+    "unsupported": [],
+    "end": {
+      "ended": false,
+      "waitingAt": "otp",
+      "type": "otp-node"
+    }
+  }
+}

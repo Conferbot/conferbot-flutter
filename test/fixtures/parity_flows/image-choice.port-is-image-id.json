@@ -1,0 +1,228 @@
+{
+  "id": "image-choice.port-is-image-id",
+  "title": "image-choice-node: reads data.images [{id,image,label}]; one with no image or no label is not shown; leaves by \"source-\" + image id",
+  "covers": [
+    "image-choice-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ic",
+        "type": "image-choice-node",
+        "data": {
+          "questionText": "<p>Which one?</p>",
+          "images": [
+            {
+              "id": "i1",
+              "image": "https://cdn.example/a.png",
+              "label": "Alpha"
+            },
+            {
+              "id": "i2",
+              "image": "",
+              "label": "NoPic"
+            },
+            {
+              "id": "i3",
+              "image": "https://cdn.example/c.png",
+              "label": "Gamma"
+            }
+          ],
+          "answerVariable": "selected_image"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "alpha",
+        "type": "message-node",
+        "data": {
+          "text": "<p>alpha</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "gamma",
+        "type": "message-node",
+        "data": {
+          "text": "<p>gamma</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-ic",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "ic",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ic-source-i1-alpha",
+        "source": "ic",
+        "sourceHandle": "source-i1",
+        "target": "alpha",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ic-source-i3-gamma",
+        "source": "ic",
+        "sourceHandle": "source-i3",
+        "target": "gamma",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "ic",
+      "do": "choose",
+      "id": "i3"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "ic",
+        "type": "image-choice-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "gamma",
+        "type": "message-node",
+        "via": "port:source-i3",
+        "t": 1360
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "ic",
+        "t": 1360
+      },
+      {
+        "node": "gamma",
+        "t": 2060
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "ic",
+        "text": "Which one? Alpha Gamma"
+      },
+      {
+        "node": "gamma",
+        "text": "gamma"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "ic",
+        "html": "<p>Which one?</p>",
+        "plain": "Which one?"
+      },
+      {
+        "node": "gamma",
+        "html": "<p>gamma</p>",
+        "plain": "gamma"
+      }
+    ],
+    "ports": [
+      {
+        "node": "ic",
+        "handle": "source-i3",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Which one?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Gamma"
+      },
+      {
+        "by": "bot",
+        "message": "<p>gamma</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "ic",
+        "shape": "user-selected-image-choice",
+        "selectedImageLabel": "Gamma",
+        "selectedImage": "https://cdn.example/c.png"
+      }
+    ],
+    "variables": [
+      {
+        "key": "selected_image",
+        "value": "Gamma",
+        "nodeId": "ic"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2060
+    }
+  }
+}

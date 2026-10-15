@@ -1,0 +1,181 @@
+{
+  "id": "result-integration.success",
+  "title": "mailchimp-node: success -> the \"source\" edge (or an old edge with no handle)",
+  "covers": [
+    "mailchimp-node"
+  ],
+  "provenance": "executed",
+  "server": {
+    "integration": {
+      "mc": {
+        "success": true
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "mc",
+        "type": "mailchimp-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "upsertMember",
+          "listId": "l",
+          "email": "{email}",
+          "answerVariable": "mailchimp_member_id"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ok",
+        "type": "message-node",
+        "data": {
+          "text": "<p>ok</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "bad",
+        "type": "message-node",
+        "data": {
+          "text": "<p>bad</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-mc",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "mc",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-mc-source-failure-bad",
+        "source": "mc",
+        "sourceHandle": "source-failure",
+        "target": "bad",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-mc-source-ok",
+        "source": "mc",
+        "sourceHandle": "source",
+        "target": "ok",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "mc",
+        "type": "mailchimp-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "ok",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 750
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "ok",
+        "t": 1450
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "ok",
+        "text": "ok"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "ok",
+        "html": "<p>ok</p>",
+        "plain": "ok"
+      }
+    ],
+    "ports": [
+      {
+        "node": "mc",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>ok</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "execute-integration",
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1450
+    }
+  }
+}

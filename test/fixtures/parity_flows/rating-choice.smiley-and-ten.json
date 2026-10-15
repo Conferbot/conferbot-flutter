@@ -1,0 +1,266 @@
+{
+  "id": "rating-choice.smiley-and-ten",
+  "title": "rating-choice-node: ratingType \"smiley\" is five faces (value 1-5); ratingType 10 is ten numbered buttons",
+  "covers": [
+    "rating-choice-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "r",
+        "type": "rating-choice-node",
+        "data": {
+          "questionText": "<p>Mood?</p>",
+          "ratingType": "smiley",
+          "answerVariable": "mood"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "r10",
+        "type": "rating-choice-node",
+        "data": {
+          "questionText": "<p>NPS?</p>",
+          "ratingType": 10,
+          "answerVariable": "nps"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{mood} {nps}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-r",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "r",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-r-source-1-r10",
+        "source": "r",
+        "sourceHandle": "source-1",
+        "target": "r10",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-r10-source-8-m",
+        "source": "r10",
+        "sourceHandle": "source-8",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "r",
+      "do": "choose",
+      "value": 2
+    },
+    {
+      "at": "r10",
+      "do": "choose",
+      "value": 9
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "r",
+        "type": "rating-choice-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "r10",
+        "type": "rating-choice-node",
+        "via": "port:source-1",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "port:source-8",
+        "t": 2350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "r",
+        "t": 1350
+      },
+      {
+        "node": "r10",
+        "t": 2050
+      },
+      {
+        "node": "m",
+        "t": 3050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "r",
+        "text": "Mood?"
+      },
+      {
+        "node": "r10",
+        "text": "NPS? 1 2 3 4 5 6 7 8 9 10"
+      },
+      {
+        "node": "m",
+        "text": "2 9"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "r",
+        "html": "<p>Mood?</p>",
+        "plain": "Mood?"
+      },
+      {
+        "node": "r10",
+        "html": "<p>NPS?</p>",
+        "plain": "NPS?"
+      },
+      {
+        "node": "m",
+        "html": "<p>2 9</p>",
+        "plain": "2 9"
+      }
+    ],
+    "ports": [
+      {
+        "node": "r",
+        "handle": "source-1",
+        "wired": true
+      },
+      {
+        "node": "r10",
+        "handle": "source-8",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Mood?</p>"
+      },
+      {
+        "by": "user",
+        "message": "😐"
+      },
+      {
+        "by": "bot",
+        "message": "<p>NPS?</p>"
+      },
+      {
+        "by": "user",
+        "message": "⭐⭐⭐⭐⭐⭐⭐⭐⭐"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{mood} {nps}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "r",
+        "shape": "user-selected-rating-choice",
+        "selectedRatingChoice": "😐",
+        "value": 2,
+        "label": "Unhappy",
+        "ratingType": "smiley"
+      },
+      {
+        "id": "r10",
+        "shape": "user-selected-rating-choice",
+        "selectedRatingChoice": "⭐⭐⭐⭐⭐⭐⭐⭐⭐",
+        "value": 9,
+        "label": "9 out of 10",
+        "ratingType": 10
+      }
+    ],
+    "variables": [
+      {
+        "key": "mood",
+        "value": 2,
+        "nodeId": "r"
+      },
+      {
+        "key": "nps",
+        "value": 9,
+        "nodeId": "r10"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 3050
+    }
+  }
+}

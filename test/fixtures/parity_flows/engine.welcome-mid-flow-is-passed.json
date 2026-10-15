@@ -1,0 +1,197 @@
+{
+  "id": "engine.welcome-mid-flow-is-passed",
+  "title": "A welcome-node reached again (by an edge) is not a display step there: it is passed silently along its first edge",
+  "covers": [
+    "welcome-node",
+    "unknown"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "a",
+        "type": "message-node",
+        "data": {
+          "text": "<p>A</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "w2",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Second welcome</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "b",
+        "type": "message-node",
+        "data": {
+          "text": "<p>B</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-a",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "a",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-a-source-w2",
+        "source": "a",
+        "sourceHandle": "source",
+        "target": "w2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-w2-source-b",
+        "source": "w2",
+        "sourceHandle": "source",
+        "target": "b",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "a",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "w2",
+        "type": "welcome-node",
+        "via": "edge:source",
+        "t": 1350
+      },
+      {
+        "node": "b",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "a",
+        "t": 1350
+      },
+      {
+        "node": "b",
+        "t": 2000
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "a",
+        "text": "A"
+      },
+      {
+        "node": "b",
+        "text": "B"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "a",
+        "html": "<p>A</p>",
+        "plain": "A"
+      },
+      {
+        "node": "w2",
+        "html": "<p>Second welcome</p>",
+        "plain": "Second welcome"
+      },
+      {
+        "node": "b",
+        "html": "<p>B</p>",
+        "plain": "B"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>A</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>B</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [
+      {
+        "node": "w2",
+        "type": "welcome-node"
+      }
+    ],
+    "end": {
+      "ended": true,
+      "t": 2000
+    }
+  }
+}

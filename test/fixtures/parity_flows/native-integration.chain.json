@@ -1,0 +1,435 @@
+{
+  "id": "native-integration.chain",
+  "title": "gmail, google-sheets, google-docs, google-drive, slack, discord, airtable, notion, zohocrm: each emits execute-integration and moves on at once along its first edge; results that arrive later fill variables (sheets columnMappedValues too); a failure changes nothing",
+  "covers": [
+    "gmail-node",
+    "google-sheets-node",
+    "google-docs-node",
+    "google-drive-node",
+    "slack-node",
+    "discord-node",
+    "airtable-node",
+    "notion-node",
+    "zohocrm-node"
+  ],
+  "provenance": "executed",
+  "server": {
+    "integration": {
+      "slack": {
+        "success": false,
+        "error": "channel_not_found"
+      },
+      "sheets": {
+        "success": true,
+        "answerVariable": "sheets_data",
+        "answerValue": [
+          [
+            "a",
+            1
+          ]
+        ],
+        "columnMappedValues": {
+          "plan": "Pro"
+        }
+      },
+      "notion": "none"
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "gmail",
+        "type": "gmail-node",
+        "data": {
+          "credentialId": "c",
+          "to": "{email}",
+          "subject": "Hi",
+          "body": "x"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "sheets",
+        "type": "google-sheets-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "read",
+          "spreadsheetId": "s",
+          "sheetName": "Sheet1",
+          "answerVariable": "sheets_data"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "docs",
+        "type": "google-docs-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "create",
+          "title": "Lead",
+          "answerVariable": "docs_data"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "drive",
+        "type": "google-drive-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "upload",
+          "name": "a.txt",
+          "answerVariable": "drive_data"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "slack",
+        "type": "slack-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "sendMessage",
+          "channel": "#leads",
+          "message": "New lead",
+          "answerVariable": "slack_data"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "discord",
+        "type": "discord-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "sendMessage",
+          "channelId": "1",
+          "message": "x",
+          "answerVariable": "discord_data"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "airtable",
+        "type": "airtable-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "list",
+          "baseId": "b",
+          "tableName": "t",
+          "answerVariable": "airtable_data"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "notion",
+        "type": "notion-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "listDatabases",
+          "answerVariable": "notion_data"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "zoho",
+        "type": "zohocrm-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "createLead",
+          "answerVariable": "zohocrm_result"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>plan={plan}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-gmail",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "gmail",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-gmail-source-sheets",
+        "source": "gmail",
+        "sourceHandle": "source",
+        "target": "sheets",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-sheets-source-docs",
+        "source": "sheets",
+        "sourceHandle": "source",
+        "target": "docs",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-docs-source-drive",
+        "source": "docs",
+        "sourceHandle": "source",
+        "target": "drive",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-drive-source-slack",
+        "source": "drive",
+        "sourceHandle": "source",
+        "target": "slack",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-slack-source-discord",
+        "source": "slack",
+        "sourceHandle": "source",
+        "target": "discord",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-discord-source-airtable",
+        "source": "discord",
+        "sourceHandle": "source",
+        "target": "airtable",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-airtable-source-notion",
+        "source": "airtable",
+        "sourceHandle": "source",
+        "target": "notion",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-notion-source-zoho",
+        "source": "notion",
+        "sourceHandle": "source",
+        "target": "zoho",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-zoho-source-m",
+        "source": "zoho",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "gmail",
+        "type": "gmail-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "sheets",
+        "type": "google-sheets-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "docs",
+        "type": "google-docs-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "drive",
+        "type": "google-drive-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "slack",
+        "type": "slack-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "discord",
+        "type": "discord-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "airtable",
+        "type": "airtable-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "notion",
+        "type": "notion-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "zoho",
+        "type": "zohocrm-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "t": 1400
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "m",
+        "text": "plan=Pro"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "m",
+        "html": "<p>plan=</p>",
+        "plain": "plan="
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>plan={plan}</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "sheets_data",
+        "value": [
+          [
+            "a",
+            1
+          ]
+        ],
+        "nodeId": "column_mapped_sheets_data"
+      },
+      {
+        "key": "plan",
+        "value": "Pro",
+        "nodeId": "column_mapped_plan"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "execute-integration",
+      "execute-integration",
+      "execute-integration",
+      "execute-integration",
+      "execute-integration",
+      "execute-integration",
+      "execute-integration",
+      "execute-integration",
+      "execute-integration",
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1400
+    }
+  }
+}

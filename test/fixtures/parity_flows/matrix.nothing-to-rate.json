@@ -1,0 +1,180 @@
+{
+  "id": "matrix.nothing-to-rate",
+  "title": "matrix-node with no rows (or fewer than 2 columns) shows nothing and leaves by source at once",
+  "covers": [
+    "matrix-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "mx",
+        "type": "matrix-node",
+        "data": {
+          "questionText": "<p>Rate</p>",
+          "rows": [],
+          "columns": [
+            {
+              "id": "c0",
+              "text": "Ok"
+            }
+          ],
+          "answerVariable": "m"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>skipped</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-mx",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "mx",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-mx-source-m",
+        "source": "mx",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "mx",
+        "type": "matrix-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "mx",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "t": 2050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "mx",
+        "text": ""
+      },
+      {
+        "node": "m",
+        "text": "skipped"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "mx",
+        "html": "<p>Rate</p>",
+        "plain": "Rate"
+      },
+      {
+        "node": "m",
+        "html": "<p>skipped</p>",
+        "plain": "skipped"
+      }
+    ],
+    "ports": [
+      {
+        "node": "mx",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Rate</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>skipped</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "m",
+        "value": null,
+        "nodeId": "mx"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2050
+    }
+  }
+}

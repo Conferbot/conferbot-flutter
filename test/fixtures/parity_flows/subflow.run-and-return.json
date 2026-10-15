@@ -1,0 +1,271 @@
+{
+  "id": "subflow.run-and-return",
+  "title": "run-subflow-node sets the inputs, jumps to the subflow-node; at the end of that path the outputs are copied back and the flow continues from Run sub-flow's \"source\" edge",
+  "covers": [
+    "run-subflow-node",
+    "subflow-node",
+    "subflow-return-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "run",
+        "type": "run-subflow-node",
+        "data": {
+          "subflowId": "sf",
+          "inputs": [
+            {
+              "name": "who",
+              "value": "Ana"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "greeting",
+              "variable": "result"
+            }
+          ]
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "back",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Back: {result}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "sf",
+        "type": "subflow-node",
+        "data": {
+          "name": "Greet"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "set",
+        "type": "variable-node",
+        "data": {
+          "name": "greeting",
+          "value": "Hello {who}",
+          "isNumber": false
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ret",
+        "type": "subflow-return-node",
+        "data": {},
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "never",
+        "type": "message-node",
+        "data": {
+          "text": "<p>never</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-run",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "run",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-run-source-back",
+        "source": "run",
+        "sourceHandle": "source",
+        "target": "back",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-sf-source-set",
+        "source": "sf",
+        "sourceHandle": "source",
+        "target": "set",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-set-source-ret",
+        "source": "set",
+        "sourceHandle": "source",
+        "target": "ret",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ret-source-never",
+        "source": "ret",
+        "sourceHandle": "source",
+        "target": "never",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "run",
+        "type": "run-subflow-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "sf",
+        "type": "subflow-node",
+        "via": "jump",
+        "t": 700
+      },
+      {
+        "node": "set",
+        "type": "variable-node",
+        "via": "port:source",
+        "t": 700
+      },
+      {
+        "node": "ret",
+        "type": "subflow-return-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "back",
+        "type": "message-node",
+        "via": "jump",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "back",
+        "t": 1400
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "back",
+        "text": "Back: Hello Ana"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "back",
+        "html": "<p>Back: Hello Ana</p>",
+        "plain": "Back: Hello Ana"
+      }
+    ],
+    "ports": [
+      {
+        "node": "sf",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Back: {result}</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "who",
+        "value": "Ana",
+        "nodeId": "column_mapped_who"
+      },
+      {
+        "key": "greeting",
+        "value": "Hello Ana",
+        "nodeId": "set"
+      },
+      {
+        "key": "result",
+        "value": "Hello Ana",
+        "nodeId": "column_mapped_result"
+      }
+    ],
+    "flowVariables": {
+      "greeting": "Hello Ana"
+    },
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1400
+    }
+  }
+}

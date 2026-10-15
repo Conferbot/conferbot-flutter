@@ -1,0 +1,225 @@
+{
+  "id": "n-choices.port-is-choice-id",
+  "title": "n-choices-node: each choice leaves by \"source-\" + its id (ids are \"1\", \"2\" or uuids - never the position); blank choices are hidden",
+  "covers": [
+    "n-choices-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"all nodes test\"",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "c",
+        "type": "n-choices-node",
+        "data": {
+          "choicePrompt": "<p>Choose node to test</p>",
+          "choices": [
+            {
+              "id": "1",
+              "choiceText": "<p>Message node</p>"
+            },
+            {
+              "id": "2",
+              "choiceText": ""
+            },
+            {
+              "id": "e9237c34-a051-4c2a-84bb-e46659ec9729",
+              "choiceText": "<p>Video node</p>"
+            }
+          ],
+          "answerVariable": "picked"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "one",
+        "type": "message-node",
+        "data": {
+          "text": "<p>one</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "video",
+        "type": "message-node",
+        "data": {
+          "text": "<p>video</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-c",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "c",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-c-source-1-one",
+        "source": "c",
+        "sourceHandle": "source-1",
+        "target": "one",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-c-source-e9237c34-a051-4c2a-84bb-e46659ec9729-video",
+        "source": "c",
+        "sourceHandle": "source-e9237c34-a051-4c2a-84bb-e46659ec9729",
+        "target": "video",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "c",
+      "do": "choose",
+      "id": "e9237c34-a051-4c2a-84bb-e46659ec9729"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "c",
+        "type": "n-choices-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "video",
+        "type": "message-node",
+        "via": "port:source-e9237c34-a051-4c2a-84bb-e46659ec9729",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "c",
+        "t": 1350
+      },
+      {
+        "node": "video",
+        "t": 2050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "c",
+        "text": "Choose node to test Message node Video node"
+      },
+      {
+        "node": "video",
+        "text": "video"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "c",
+        "html": "<p>Choose node to test</p>",
+        "plain": "Choose node to test"
+      },
+      {
+        "node": "video",
+        "html": "<p>video</p>",
+        "plain": "video"
+      }
+    ],
+    "ports": [
+      {
+        "node": "c",
+        "handle": "source-e9237c34-a051-4c2a-84bb-e46659ec9729",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Choose node to test</p>"
+      },
+      {
+        "by": "user",
+        "message": "Video node"
+      },
+      {
+        "by": "bot",
+        "message": "<p>video</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "c",
+        "shape": "user-selected-choice",
+        "selectedChoice": "Video node"
+      }
+    ],
+    "variables": [
+      {
+        "key": "picked",
+        "value": "Video node",
+        "nodeId": "c"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2050
+    }
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "id": "stripe-node.link-is-not-a-gate",
+  "title": "stripe-node (createPaymentLink): shows the payment link the server made and moves on 500 ms later - it does not wait for the payment (payment-node does)",
+  "covers": [
+    "stripe-node"
+  ],
+  "provenance": "executed",
+  "source": "real node shape (anonymised)",
+  "server": {
+    "integration": {
+      "stripe": {
+        "success": true,
+        "data": {
+          "url": "https://buy.stripe.com/test_123",
+          "id": "plink_1"
+        },
+        "message": "Pay here"
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "stripe",
+        "type": "stripe-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "createPaymentLink",
+          "priceId": "price_1",
+          "currency": "usd",
+          "productName": "Plan",
+          "answerVariable": "stripe_result"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>after link</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-stripe",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "stripe",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-stripe-source-m",
+        "source": "stripe",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "stripe",
+        "type": "stripe-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1250
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "t": 1950
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi S Stripe Pay here Pay Now"
+      },
+      {
+        "node": "m",
+        "text": "after link"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "m",
+        "html": "<p>after link</p>",
+        "plain": "after link"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>after link</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "execute-integration",
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1950
+    }
+  }
+}

@@ -1,0 +1,275 @@
+{
+  "id": "ai-extract.missing",
+  "title": "ai-extract-node (real): a required field missing -> source-missing; the server unreachable is the same path",
+  "covers": [
+    "ai-extract-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"QA - All Nodes\"",
+  "server": {
+    "http": {
+      "ai/extract": "network"
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ax",
+        "type": "ai-extract-node",
+        "data": {
+          "questionText": "<p>Tell me a bit about you - name, work email, company and team size.</p>",
+          "source": "ask",
+          "sourceVariable": "",
+          "fields": [
+            {
+              "id": "f1",
+              "name": "name",
+              "type": "text",
+              "description": "The visitor's full name",
+              "required": true
+            },
+            {
+              "id": "f2",
+              "name": "email",
+              "type": "email",
+              "description": "Work email",
+              "required": true
+            },
+            {
+              "id": "f3",
+              "name": "company",
+              "type": "text",
+              "description": "Company name",
+              "required": false
+            },
+            {
+              "id": "f4",
+              "name": "team_size",
+              "type": "number",
+              "description": "How many people on the team",
+              "required": false
+            }
+          ],
+          "instructions": "",
+          "apiKey": "<redacted>",
+          "selectedModel": "gpt-4o-mini",
+          "answerVariable": "lead"
+        },
+        "position": {
+          "x": 1160,
+          "y": 960
+        }
+      },
+      {
+        "id": "axOk",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Got it: {name} / {email} / {company} / team {team_size}.</p>"
+        },
+        "position": {
+          "x": 1520,
+          "y": 960
+        }
+      },
+      {
+        "id": "axMiss",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Missing: {lead_missing}.</p>"
+        },
+        "position": {
+          "x": 1880,
+          "y": 960
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-ax",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "ax",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ax-source-axOk",
+        "source": "ax",
+        "sourceHandle": "source",
+        "target": "axOk",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ax-source-missing-axMiss",
+        "source": "ax",
+        "sourceHandle": "source-missing",
+        "target": "axMiss",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "ax",
+      "do": "text",
+      "value": "just browsing"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "ax",
+        "type": "ai-extract-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "axMiss",
+        "type": "message-node",
+        "via": "port:source-missing",
+        "t": 2196
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "ax",
+        "t": 1696
+      },
+      {
+        "node": "axMiss",
+        "t": 2984
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "ax",
+        "text": "Tell me a bit about you - name, work email, company and team size."
+      },
+      {
+        "node": "axMiss",
+        "text": "Missing: name, email."
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "ax",
+        "html": "<p>Tell me a bit about you - name, work email, company and team size.</p>",
+        "plain": "Tell me a bit about you - name, work email, company and team size."
+      },
+      {
+        "node": "axMiss",
+        "html": "<p>Missing: name, email.</p>",
+        "plain": "Missing: name, email."
+      }
+    ],
+    "ports": [
+      {
+        "node": "ax",
+        "handle": "source-missing",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Tell me a bit about you - name, work email, company and team size.</p>"
+      },
+      {
+        "by": "user",
+        "message": "just browsing"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Missing: {lead_missing}.</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "ax",
+        "shape": "user-ai-extract",
+        "asked": true,
+        "input": "just browsing",
+        "values": {},
+        "missing": [
+          "name",
+          "email"
+        ],
+        "ok": false,
+        "error": "network"
+      }
+    ],
+    "variables": [
+      {
+        "key": "lead",
+        "value": {},
+        "nodeId": "ax"
+      },
+      {
+        "key": "lead_missing",
+        "value": [
+          "name",
+          "email"
+        ],
+        "nodeId": "column_mapped_lead_missing"
+      }
+    ],
+    "errors": [],
+    "http": [
+      {
+        "path": "ai/extract",
+        "body": {
+          "nodeId": "ax",
+          "text": "just browsing"
+        }
+      }
+    ],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2984
+    }
+  }
+}

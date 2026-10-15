@@ -1,0 +1,157 @@
+{
+  "id": "file.reads-data-file",
+  "title": "file-node shows a download card for data.file and moves on at once",
+  "covers": [
+    "file-node"
+  ],
+  "provenance": "executed",
+  "source": "real node shape (anonymised)",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "f",
+        "type": "file-node",
+        "data": {
+          "audio": "",
+          "file": "https://cdn.example.com/media/767d3a0f.pdf"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>after file</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-f",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "f",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-f-source-m",
+        "source": "f",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "f",
+        "type": "file-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "f",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "t": 2010
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "f",
+        "text": "PDF 767d3a0f.pdf PDF file - Download"
+      },
+      {
+        "node": "m",
+        "text": "after file"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "m",
+        "html": "<p>after file</p>",
+        "plain": "after file"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "https://cdn.example.com/media/767d3a0f.pdf"
+      },
+      {
+        "by": "bot",
+        "message": "<p>after file</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2010
+    }
+  }
+}

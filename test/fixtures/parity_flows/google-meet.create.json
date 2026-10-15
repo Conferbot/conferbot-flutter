@@ -1,0 +1,165 @@
+{
+  "id": "google-meet.create",
+  "title": "google-meet-node (create): waits for the server result, then moves on",
+  "covers": [
+    "google-meet-node"
+  ],
+  "provenance": "executed",
+  "server": {
+    "integration": {
+      "meet": {
+        "success": true,
+        "data": {
+          "meetingUri": "https://meet.google.com/abc-defg-hij"
+        },
+        "answerVariable": "meet_data",
+        "answerValue": "https://meet.google.com/abc-defg-hij"
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "meet",
+        "type": "google-meet-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "create",
+          "accessType": "open",
+          "answerVariable": "meet_data"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{meet_data}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-meet",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "meet",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-meet-source-m",
+        "source": "meet",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "meet",
+        "type": "google-meet-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 750
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "t": 1450
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "m",
+        "text": "https://meet.google.com/abc-defg-hij"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "m",
+        "html": "<p>https://meet.google.com/abc-defg-hij</p>",
+        "plain": "https://meet.google.com/abc-defg-hij"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{meet_data}</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "meet_data",
+        "value": "https://meet.google.com/abc-defg-hij",
+        "nodeId": "column_mapped_meet_data"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "execute-integration",
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1450
+    }
+  }
+}

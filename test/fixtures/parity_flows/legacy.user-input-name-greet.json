@@ -1,0 +1,175 @@
+{
+  "id": "legacy.user-input-name-greet",
+  "title": "user-input-node type \"name\": greets with nameGreet (first name) after 1000 ms typing; next after 2000 ms",
+  "covers": [
+    "user-input-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "u",
+        "type": "user-input-node",
+        "data": {
+          "type": "name",
+          "inputPrompt": "Name?",
+          "nameGreet": "Nice to meet you, {name}"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "next",
+        "type": "message-node",
+        "data": {
+          "text": "<p>next</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-u",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "u",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-u-source-1-next",
+        "source": "u",
+        "sourceHandle": "source-1",
+        "target": "next",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "u",
+      "do": "text",
+      "value": "maria lopez"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "u",
+        "type": "user-input-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "next",
+        "type": "message-node",
+        "via": "edge:source-1",
+        "t": 3350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "u",
+        "t": 1350
+      },
+      {
+        "node": "next",
+        "t": 4050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "u",
+        "text": "Name? Nice to meet you, Maria"
+      },
+      {
+        "node": "next",
+        "text": "next"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "next",
+        "html": "<p>next</p>",
+        "plain": "next"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "Name?"
+      },
+      {
+        "by": "user",
+        "message": "maria lopez"
+      },
+      {
+        "by": "bot",
+        "message": "<p>next</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "u",
+        "shape": "user-input-response",
+        "type": "name",
+        "text": "maria lopez"
+      }
+    ],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 4050
+    }
+  }
+}

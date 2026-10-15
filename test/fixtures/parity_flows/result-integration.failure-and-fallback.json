@@ -1,0 +1,239 @@
+{
+  "id": "result-integration.failure-and-fallback",
+  "title": "segment-node failed -> source-failure; salesforce-node failed with no failure edge -> its success edge",
+  "covers": [
+    "segment-node",
+    "salesforce-node"
+  ],
+  "provenance": "executed",
+  "server": {
+    "integration": {
+      "sg": {
+        "success": false,
+        "error": "boom"
+      },
+      "sf": {
+        "success": false
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "sg",
+        "type": "segment-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "identify"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "sgBad",
+        "type": "message-node",
+        "data": {
+          "text": "<p>segment failed</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "sf",
+        "type": "salesforce-node",
+        "data": {
+          "credentialId": "c",
+          "operation": "createLead"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "sfOk",
+        "type": "message-node",
+        "data": {
+          "text": "<p>salesforce success path</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-sg",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "sg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-sg-source-failure-sgBad",
+        "source": "sg",
+        "sourceHandle": "source-failure",
+        "target": "sgBad",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-sgBad-source-sf",
+        "source": "sgBad",
+        "sourceHandle": "source",
+        "target": "sf",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-sf-source-sfOk",
+        "source": "sf",
+        "sourceHandle": "source",
+        "target": "sfOk",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "sg",
+        "type": "segment-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "sgBad",
+        "type": "message-node",
+        "via": "port:source-failure",
+        "t": 750
+      },
+      {
+        "node": "sf",
+        "type": "salesforce-node",
+        "via": "edge:source",
+        "t": 1450
+      },
+      {
+        "node": "sfOk",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1500
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "sgBad",
+        "t": 1450
+      },
+      {
+        "node": "sfOk",
+        "t": 2276
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "sgBad",
+        "text": "segment failed"
+      },
+      {
+        "node": "sfOk",
+        "text": "salesforce success path"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "sgBad",
+        "html": "<p>segment failed</p>",
+        "plain": "segment failed"
+      },
+      {
+        "node": "sfOk",
+        "html": "<p>salesforce success path</p>",
+        "plain": "salesforce success path"
+      }
+    ],
+    "ports": [
+      {
+        "node": "sg",
+        "handle": "source-failure",
+        "wired": true
+      },
+      {
+        "node": "sf",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>segment failed</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>salesforce success path</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "execute-integration",
+      "execute-integration",
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2276
+    }
+  }
+}

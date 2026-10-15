@@ -1,0 +1,2395 @@
+{
+  "id": "real.qa-all-nodes-tour",
+  "title": "The real \"QA - All Nodes\" bot end to end (OTP, address, matrix, AI extract/route, KB, signature) with scripted server answers",
+  "covers": [
+    "otp-node",
+    "address-node",
+    "matrix-node",
+    "ai-extract-node",
+    "ai-route-node",
+    "kb-answer-node",
+    "signature-node",
+    "message-node",
+    "welcome-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"QA - All Nodes\"",
+  "server": {
+    "http": {
+      "otp/send": {
+        "status": 200,
+        "body": {
+          "sent": true
+        }
+      },
+      "otp/verify": {
+        "status": 200,
+        "body": {
+          "verified": true,
+          "email": "ana@acme.io"
+        }
+      },
+      "ai/extract": {
+        "status": 200,
+        "body": {
+          "ok": false,
+          "values": {
+            "name": "Ana"
+          },
+          "missing": [
+            "email"
+          ]
+        }
+      },
+      "ai/route": [
+        {
+          "status": 200,
+          "body": {
+            "intentId": "i1",
+            "intent": "Sales",
+            "confidence": 0.88
+          }
+        },
+        {
+          "status": 200,
+          "body": {
+            "fallback": true
+          }
+        }
+      ],
+      "kb/answer": [
+        {
+          "status": 200,
+          "body": {
+            "found": true,
+            "answer": "Yes.",
+            "sources": []
+          }
+        },
+        {
+          "status": 200,
+          "body": {
+            "found": false
+          }
+        }
+      ],
+      "media": {
+        "status": 200,
+        "body": {
+          "url": "https://api.test/media/sig"
+        }
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "1",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi! 👋 I'm <strong>Nova</strong>. This tour walks through the newest steps.</p>"
+        },
+        "position": {
+          "x": 80,
+          "y": 120
+        }
+      },
+      {
+        "id": "otp",
+        "type": "otp-node",
+        "data": {
+          "questionText": "<p>Let's confirm your email first.</p>",
+          "channel": "email",
+          "emailSource": "ask",
+          "emailVariable": "",
+          "emailSubject": "Your Acme Cloud code",
+          "maxAttempts": 3,
+          "allowSkip": false,
+          "skipLabel": "Skip",
+          "answerVariable": "work_email"
+        },
+        "position": {
+          "x": 440,
+          "y": 120
+        }
+      },
+      {
+        "id": "otpOk",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Verified: {work_email} ({work_email_verified}).</p>"
+        },
+        "position": {
+          "x": 800,
+          "y": 120
+        }
+      },
+      {
+        "id": "otpFail",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Not verified ({work_email_verified}).</p>"
+        },
+        "position": {
+          "x": 1160,
+          "y": 120
+        }
+      },
+      {
+        "id": "otp2",
+        "type": "otp-node",
+        "data": {
+          "questionText": "<p>Optional: verify a second address?</p>",
+          "channel": "email",
+          "emailSource": "ask",
+          "maxAttempts": 5,
+          "allowSkip": true,
+          "skipLabel": "Skip for now",
+          "answerVariable": "backup_email"
+        },
+        "position": {
+          "x": 1520,
+          "y": 120
+        }
+      },
+      {
+        "id": "otp2Fail",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Skipped - backup verified: {backup_email_verified}.</p>"
+        },
+        "position": {
+          "x": 1880,
+          "y": 120
+        }
+      },
+      {
+        "id": "otp2Ok",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Backup verified too.</p>"
+        },
+        "position": {
+          "x": 80,
+          "y": 540
+        }
+      },
+      {
+        "id": "addr",
+        "type": "address-node",
+        "data": {
+          "questionText": "<p>Where should we ship it?</p>",
+          "countryCodes": "ae",
+          "allowMyLocation": true,
+          "showMap": true,
+          "allowManual": true,
+          "placeholder": "Start typing your address",
+          "answerVariable": "ship"
+        },
+        "position": {
+          "x": 440,
+          "y": 540
+        }
+      },
+      {
+        "id": "addrMsg",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Shipping to {ship} | city {ship_city} | country {ship_country_code} | {ship_lat},{ship_lng}</p>"
+        },
+        "position": {
+          "x": 800,
+          "y": 540
+        }
+      },
+      {
+        "id": "addr2",
+        "type": "address-node",
+        "data": {
+          "questionText": "<p>And your billing address?</p>",
+          "countryCodes": "",
+          "allowMyLocation": false,
+          "showMap": false,
+          "allowManual": true,
+          "answerVariable": "bill"
+        },
+        "position": {
+          "x": 1160,
+          "y": 540
+        }
+      },
+      {
+        "id": "addr2Msg",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Billing: {bill_line1}, {bill_city} {bill_postal}</p>"
+        },
+        "position": {
+          "x": 1520,
+          "y": 540
+        }
+      },
+      {
+        "id": "mx",
+        "type": "matrix-node",
+        "data": {
+          "questionText": "<p>How did we do?</p>",
+          "rows": [
+            {
+              "id": "r0",
+              "text": "Ease of use"
+            },
+            {
+              "id": "r1",
+              "text": "Speed"
+            },
+            {
+              "id": "r2",
+              "text": "Support"
+            }
+          ],
+          "columns": [
+            {
+              "id": "c0",
+              "text": "Poor"
+            },
+            {
+              "id": "c1",
+              "text": "Fair"
+            },
+            {
+              "id": "c2",
+              "text": "Good"
+            },
+            {
+              "id": "c3",
+              "text": "Great"
+            }
+          ],
+          "mode": "single",
+          "requireAll": true,
+          "submitLabel": "Submit",
+          "answerVariable": "rating_grid"
+        },
+        "position": {
+          "x": 1880,
+          "y": 540
+        }
+      },
+      {
+        "id": "mxMsg",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Grid: {rating_grid}</p>"
+        },
+        "position": {
+          "x": 80,
+          "y": 960
+        }
+      },
+      {
+        "id": "mx2",
+        "type": "matrix-node",
+        "data": {
+          "questionText": "<p>Which channels for each team?</p>",
+          "rows": [
+            {
+              "id": "r0",
+              "text": "Sales"
+            },
+            {
+              "id": "r1",
+              "text": "Support"
+            }
+          ],
+          "columns": [
+            {
+              "id": "c0",
+              "text": "Email"
+            },
+            {
+              "id": "c1",
+              "text": "Chat"
+            },
+            {
+              "id": "c2",
+              "text": "Phone"
+            },
+            {
+              "id": "c3",
+              "text": "WhatsApp"
+            },
+            {
+              "id": "c4",
+              "text": "SMS"
+            }
+          ],
+          "mode": "multiple",
+          "requireAll": false,
+          "submitLabel": "Done",
+          "answerVariable": "team_channels"
+        },
+        "position": {
+          "x": 440,
+          "y": 960
+        }
+      },
+      {
+        "id": "mx2Msg",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Channels: {team_channels}</p>"
+        },
+        "position": {
+          "x": 800,
+          "y": 960
+        }
+      },
+      {
+        "id": "ax",
+        "type": "ai-extract-node",
+        "data": {
+          "questionText": "<p>Tell me a bit about you - name, work email, company and team size.</p>",
+          "source": "ask",
+          "sourceVariable": "",
+          "fields": [
+            {
+              "id": "f1",
+              "name": "name",
+              "type": "text",
+              "description": "The visitor's full name",
+              "required": true
+            },
+            {
+              "id": "f2",
+              "name": "email",
+              "type": "email",
+              "description": "Work email",
+              "required": true
+            },
+            {
+              "id": "f3",
+              "name": "company",
+              "type": "text",
+              "description": "Company name",
+              "required": false
+            },
+            {
+              "id": "f4",
+              "name": "team_size",
+              "type": "number",
+              "description": "How many people on the team",
+              "required": false
+            }
+          ],
+          "instructions": "",
+          "apiKey": "<redacted>",
+          "selectedModel": "gpt-4o-mini",
+          "answerVariable": "lead"
+        },
+        "position": {
+          "x": 1160,
+          "y": 960
+        }
+      },
+      {
+        "id": "axOk",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Got it: {name} / {email} / {company} / team {team_size}.</p>"
+        },
+        "position": {
+          "x": 1520,
+          "y": 960
+        }
+      },
+      {
+        "id": "axMiss",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Missing: {lead_missing}.</p>"
+        },
+        "position": {
+          "x": 1880,
+          "y": 960
+        }
+      },
+      {
+        "id": "ar",
+        "type": "ai-route-node",
+        "data": {
+          "questionText": "<p>What can we help with today?</p>",
+          "source": "ask",
+          "intents": [
+            {
+              "id": "i1",
+              "name": "Sales",
+              "description": "Pricing, plans, buying, demos"
+            },
+            {
+              "id": "i2",
+              "name": "Support",
+              "description": "Something isn't working, how-to questions"
+            },
+            {
+              "id": "i3",
+              "name": "Billing",
+              "description": "Invoices, refunds, payment methods"
+            }
+          ],
+          "minConfidence": 0.5,
+          "apiKey": "<redacted>",
+          "selectedModel": "gpt-4o-mini",
+          "answerVariable": "intent"
+        },
+        "position": {
+          "x": 80,
+          "y": 1380
+        }
+      },
+      {
+        "id": "arSales",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Routed to Sales ({intent}, {intent_confidence}).</p>"
+        },
+        "position": {
+          "x": 440,
+          "y": 1380
+        }
+      },
+      {
+        "id": "arSupport",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Routed to Support ({intent}, {intent_confidence}).</p>"
+        },
+        "position": {
+          "x": 800,
+          "y": 1380
+        }
+      },
+      {
+        "id": "arBilling",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Routed to Billing ({intent}, {intent_confidence}).</p>"
+        },
+        "position": {
+          "x": 1160,
+          "y": 1380
+        }
+      },
+      {
+        "id": "arNo",
+        "type": "message-node",
+        "data": {
+          "text": "<p>No match - routing to a human.</p>"
+        },
+        "position": {
+          "x": 1520,
+          "y": 1380
+        }
+      },
+      {
+        "id": "ar2",
+        "type": "ai-route-node",
+        "data": {
+          "questionText": "<p>Anything else? (fallback check)</p>",
+          "source": "ask",
+          "intents": [
+            {
+              "id": "j1",
+              "name": "Sales",
+              "description": "Pricing"
+            },
+            {
+              "id": "j2",
+              "name": "Support",
+              "description": "Problems"
+            }
+          ],
+          "minConfidence": 0.5,
+          "apiKey": "<redacted>",
+          "selectedModel": "gpt-4o-mini",
+          "answerVariable": "intent2"
+        },
+        "position": {
+          "x": 1880,
+          "y": 1380
+        }
+      },
+      {
+        "id": "ar2No",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Fallback taken ({intent2}).</p>"
+        },
+        "position": {
+          "x": 80,
+          "y": 1800
+        }
+      },
+      {
+        "id": "ar2Yes",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Matched {intent2}.</p>"
+        },
+        "position": {
+          "x": 440,
+          "y": 1800
+        }
+      },
+      {
+        "id": "kb",
+        "type": "kb-answer-node",
+        "data": {
+          "questionText": "<p>Ask me anything about our policies.</p>",
+          "source": "ask",
+          "showSources": true,
+          "maxSources": 3,
+          "notFoundMessage": "<p>I couldn't find that in our help articles.</p>",
+          "answerVariable": "kb_answer"
+        },
+        "position": {
+          "x": 800,
+          "y": 1800
+        }
+      },
+      {
+        "id": "kbOk",
+        "type": "message-node",
+        "data": {
+          "text": "<p>(answered: {kb_answer_found})</p>"
+        },
+        "position": {
+          "x": 1160,
+          "y": 1800
+        }
+      },
+      {
+        "id": "kbNo",
+        "type": "message-node",
+        "data": {
+          "text": "<p>(not found: {kb_answer_found})</p>"
+        },
+        "position": {
+          "x": 1520,
+          "y": 1800
+        }
+      },
+      {
+        "id": "kb2",
+        "type": "kb-answer-node",
+        "data": {
+          "questionText": "<p>Another question?</p>",
+          "source": "ask",
+          "showSources": true,
+          "maxSources": 3,
+          "notFoundMessage": "<p>I couldn't find that in our help articles.</p>",
+          "answerVariable": "kb2"
+        },
+        "position": {
+          "x": 1880,
+          "y": 1800
+        }
+      },
+      {
+        "id": "kb2Ok",
+        "type": "message-node",
+        "data": {
+          "text": "<p>(kb2 answered)</p>"
+        },
+        "position": {
+          "x": 80,
+          "y": 2220
+        }
+      },
+      {
+        "id": "kb2No",
+        "type": "message-node",
+        "data": {
+          "text": "<p>(kb2 not found)</p>"
+        },
+        "position": {
+          "x": 440,
+          "y": 2220
+        }
+      },
+      {
+        "id": "sg",
+        "type": "signature-node",
+        "data": {
+          "questionText": "<p>Please sign to accept the quote.</p>",
+          "consentText": "By signing you agree to the [Terms](https://example.com/terms).",
+          "allowTyped": true,
+          "requireName": true,
+          "penColor": "auto",
+          "submitLabel": "Sign",
+          "answerVariable": "signature"
+        },
+        "position": {
+          "x": 800,
+          "y": 2220
+        }
+      },
+      {
+        "id": "sgMsg",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Signed by {signature_name} ({signature_method}) at {signature_at}.</p>"
+        },
+        "position": {
+          "x": 1160,
+          "y": 2220
+        }
+      },
+      {
+        "id": "sg2",
+        "type": "signature-node",
+        "data": {
+          "questionText": "<p>And initial here (typed is fine).</p>",
+          "consentText": "",
+          "allowTyped": true,
+          "requireName": false,
+          "penColor": "auto",
+          "submitLabel": "Sign",
+          "answerVariable": "initials"
+        },
+        "position": {
+          "x": 1520,
+          "y": 2220
+        }
+      },
+      {
+        "id": "sg2Msg",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Initials: {initials_method} {initials_name}.</p>"
+        },
+        "position": {
+          "x": 1880,
+          "y": 2220
+        }
+      },
+      {
+        "id": "end",
+        "type": "message-node",
+        "data": {
+          "text": "<p>That's the batch-2 tour. Thanks!</p>"
+        },
+        "position": {
+          "x": 80,
+          "y": 2640
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-otp-source-otpOk",
+        "source": "otp",
+        "sourceHandle": "source",
+        "target": "otpOk",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-otp-source-failed-otpFail",
+        "source": "otp",
+        "sourceHandle": "source-failed",
+        "target": "otpFail",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-otpOk-source-otp2",
+        "source": "otpOk",
+        "sourceHandle": "source",
+        "target": "otp2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-otpFail-source-otp2",
+        "source": "otpFail",
+        "sourceHandle": "source",
+        "target": "otp2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-otp2-source-otp2Ok",
+        "source": "otp2",
+        "sourceHandle": "source",
+        "target": "otp2Ok",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-otp2-source-failed-otp2Fail",
+        "source": "otp2",
+        "sourceHandle": "source-failed",
+        "target": "otp2Fail",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-1-source-otp",
+        "source": "1",
+        "sourceHandle": "source",
+        "target": "otp",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-addr-source-addrMsg",
+        "source": "addr",
+        "sourceHandle": "source",
+        "target": "addrMsg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-addrMsg-source-addr2",
+        "source": "addrMsg",
+        "sourceHandle": "source",
+        "target": "addr2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-addr2-source-addr2Msg",
+        "source": "addr2",
+        "sourceHandle": "source",
+        "target": "addr2Msg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-otp2Ok-source-addr",
+        "source": "otp2Ok",
+        "sourceHandle": "source",
+        "target": "addr",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-otp2Fail-source-addr",
+        "source": "otp2Fail",
+        "sourceHandle": "source",
+        "target": "addr",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-mx-source-mxMsg",
+        "source": "mx",
+        "sourceHandle": "source",
+        "target": "mxMsg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-mxMsg-source-mx2",
+        "source": "mxMsg",
+        "sourceHandle": "source",
+        "target": "mx2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-mx2-source-mx2Msg",
+        "source": "mx2",
+        "sourceHandle": "source",
+        "target": "mx2Msg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-addr2Msg-source-mx",
+        "source": "addr2Msg",
+        "sourceHandle": "source",
+        "target": "mx",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar-source-i1-arSales",
+        "source": "ar",
+        "sourceHandle": "source-i1",
+        "target": "arSales",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar-source-i2-arSupport",
+        "source": "ar",
+        "sourceHandle": "source-i2",
+        "target": "arSupport",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar-source-i3-arBilling",
+        "source": "ar",
+        "sourceHandle": "source-i3",
+        "target": "arBilling",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar-source-fallback-arNo",
+        "source": "ar",
+        "sourceHandle": "source-fallback",
+        "target": "arNo",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ax-source-axOk",
+        "source": "ax",
+        "sourceHandle": "source",
+        "target": "axOk",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ax-source-missing-axMiss",
+        "source": "ax",
+        "sourceHandle": "source-missing",
+        "target": "axMiss",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-axOk-source-ar",
+        "source": "axOk",
+        "sourceHandle": "source",
+        "target": "ar",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-axMiss-source-ar",
+        "source": "axMiss",
+        "sourceHandle": "source",
+        "target": "ar",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-arSales-source-ar2",
+        "source": "arSales",
+        "sourceHandle": "source",
+        "target": "ar2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-arSupport-source-ar2",
+        "source": "arSupport",
+        "sourceHandle": "source",
+        "target": "ar2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-arBilling-source-ar2",
+        "source": "arBilling",
+        "sourceHandle": "source",
+        "target": "ar2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-arNo-source-ar2",
+        "source": "arNo",
+        "sourceHandle": "source",
+        "target": "ar2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar2-source-j1-ar2Yes",
+        "source": "ar2",
+        "sourceHandle": "source-j1",
+        "target": "ar2Yes",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar2-source-j2-ar2Yes",
+        "source": "ar2",
+        "sourceHandle": "source-j2",
+        "target": "ar2Yes",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar2-source-fallback-ar2No",
+        "source": "ar2",
+        "sourceHandle": "source-fallback",
+        "target": "ar2No",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-mx2Msg-source-ax",
+        "source": "mx2Msg",
+        "sourceHandle": "source",
+        "target": "ax",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-kb-source-kbOk",
+        "source": "kb",
+        "sourceHandle": "source",
+        "target": "kbOk",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-kb-source-notfound-kbNo",
+        "source": "kb",
+        "sourceHandle": "source-notfound",
+        "target": "kbNo",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-kbOk-source-kb2",
+        "source": "kbOk",
+        "sourceHandle": "source",
+        "target": "kb2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-kbNo-source-kb2",
+        "source": "kbNo",
+        "sourceHandle": "source",
+        "target": "kb2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-kb2-source-kb2Ok",
+        "source": "kb2",
+        "sourceHandle": "source",
+        "target": "kb2Ok",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-kb2-source-notfound-kb2No",
+        "source": "kb2",
+        "sourceHandle": "source-notfound",
+        "target": "kb2No",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar2Yes-source-kb",
+        "source": "ar2Yes",
+        "sourceHandle": "source",
+        "target": "kb",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar2No-source-kb",
+        "source": "ar2No",
+        "sourceHandle": "source",
+        "target": "kb",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-sg-source-sgMsg",
+        "source": "sg",
+        "sourceHandle": "source",
+        "target": "sgMsg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-sgMsg-source-sg2",
+        "source": "sgMsg",
+        "sourceHandle": "source",
+        "target": "sg2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-sg2-source-sg2Msg",
+        "source": "sg2",
+        "sourceHandle": "source",
+        "target": "sg2Msg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-kb2Ok-source-sg",
+        "source": "kb2Ok",
+        "sourceHandle": "source",
+        "target": "sg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-kb2No-source-sg",
+        "source": "kb2No",
+        "sourceHandle": "source",
+        "target": "sg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-sg2Msg-source-end",
+        "source": "sg2Msg",
+        "sourceHandle": "source",
+        "target": "end",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "otp",
+      "do": "otpEmail",
+      "email": "ana@acme.io"
+    },
+    {
+      "at": "otp",
+      "do": "otpCode",
+      "code": "123456"
+    },
+    {
+      "at": "otp2",
+      "do": "otpSkip"
+    },
+    {
+      "at": "addr",
+      "do": "addressManual",
+      "line1": "12 Marina Walk",
+      "city": "Dubai",
+      "country": "United Arab Emirates"
+    },
+    {
+      "at": "addr2",
+      "do": "addressManual",
+      "line1": "1 Main St",
+      "city": "Austin",
+      "postal": "78701"
+    },
+    {
+      "at": "mx",
+      "do": "matrix",
+      "cells": {
+        "r0": "c0",
+        "r1": "c1",
+        "r2": "c2"
+      }
+    },
+    {
+      "at": "mx2",
+      "do": "matrix",
+      "cells": {
+        "r0": [
+          "c0"
+        ],
+        "r1": [
+          "c1"
+        ]
+      }
+    },
+    {
+      "at": "ax",
+      "do": "text",
+      "value": "I am Ana"
+    },
+    {
+      "at": "ar",
+      "do": "text",
+      "value": "pricing"
+    },
+    {
+      "at": "ar2",
+      "do": "text",
+      "value": "nothing"
+    },
+    {
+      "at": "kb",
+      "do": "text",
+      "value": "refunds?"
+    },
+    {
+      "at": "kb2",
+      "do": "text",
+      "value": "xyzzy"
+    },
+    {
+      "at": "sg",
+      "do": "signTyped",
+      "name": "Ana Lima",
+      "fullName": "Ana Lima"
+    },
+    {
+      "at": "sg2",
+      "do": "signTyped",
+      "name": "AL"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "1",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "otp",
+        "type": "otp-node",
+        "via": "edge:source",
+        "t": 1208
+      },
+      {
+        "node": "otpOk",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 3022
+      },
+      {
+        "node": "otp2",
+        "type": "otp-node",
+        "via": "edge:source",
+        "t": 4086
+      },
+      {
+        "node": "otp2Fail",
+        "type": "message-node",
+        "via": "port:source-failed",
+        "t": 5624
+      },
+      {
+        "node": "addr",
+        "type": "address-node",
+        "via": "edge:source",
+        "t": 6736
+      },
+      {
+        "node": "addrMsg",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 8302
+      },
+      {
+        "node": "addr2",
+        "type": "address-node",
+        "via": "edge:source",
+        "t": 9894
+      },
+      {
+        "node": "addr2Msg",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 12346
+      },
+      {
+        "node": "mx",
+        "type": "matrix-node",
+        "via": "edge:source",
+        "t": 13422
+      },
+      {
+        "node": "mxMsg",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 14812
+      },
+      {
+        "node": "mx2",
+        "type": "matrix-node",
+        "via": "edge:source",
+        "t": 15540
+      },
+      {
+        "node": "mx2Msg",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 16382
+      },
+      {
+        "node": "ax",
+        "type": "ai-extract-node",
+        "via": "edge:source",
+        "t": 17182
+      },
+      {
+        "node": "axMiss",
+        "type": "message-node",
+        "via": "port:source-missing",
+        "t": 18878
+      },
+      {
+        "node": "ar",
+        "type": "ai-route-node",
+        "via": "edge:source",
+        "t": 19666
+      },
+      {
+        "node": "arSales",
+        "type": "message-node",
+        "via": "port:source-i1",
+        "t": 21112
+      },
+      {
+        "node": "ar2",
+        "type": "ai-route-node",
+        "via": "edge:source",
+        "t": 22188
+      },
+      {
+        "node": "ar2No",
+        "type": "message-node",
+        "via": "port:source-fallback",
+        "t": 24180
+      },
+      {
+        "node": "kb",
+        "type": "kb-answer-node",
+        "via": "edge:source",
+        "t": 25004
+      },
+      {
+        "node": "kbOk",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 26558
+      },
+      {
+        "node": "kb2",
+        "type": "kb-answer-node",
+        "via": "edge:source",
+        "t": 27406
+      },
+      {
+        "node": "kb2No",
+        "type": "message-node",
+        "via": "port:source-notfound",
+        "t": 28896
+      },
+      {
+        "node": "sg",
+        "type": "signature-node",
+        "via": "edge:source",
+        "t": 29596
+      },
+      {
+        "node": "sgMsg",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 30438
+      },
+      {
+        "node": "sg2",
+        "type": "signature-node",
+        "via": "edge:source",
+        "t": 31730
+      },
+      {
+        "node": "sg2Msg",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 33630
+      },
+      {
+        "node": "end",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 34658
+      }
+    ],
+    "shown": [
+      {
+        "node": "1",
+        "t": 1208
+      },
+      {
+        "node": "otp",
+        "t": 2942
+      },
+      {
+        "node": "otpOk",
+        "t": 4086
+      },
+      {
+        "node": "otp2",
+        "t": 5574
+      },
+      {
+        "node": "otp2Fail",
+        "t": 6736
+      },
+      {
+        "node": "addr",
+        "t": 8252
+      },
+      {
+        "node": "addrMsg",
+        "t": 9894
+      },
+      {
+        "node": "addr2",
+        "t": 12296
+      },
+      {
+        "node": "addr2Msg",
+        "t": 13422
+      },
+      {
+        "node": "mx",
+        "t": 14812
+      },
+      {
+        "node": "mxMsg",
+        "t": 15540
+      },
+      {
+        "node": "mx2",
+        "t": 16382
+      },
+      {
+        "node": "mx2Msg",
+        "t": 17182
+      },
+      {
+        "node": "ax",
+        "t": 18378
+      },
+      {
+        "node": "axMiss",
+        "t": 19666
+      },
+      {
+        "node": "ar",
+        "t": 20612
+      },
+      {
+        "node": "arSales",
+        "t": 22188
+      },
+      {
+        "node": "ar2",
+        "t": 23680
+      },
+      {
+        "node": "ar2No",
+        "t": 25004
+      },
+      {
+        "node": "kb",
+        "t": 26058
+      },
+      {
+        "node": "kbOk",
+        "t": 27406
+      },
+      {
+        "node": "kb2",
+        "t": 28396
+      },
+      {
+        "node": "kb2No",
+        "t": 29596
+      },
+      {
+        "node": "sg",
+        "t": 30388
+      },
+      {
+        "node": "sgMsg",
+        "t": 31730
+      },
+      {
+        "node": "sg2",
+        "t": 33630
+      },
+      {
+        "node": "sg2Msg",
+        "t": 34658
+      },
+      {
+        "node": "end",
+        "t": 36068
+      }
+    ],
+    "drawn": [
+      {
+        "node": "1",
+        "text": "Hi! 👋 I'm Nova . This tour walks through the newest steps."
+      },
+      {
+        "node": "otp",
+        "text": "Let's confirm your email first. Email verified a***@acme.io"
+      },
+      {
+        "node": "otpOk",
+        "text": "Verified: ana@acme.io (true)."
+      },
+      {
+        "node": "otp2",
+        "text": "Optional: verify a second address? Not verified Skipped"
+      },
+      {
+        "node": "otp2Fail",
+        "text": "Skipped - backup verified: false."
+      },
+      {
+        "node": "addr",
+        "text": "Where should we ship it? 12 Marina Walk Dubai, United Arab Emirates"
+      },
+      {
+        "node": "addrMsg",
+        "text": "Shipping to 12 Marina Walk, Dubai, United Arab Emirates | city Dubai | country |,"
+      },
+      {
+        "node": "addr2",
+        "text": "And your billing address? 1 Main St Austin, 78701"
+      },
+      {
+        "node": "addr2Msg",
+        "text": "Billing: 1 Main St, Austin 78701"
+      },
+      {
+        "node": "mx",
+        "text": "How did we do? Poor Fair Good Great Ease of use Speed Support"
+      },
+      {
+        "node": "mxMsg",
+        "text": "Grid: Ease of use: Poor · Speed: Fair · Support: Good"
+      },
+      {
+        "node": "mx2",
+        "text": "Which channels for each team? Email Chat Phone WhatsApp SMS Sales Support"
+      },
+      {
+        "node": "mx2Msg",
+        "text": "Channels: Sales: Email · Support: Chat"
+      },
+      {
+        "node": "ax",
+        "text": "Tell me a bit about you - name, work email, company and team size."
+      },
+      {
+        "node": "axMiss",
+        "text": "Missing: email."
+      },
+      {
+        "node": "ar",
+        "text": "What can we help with today?"
+      },
+      {
+        "node": "arSales",
+        "text": "Routed to Sales (Sales, 0.88)."
+      },
+      {
+        "node": "ar2",
+        "text": "Anything else? (fallback check)"
+      },
+      {
+        "node": "ar2No",
+        "text": "Fallback taken ()."
+      },
+      {
+        "node": "kb",
+        "text": "Ask me anything about our policies. Yes."
+      },
+      {
+        "node": "kbOk",
+        "text": "(answered: true)"
+      },
+      {
+        "node": "kb2",
+        "text": "Another question? I couldn't find that in our help articles."
+      },
+      {
+        "node": "kb2No",
+        "text": "(kb2 not found)"
+      },
+      {
+        "node": "sg",
+        "text": "Please sign to accept the quote. Signed Ana Lima · Oct 15, 2026, 10:00 AM"
+      },
+      {
+        "node": "sgMsg",
+        "text": "Signed by Ana Lima (typed) at 2026-10-15T10:00:30.438Z."
+      },
+      {
+        "node": "sg2",
+        "text": "And initial here (typed is fine). Signed AL · Oct 15, 2026, 10:00 AM"
+      },
+      {
+        "node": "sg2Msg",
+        "text": "Initials: typed AL."
+      },
+      {
+        "node": "end",
+        "text": "That's the batch-2 tour. Thanks!"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "1",
+        "html": "<p>Hi! 👋 I'm <strong>Nova</strong>. This tour walks through the newest steps.</p>",
+        "plain": "Hi! 👋 I'm Nova. This tour walks through the newest steps."
+      },
+      {
+        "node": "otp",
+        "html": "<p>Let's confirm your email first.</p>",
+        "plain": "Let's confirm your email first."
+      },
+      {
+        "node": "otpOk",
+        "html": "<p>Verified: ana@acme.io (true).</p>",
+        "plain": "Verified: ana@acme.io (true)."
+      },
+      {
+        "node": "otp2",
+        "html": "<p>Optional: verify a second address?</p>",
+        "plain": "Optional: verify a second address?"
+      },
+      {
+        "node": "otp2Fail",
+        "html": "<p>Skipped - backup verified: false.</p>",
+        "plain": "Skipped - backup verified: false."
+      },
+      {
+        "node": "addr",
+        "html": "<p>Where should we ship it?</p>",
+        "plain": "Where should we ship it?"
+      },
+      {
+        "node": "addrMsg",
+        "html": "<p>Shipping to 12 Marina Walk, Dubai, United Arab Emirates | city Dubai | country |,</p>",
+        "plain": "Shipping to 12 Marina Walk, Dubai, United Arab Emirates | city Dubai | country |,"
+      },
+      {
+        "node": "addr2",
+        "html": "<p>And your billing address?</p>",
+        "plain": "And your billing address?"
+      },
+      {
+        "node": "addr2Msg",
+        "html": "<p>Billing: 1 Main St, Austin 78701</p>",
+        "plain": "Billing: 1 Main St, Austin 78701"
+      },
+      {
+        "node": "mx",
+        "html": "<p>How did we do?</p>",
+        "plain": "How did we do?"
+      },
+      {
+        "node": "mxMsg",
+        "html": "<p>Grid: Ease of use: Poor · Speed: Fair · Support: Good</p>",
+        "plain": "Grid: Ease of use: Poor · Speed: Fair · Support: Good"
+      },
+      {
+        "node": "mx2",
+        "html": "<p>Which channels for each team?</p>",
+        "plain": "Which channels for each team?"
+      },
+      {
+        "node": "mx2Msg",
+        "html": "<p>Channels: Sales: Email · Support: Chat</p>",
+        "plain": "Channels: Sales: Email · Support: Chat"
+      },
+      {
+        "node": "ax",
+        "html": "<p>Tell me a bit about you - name, work email, company and team size.</p>",
+        "plain": "Tell me a bit about you - name, work email, company and team size."
+      },
+      {
+        "node": "axMiss",
+        "html": "<p>Missing: email.</p>",
+        "plain": "Missing: email."
+      },
+      {
+        "node": "ar",
+        "html": "<p>What can we help with today?</p>",
+        "plain": "What can we help with today?"
+      },
+      {
+        "node": "arSales",
+        "html": "<p>Routed to Sales (Sales, 0.88).</p>",
+        "plain": "Routed to Sales (Sales, 0.88)."
+      },
+      {
+        "node": "ar2",
+        "html": "<p>Anything else? (fallback check)</p>",
+        "plain": "Anything else? (fallback check)"
+      },
+      {
+        "node": "ar2No",
+        "html": "<p>Fallback taken ().</p>",
+        "plain": "Fallback taken ()."
+      },
+      {
+        "node": "kb",
+        "html": "<p>Ask me anything about our policies.</p>",
+        "plain": "Ask me anything about our policies."
+      },
+      {
+        "node": "kbOk",
+        "html": "<p>(answered: true)</p>",
+        "plain": "(answered: true)"
+      },
+      {
+        "node": "kb2",
+        "html": "<p>Another question?</p>",
+        "plain": "Another question?"
+      },
+      {
+        "node": "kb2No",
+        "html": "<p>(kb2 not found)</p>",
+        "plain": "(kb2 not found)"
+      },
+      {
+        "node": "sg",
+        "html": "<p>Please sign to accept the quote.</p>",
+        "plain": "Please sign to accept the quote."
+      },
+      {
+        "node": "sgMsg",
+        "html": "<p>Signed by Ana Lima (typed) at 2026-10-15T10:00:30.438Z.</p>",
+        "plain": "Signed by Ana Lima (typed) at 2026-10-15T10:00:30.438Z."
+      },
+      {
+        "node": "sg2",
+        "html": "<p>And initial here (typed is fine).</p>",
+        "plain": "And initial here (typed is fine)."
+      },
+      {
+        "node": "sg2Msg",
+        "html": "<p>Initials: typed AL.</p>",
+        "plain": "Initials: typed AL."
+      },
+      {
+        "node": "end",
+        "html": "<p>That's the batch-2 tour. Thanks!</p>",
+        "plain": "That's the batch-2 tour. Thanks!"
+      }
+    ],
+    "ports": [
+      {
+        "node": "otp",
+        "handle": "source",
+        "wired": true
+      },
+      {
+        "node": "otp2",
+        "handle": "source-failed",
+        "wired": true
+      },
+      {
+        "node": "addr",
+        "handle": "source",
+        "wired": true
+      },
+      {
+        "node": "addr2",
+        "handle": "source",
+        "wired": true
+      },
+      {
+        "node": "mx",
+        "handle": "source",
+        "wired": true
+      },
+      {
+        "node": "mx2",
+        "handle": "source",
+        "wired": true
+      },
+      {
+        "node": "ax",
+        "handle": "source-missing",
+        "wired": true
+      },
+      {
+        "node": "ar",
+        "handle": "source-i1",
+        "wired": true
+      },
+      {
+        "node": "ar2",
+        "handle": "source-fallback",
+        "wired": true
+      },
+      {
+        "node": "kb",
+        "handle": "source",
+        "wired": true
+      },
+      {
+        "node": "kb2",
+        "handle": "source-notfound",
+        "wired": true
+      },
+      {
+        "node": "sg",
+        "handle": "source",
+        "wired": true
+      },
+      {
+        "node": "sg2",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi! 👋 I'm <strong>Nova</strong>. This tour walks through the newest steps.</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Let's confirm your email first.</p>"
+      },
+      {
+        "by": "user",
+        "message": "Verified: ana@acme.io"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Verified: {work_email} ({work_email_verified}).</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Optional: verify a second address?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Not verified"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Skipped - backup verified: {backup_email_verified}.</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Where should we ship it?</p>"
+      },
+      {
+        "by": "user",
+        "message": "12 Marina Walk, Dubai, United Arab Emirates"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Shipping to {ship} | city {ship_city} | country {ship_country_code} | {ship_lat},{ship_lng}</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>And your billing address?</p>"
+      },
+      {
+        "by": "user",
+        "message": "1 Main St, Austin, 78701"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Billing: {bill_line1}, {bill_city} {bill_postal}</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>How did we do?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Ease of use: Poor · Speed: Fair · Support: Good"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Grid: {rating_grid}</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Which channels for each team?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Sales: Email · Support: Chat"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Channels: {team_channels}</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Tell me a bit about you - name, work email, company and team size.</p>"
+      },
+      {
+        "by": "user",
+        "message": "I am Ana"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Missing: {lead_missing}.</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>What can we help with today?</p>"
+      },
+      {
+        "by": "user",
+        "message": "pricing"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Routed to Sales ({intent}, {intent_confidence}).</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Anything else? (fallback check)</p>"
+      },
+      {
+        "by": "user",
+        "message": "nothing"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Fallback taken ({intent2}).</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Ask me anything about our policies.</p>"
+      },
+      {
+        "by": "user",
+        "message": "refunds?"
+      },
+      {
+        "by": "bot",
+        "message": "Yes."
+      },
+      {
+        "by": "bot",
+        "message": "<p>(answered: {kb_answer_found})</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Another question?</p>"
+      },
+      {
+        "by": "user",
+        "message": "xyzzy"
+      },
+      {
+        "by": "bot",
+        "message": "I couldn't find that in our help articles."
+      },
+      {
+        "by": "bot",
+        "message": "<p>(kb2 not found)</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Please sign to accept the quote.</p>"
+      },
+      {
+        "by": "user",
+        "message": "Signed: https://api.test/media/sig"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Signed by {signature_name} ({signature_method}) at {signature_at}.</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>And initial here (typed is fine).</p>"
+      },
+      {
+        "by": "user",
+        "message": "Signed: https://api.test/media/sig"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Initials: {initials_method} {initials_name}.</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>That's the batch-2 tour. Thanks!</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "otp",
+        "shape": "user-otp",
+        "verified": true,
+        "email": "ana@acme.io",
+        "channel": "email"
+      },
+      {
+        "id": "otp2",
+        "shape": "user-otp",
+        "verified": false,
+        "channel": "email",
+        "reason": "skipped"
+      },
+      {
+        "id": "addr",
+        "shape": "user-address",
+        "value": {
+          "formatted": "12 Marina Walk, Dubai, United Arab Emirates",
+          "line1": "12 Marina Walk",
+          "city": "Dubai",
+          "region": "",
+          "postal": "",
+          "country": "United Arab Emirates",
+          "countryCode": "",
+          "lat": null,
+          "lng": null
+        },
+        "display": "12 Marina Walk, Dubai, United Arab Emirates",
+        "source": "manual"
+      },
+      {
+        "id": "addr2",
+        "shape": "user-address",
+        "value": {
+          "formatted": "1 Main St, Austin, 78701",
+          "line1": "1 Main St",
+          "city": "Austin",
+          "region": "",
+          "postal": "78701",
+          "country": "",
+          "countryCode": "",
+          "lat": null,
+          "lng": null
+        },
+        "display": "1 Main St, Austin, 78701",
+        "source": "manual"
+      },
+      {
+        "id": "mx",
+        "shape": "user-matrix",
+        "value": {
+          "Ease of use": "Poor",
+          "Speed": "Fair",
+          "Support": "Good"
+        },
+        "rows": [
+          {
+            "id": "r0",
+            "text": "Ease of use",
+            "answer": "Poor"
+          },
+          {
+            "id": "r1",
+            "text": "Speed",
+            "answer": "Fair"
+          },
+          {
+            "id": "r2",
+            "text": "Support",
+            "answer": "Good"
+          }
+        ],
+        "mode": "single",
+        "display": "Ease of use: Poor · Speed: Fair · Support: Good"
+      },
+      {
+        "id": "mx2",
+        "shape": "user-matrix",
+        "value": {
+          "Sales": [
+            "Email"
+          ],
+          "Support": [
+            "Chat"
+          ]
+        },
+        "rows": [
+          {
+            "id": "r0",
+            "text": "Sales",
+            "answer": [
+              "Email"
+            ]
+          },
+          {
+            "id": "r1",
+            "text": "Support",
+            "answer": [
+              "Chat"
+            ]
+          }
+        ],
+        "mode": "multiple",
+        "display": "Sales: Email · Support: Chat"
+      },
+      {
+        "id": "ax",
+        "shape": "user-ai-extract",
+        "asked": true,
+        "input": "I am Ana",
+        "values": {
+          "name": "Ana"
+        },
+        "missing": [
+          "email"
+        ],
+        "ok": false
+      },
+      {
+        "id": "ar",
+        "shape": "user-ai-route",
+        "asked": true,
+        "input": "pricing",
+        "intentId": "i1",
+        "intent": "Sales",
+        "confidence": 0.88,
+        "fallback": false
+      },
+      {
+        "id": "ar2",
+        "shape": "user-ai-route",
+        "asked": true,
+        "input": "nothing",
+        "intentId": null,
+        "intent": null,
+        "confidence": 0,
+        "fallback": true,
+        "error": "no_match"
+      },
+      {
+        "id": "sg",
+        "shape": "user-signature",
+        "url": "https://api.test/media/sig",
+        "method": "typed",
+        "name": "Ana Lima",
+        "width": 192,
+        "height": 114
+      },
+      {
+        "id": "sg2",
+        "shape": "user-signature",
+        "url": "https://api.test/media/sig",
+        "method": "typed",
+        "name": "AL",
+        "width": 96,
+        "height": 114
+      }
+    ],
+    "variables": [
+      {
+        "key": "work_email",
+        "value": "ana@acme.io",
+        "nodeId": "otp"
+      },
+      {
+        "key": "work_email_verified",
+        "value": true,
+        "nodeId": "column_mapped_work_email_verified"
+      },
+      {
+        "key": "backup_email",
+        "value": null,
+        "nodeId": "otp2"
+      },
+      {
+        "key": "backup_email_verified",
+        "value": false,
+        "nodeId": "column_mapped_backup_email_verified"
+      },
+      {
+        "key": "ship",
+        "value": "12 Marina Walk, Dubai, United Arab Emirates",
+        "nodeId": "addr"
+      },
+      {
+        "key": "ship_line1",
+        "value": "12 Marina Walk",
+        "nodeId": "column_mapped_ship_line1"
+      },
+      {
+        "key": "ship_city",
+        "value": "Dubai",
+        "nodeId": "column_mapped_ship_city"
+      },
+      {
+        "key": "ship_country",
+        "value": "United Arab Emirates",
+        "nodeId": "column_mapped_ship_country"
+      },
+      {
+        "key": "bill",
+        "value": "1 Main St, Austin, 78701",
+        "nodeId": "addr2"
+      },
+      {
+        "key": "bill_line1",
+        "value": "1 Main St",
+        "nodeId": "column_mapped_bill_line1"
+      },
+      {
+        "key": "bill_city",
+        "value": "Austin",
+        "nodeId": "column_mapped_bill_city"
+      },
+      {
+        "key": "bill_postal",
+        "value": "78701",
+        "nodeId": "column_mapped_bill_postal"
+      },
+      {
+        "key": "rating_grid",
+        "value": {
+          "Ease of use": "Poor",
+          "Speed": "Fair",
+          "Support": "Good"
+        },
+        "nodeId": "mx"
+      },
+      {
+        "key": "team_channels",
+        "value": {
+          "Sales": [
+            "Email"
+          ],
+          "Support": [
+            "Chat"
+          ]
+        },
+        "nodeId": "mx2"
+      },
+      {
+        "key": "lead",
+        "value": {
+          "name": "Ana"
+        },
+        "nodeId": "ax"
+      },
+      {
+        "key": "name",
+        "value": "Ana",
+        "nodeId": "column_mapped_name"
+      },
+      {
+        "key": "lead_missing",
+        "value": [
+          "email"
+        ],
+        "nodeId": "column_mapped_lead_missing"
+      },
+      {
+        "key": "intent",
+        "value": "Sales",
+        "nodeId": "ar"
+      },
+      {
+        "key": "intent_confidence",
+        "value": 0.88,
+        "nodeId": "column_mapped_intent_confidence"
+      },
+      {
+        "key": "intent2",
+        "value": "",
+        "nodeId": "ar2"
+      },
+      {
+        "key": "intent2_confidence",
+        "value": 0,
+        "nodeId": "column_mapped_intent2_confidence"
+      },
+      {
+        "key": "kb_answer",
+        "value": "Yes.",
+        "nodeId": "kb"
+      },
+      {
+        "key": "kb_answer_found",
+        "value": true,
+        "nodeId": "column_mapped_kb_answer_found"
+      },
+      {
+        "key": "kb_answer_sources",
+        "value": [],
+        "nodeId": "column_mapped_kb_answer_sources"
+      },
+      {
+        "key": "kb2",
+        "value": "",
+        "nodeId": "kb2"
+      },
+      {
+        "key": "kb2_found",
+        "value": false,
+        "nodeId": "column_mapped_kb2_found"
+      },
+      {
+        "key": "kb2_sources",
+        "value": [],
+        "nodeId": "column_mapped_kb2_sources"
+      },
+      {
+        "key": "signature",
+        "value": "https://api.test/media/sig",
+        "nodeId": "sg"
+      },
+      {
+        "key": "signature_at",
+        "value": "2026-10-15T10:00:30.438Z",
+        "nodeId": "column_mapped_signature_at"
+      },
+      {
+        "key": "signature_method",
+        "value": "typed",
+        "nodeId": "column_mapped_signature_method"
+      },
+      {
+        "key": "signature_name",
+        "value": "Ana Lima",
+        "nodeId": "column_mapped_signature_name"
+      },
+      {
+        "key": "initials",
+        "value": "https://api.test/media/sig",
+        "nodeId": "sg2"
+      },
+      {
+        "key": "initials_at",
+        "value": "2026-10-15T10:00:33.630Z",
+        "nodeId": "column_mapped_initials_at"
+      },
+      {
+        "key": "initials_method",
+        "value": "typed",
+        "nodeId": "column_mapped_initials_method"
+      },
+      {
+        "key": "initials_name",
+        "value": "AL",
+        "nodeId": "column_mapped_initials_name"
+      }
+    ],
+    "errors": [],
+    "http": [
+      {
+        "path": "otp/send",
+        "body": {
+          "nodeId": "otp",
+          "sessionId": "qa-session",
+          "email": "ana@acme.io"
+        }
+      },
+      {
+        "path": "otp/verify",
+        "body": {
+          "nodeId": "otp",
+          "sessionId": "qa-session",
+          "code": "123456"
+        }
+      },
+      {
+        "path": "ai/extract",
+        "body": {
+          "nodeId": "ax",
+          "text": "I am Ana"
+        }
+      },
+      {
+        "path": "ai/route",
+        "body": {
+          "nodeId": "ar",
+          "text": "pricing"
+        }
+      },
+      {
+        "path": "ai/route",
+        "body": {
+          "nodeId": "ar2",
+          "text": "nothing"
+        }
+      },
+      {
+        "path": "kb/answer",
+        "body": {
+          "nodeId": "kb",
+          "question": "refunds?"
+        }
+      },
+      {
+        "path": "kb/answer",
+        "body": {
+          "nodeId": "kb2",
+          "question": "xyzzy"
+        }
+      },
+      {
+        "path": "media"
+      },
+      {
+        "path": "media"
+      }
+    ],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 36068
+    }
+  }
+}

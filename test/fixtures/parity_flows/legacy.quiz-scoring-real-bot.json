@@ -1,0 +1,1080 @@
+{
+  "id": "legacy.quiz-scoring-real-bot",
+  "title": "Real quiz bot: right answers leave by source-2 into a variable-node that ADDS to the score (quiz special case); wrong by source-1; the old-shape condition at the end is TRUE and has no source-0 edge, so the chat ends",
+  "covers": [
+    "quiz-node",
+    "variable-node",
+    "condition-node",
+    "two-choices-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"testing\"",
+  "flow": {
+    "nodes": [
+      {
+        "id": "quiz-1-welcome",
+        "position": {
+          "x": 120,
+          "y": 240
+        },
+        "data": {
+          "text": "You've completed module 1. Now it's time to test what you've learned!",
+          "image": "https://cdn.example.com/media/468e0011.gif"
+        },
+        "type": "welcome-node",
+        "width": 220,
+        "height": 231,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 23,
+              "dx": 8
+            },
+            "id": "0d4b44ff-efc6-40e8-bdcd-9afc45b2cf77"
+          }
+        }
+      },
+      {
+        "id": "quiz-2-two-choices",
+        "position": {
+          "x": 395.1799363673824,
+          "y": 536.5292942337804
+        },
+        "data": {
+          "choiceText1": "Yes! I'm ready!",
+          "choiceText2": "",
+          "disableSecondChoice": true,
+          "choicePrompt": "Let's begin?"
+        },
+        "type": "two-choices-node",
+        "width": 250,
+        "height": 159,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 160,
+              "dx": 8
+            },
+            "id": "8fb8314e-bf10-44de-80db-cebbb5aff0a0"
+          },
+          "source-2": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 180,
+              "dx": 8
+            },
+            "id": "f3cf1af9-437f-498a-b51e-2b8439569e7c"
+          }
+        },
+        "positionAbsolute": {
+          "x": 395.1799363673824,
+          "y": 536.5292942337804
+        }
+      },
+      {
+        "id": "quiz-3-quiz",
+        "position": {
+          "x": 581.25,
+          "y": 218.75
+        },
+        "data": {
+          "quizPrompt": "1 + 2 x 3=?",
+          "option1": "4",
+          "option2": "9",
+          "option3": "7",
+          "option4": "6",
+          "disableOption5": true,
+          "correctAnswer": "option3",
+          "answerVariable": "quiz"
+        },
+        "type": "quiz-node",
+        "width": 250,
+        "height": 265,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 165,
+              "dx": 8
+            },
+            "attrs": {
+              "text": {
+                "text": "Wrong",
+                "x": 67,
+                "fill": "red"
+              }
+            },
+            "id": "a26711bc-d0ec-49ba-bf58-a54ff60ab365"
+          },
+          "source-2": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 160,
+              "dx": 8
+            },
+            "attrs": {
+              "text": {
+                "text": "Right",
+                "x": 60,
+                "fill": "green"
+              }
+            },
+            "id": "aab78fba-4542-41c3-a94f-e1f74eb06f96"
+          }
+        },
+        "positionAbsolute": {
+          "x": 581.25,
+          "y": 218.75
+        }
+      },
+      {
+        "id": "quiz-4-variable",
+        "position": {
+          "x": 990,
+          "y": 540
+        },
+        "data": {
+          "type": "int",
+          "name": "score",
+          "value": "1",
+          "answerVariable": "string"
+        },
+        "type": "variable-node",
+        "width": 250,
+        "height": 234,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 100,
+              "dx": 8
+            },
+            "id": "ee541b57-b2e5-47ce-9324-6f51818c62ff"
+          }
+        }
+      },
+      {
+        "id": "quiz-5-quiz",
+        "position": {
+          "x": 1255.6079618204296,
+          "y": 213.91605168041752
+        },
+        "data": {
+          "quizPrompt": "Which of the following is NOT a cryptocurrency?",
+          "option1": "Ethereum",
+          "option2": "Litecoin",
+          "option3": "Usher Bucks",
+          "option4": "Bitcoin",
+          "option5": "Cardano",
+          "correctAnswer": "option3",
+          "answerVariable": "quiz"
+        },
+        "type": "quiz-node",
+        "width": 250,
+        "height": 308,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 165,
+              "dx": 8
+            },
+            "attrs": {
+              "text": {
+                "text": "Wrong",
+                "x": 67,
+                "fill": "red"
+              }
+            },
+            "id": "a26711bc-d0ec-49ba-bf58-a54ff60ab365"
+          },
+          "source-2": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 160,
+              "dx": 8
+            },
+            "attrs": {
+              "text": {
+                "text": "Right",
+                "x": 60,
+                "fill": "green"
+              }
+            },
+            "id": "aab78fba-4542-41c3-a94f-e1f74eb06f96"
+          }
+        },
+        "positionAbsolute": {
+          "x": 1255.6079618204296,
+          "y": 213.91605168041752
+        }
+      },
+      {
+        "id": "quiz-6-variable",
+        "position": {
+          "x": 1532,
+          "y": 540
+        },
+        "data": {
+          "type": "int",
+          "name": "score",
+          "value": "1"
+        },
+        "type": "variable-node",
+        "width": 250,
+        "height": 234,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 100,
+              "dx": 8
+            },
+            "id": "ee541b57-b2e5-47ce-9324-6f51818c62ff"
+          }
+        }
+      },
+      {
+        "id": "quiz-7-quiz",
+        "position": {
+          "x": 1800,
+          "y": 300
+        },
+        "data": {
+          "quizPrompt": "Who went to the space first?",
+          "option1": "Elon Musk",
+          "option2": "Jeff Bezos",
+          "option3": "Neil Armstrong",
+          "option4": "Bill Gates",
+          "option5": "Lance Armstrong",
+          "correctAnswer": "option3"
+        },
+        "type": "quiz-node",
+        "width": 250,
+        "height": 303,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 165,
+              "dx": 8
+            },
+            "attrs": {
+              "text": {
+                "text": "Wrong",
+                "x": 67,
+                "fill": "red"
+              }
+            },
+            "id": "a26711bc-d0ec-49ba-bf58-a54ff60ab365"
+          },
+          "source-2": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 160,
+              "dx": 8
+            },
+            "attrs": {
+              "text": {
+                "text": "Right",
+                "x": 60,
+                "fill": "green"
+              }
+            },
+            "id": "aab78fba-4542-41c3-a94f-e1f74eb06f96"
+          }
+        }
+      },
+      {
+        "id": "quiz-8-variable",
+        "position": {
+          "x": 2070,
+          "y": 570
+        },
+        "data": {
+          "type": "int",
+          "name": "score",
+          "value": "1"
+        },
+        "type": "variable-node",
+        "width": 250,
+        "height": 234,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 100,
+              "dx": 8
+            },
+            "id": "ee541b57-b2e5-47ce-9324-6f51818c62ff"
+          }
+        }
+      },
+      {
+        "id": "quiz-9-condition",
+        "position": {
+          "x": 2347,
+          "y": 400
+        },
+        "data": {
+          "varName": "score",
+          "condition": "=",
+          "value": "3"
+        },
+        "type": "condition-node",
+        "width": 250,
+        "height": 167,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 10,
+              "dx": 8
+            },
+            "attrs": {
+              "text": {
+                "text": "True",
+                "x": 55,
+                "fill": "green"
+              }
+            },
+            "id": "fe1a2320-59fc-44c7-820d-1a91ac67d285"
+          },
+          "source-2": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 10,
+              "dx": 8
+            },
+            "attrs": {
+              "text": {
+                "text": "False",
+                "x": 60,
+                "fill": "red"
+              }
+            },
+            "id": "ec867f8e-ccac-4c8e-99ae-199ba6b54dc4"
+          }
+        }
+      },
+      {
+        "id": "quiz-10-message",
+        "position": {
+          "x": 2676,
+          "y": 310
+        },
+        "data": {
+          "text": "Awesome!"
+        },
+        "type": "message-node",
+        "width": 270,
+        "height": 87,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 33,
+              "dx": 8
+            },
+            "id": "b02f3715-c9e1-4240-bc7a-526ea4ad553a"
+          }
+        }
+      },
+      {
+        "id": "quiz-11-message",
+        "position": {
+          "x": 2676,
+          "y": 522
+        },
+        "data": {
+          "text": "You need to improve"
+        },
+        "type": "message-node",
+        "width": 270,
+        "height": 87,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 33,
+              "dx": 8
+            },
+            "id": "b02f3715-c9e1-4240-bc7a-526ea4ad553a"
+          }
+        }
+      },
+      {
+        "id": "quiz-12-image",
+        "position": {
+          "x": 2973,
+          "y": 540
+        },
+        "data": {
+          "image": "https://cdn.example.com/media/fea97891.gif"
+        },
+        "type": "image-node",
+        "width": 270,
+        "height": 192,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 50,
+              "dx": 8
+            },
+            "id": "e0702656-7706-4607-88a1-d6896354cad9"
+          }
+        }
+      },
+      {
+        "id": "quiz-13-image",
+        "position": {
+          "x": 2973,
+          "y": 240
+        },
+        "data": {
+          "image": "https://cdn.example.com/media/a9cdf8b5.gif"
+        },
+        "type": "image-node",
+        "width": 270,
+        "height": 267,
+        "selected": false,
+        "dragging": false,
+        "ports": {
+          "source-1": {
+            "group": "out",
+            "args": {
+              "x": 12,
+              "dy": 50,
+              "dx": 8
+            },
+            "id": "e0702656-7706-4607-88a1-d6896354cad9"
+          }
+        }
+      },
+      {
+        "id": "quiz-14-calendar",
+        "position": {
+          "x": 210.46875,
+          "y": -82.5
+        },
+        "data": {
+          "calendarPrompt": "",
+          "timeZone": "UTC",
+          "showPastDates": true,
+          "excludeDays": [
+            ""
+          ],
+          "excludeDates": [
+            ""
+          ],
+          "showTimeSelection": false,
+          "weeklyHours": [
+            {
+              "day": 0,
+              "dayName": "Sunday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 1,
+              "dayName": "Monday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 2,
+              "dayName": "Tuesday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 3,
+              "dayName": "Wednesday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 4,
+              "dayName": "Thursday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 5,
+              "dayName": "Friday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 6,
+              "dayName": "Saturday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            }
+          ],
+          "bookings": [
+            {}
+          ],
+          "answerVariable": "calendar_answer"
+        },
+        "type": "calendar-node",
+        "width": 250,
+        "height": 87,
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "quiz-15-business-hours",
+        "position": {
+          "x": 719.21875,
+          "y": -87.5
+        },
+        "data": {
+          "timezone": "Africa/Accra",
+          "excludeDays": [
+            ""
+          ],
+          "excludeDates": [
+            ""
+          ],
+          "weeklyHours": [
+            {
+              "day": 0,
+              "dayName": "Sunday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 1,
+              "dayName": "Monday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 2,
+              "dayName": "Tuesday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 3,
+              "dayName": "Wednesday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 4,
+              "dayName": "Thursday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 5,
+              "dayName": "Friday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 6,
+              "dayName": "Saturday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            }
+          ]
+        },
+        "type": "business-hours-node",
+        "width": 250,
+        "height": 181,
+        "selected": false,
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "animated": true,
+        "source": "quiz-1-welcome",
+        "sourceHandle": "source-1",
+        "target": "quiz-2-two-choices",
+        "targetHandle": "971f31b7-15f7-4542-8a94-2fbad1a265bf",
+        "id": "quiz-edge-1",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-2-two-choices",
+        "sourceHandle": "source-1",
+        "target": "quiz-3-quiz",
+        "targetHandle": "637f3ced-9a22-42a8-b2c1-3d19dba829c5",
+        "id": "quiz-edge-2",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-3-quiz",
+        "sourceHandle": "source-2",
+        "target": "quiz-4-variable",
+        "targetHandle": "70ec6012-8806-454b-b7ce-3b61a7a81aee",
+        "id": "quiz-edge-3",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-4-variable",
+        "sourceHandle": "source-1",
+        "target": "quiz-5-quiz",
+        "targetHandle": "637f3ced-9a22-42a8-b2c1-3d19dba829c5",
+        "id": "quiz-edge-4",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-3-quiz",
+        "sourceHandle": "source-1",
+        "target": "quiz-5-quiz",
+        "targetHandle": "637f3ced-9a22-42a8-b2c1-3d19dba829c5",
+        "id": "quiz-edge-5",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-5-quiz",
+        "sourceHandle": "source-2",
+        "target": "quiz-6-variable",
+        "targetHandle": "70ec6012-8806-454b-b7ce-3b61a7a81aee",
+        "id": "quiz-edge-6",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-6-variable",
+        "sourceHandle": "source-1",
+        "target": "quiz-7-quiz",
+        "targetHandle": "637f3ced-9a22-42a8-b2c1-3d19dba829c5",
+        "id": "quiz-edge-7",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-5-quiz",
+        "sourceHandle": "source-1",
+        "target": "quiz-7-quiz",
+        "targetHandle": "637f3ced-9a22-42a8-b2c1-3d19dba829c5",
+        "id": "quiz-edge-8",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-7-quiz",
+        "sourceHandle": "source-2",
+        "target": "quiz-8-variable",
+        "targetHandle": "70ec6012-8806-454b-b7ce-3b61a7a81aee",
+        "id": "quiz-edge-9",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-7-quiz",
+        "sourceHandle": "source-1",
+        "target": "quiz-9-condition",
+        "targetHandle": "6ead02ec-341d-424c-bcf5-92d0284c96a0",
+        "id": "quiz-edge-10",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-8-variable",
+        "sourceHandle": "source-1",
+        "target": "quiz-9-condition",
+        "targetHandle": "6ead02ec-341d-424c-bcf5-92d0284c96a0",
+        "id": "quiz-edge-11",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-9-condition",
+        "sourceHandle": "source-2",
+        "target": "quiz-11-message",
+        "targetHandle": "bd650dbd-f829-4a0b-851b-8c41bd0b2861",
+        "id": "quiz-edge-12",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-9-condition",
+        "sourceHandle": "source-1",
+        "target": "quiz-10-message",
+        "targetHandle": "bd650dbd-f829-4a0b-851b-8c41bd0b2861",
+        "id": "quiz-edge-13",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-11-message",
+        "sourceHandle": "source-1",
+        "target": "quiz-12-image",
+        "targetHandle": "b84c2a34-d793-47c4-b814-c3559a6e81ba",
+        "id": "quiz-edge-14",
+        "type": "customedge",
+        "selected": false
+      },
+      {
+        "animated": true,
+        "source": "quiz-10-message",
+        "sourceHandle": "source-1",
+        "target": "quiz-13-image",
+        "targetHandle": "b84c2a34-d793-47c4-b814-c3559a6e81ba",
+        "id": "quiz-edge-15",
+        "type": "customedge",
+        "selected": false
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "do": "choose",
+      "index": 0
+    },
+    {
+      "do": "choose",
+      "index": 2
+    },
+    {
+      "do": "choose",
+      "index": 0
+    },
+    {
+      "do": "choose",
+      "index": 2
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "quiz-1-welcome",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "quiz-2-two-choices",
+        "type": "two-choices-node",
+        "via": "edge:source-1",
+        "t": 1328
+      },
+      {
+        "node": "quiz-3-quiz",
+        "type": "quiz-node",
+        "via": "port:source-1",
+        "t": 3146
+      },
+      {
+        "node": "quiz-5-quiz",
+        "type": "quiz-node",
+        "via": "jump",
+        "t": 3846
+      },
+      {
+        "node": "quiz-7-quiz",
+        "type": "quiz-node",
+        "via": "port:source-1",
+        "t": 4546
+      },
+      {
+        "node": "quiz-9-condition",
+        "type": "condition-node",
+        "via": "jump",
+        "t": 5246
+      }
+    ],
+    "shown": [
+      {
+        "node": "quiz-1-welcome",
+        "t": 1328
+      },
+      {
+        "node": "quiz-2-two-choices",
+        "t": 3146
+      },
+      {
+        "node": "quiz-3-quiz",
+        "t": 3846
+      },
+      {
+        "node": "quiz-5-quiz",
+        "t": 4546
+      },
+      {
+        "node": "quiz-7-quiz",
+        "t": 5246
+      }
+    ],
+    "drawn": [
+      {
+        "node": "quiz-1-welcome",
+        "text": "You've completed module 1. Now it's time to test what you've learned!"
+      },
+      {
+        "node": "quiz-2-two-choices",
+        "text": "Let's begin? Yes! I'm ready!"
+      },
+      {
+        "node": "quiz-3-quiz",
+        "text": "1 + 2 x 3=? 4 9 7 6"
+      },
+      {
+        "node": "quiz-5-quiz",
+        "text": "Which of the following is NOT a cryptocurrency? Ethereum Litecoin Usher Bucks Bitcoin Cardano"
+      },
+      {
+        "node": "quiz-7-quiz",
+        "text": "Who went to the space first? Elon Musk Jeff Bezos Neil Armstrong Bill Gates Lance Armstrong"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "quiz-1-welcome",
+        "html": "You've completed module 1. Now it's time to test what you've learned!",
+        "plain": "You've completed module 1. Now it's time to test what you've learned!"
+      },
+      {
+        "node": "quiz-3-quiz",
+        "html": "1 + 2 x 3=?",
+        "plain": "1 + 2 x 3=?"
+      },
+      {
+        "node": "quiz-5-quiz",
+        "html": "Which of the following is NOT a cryptocurrency?",
+        "plain": "Which of the following is NOT a cryptocurrency?"
+      },
+      {
+        "node": "quiz-7-quiz",
+        "html": "Who went to the space first?",
+        "plain": "Who went to the space first?"
+      }
+    ],
+    "ports": [
+      {
+        "node": "quiz-2-two-choices",
+        "handle": "source-1",
+        "wired": true
+      },
+      {
+        "node": "quiz-5-quiz",
+        "handle": "source-1",
+        "wired": true
+      },
+      {
+        "node": "quiz-9-condition",
+        "handle": "source-0",
+        "wired": false
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "You've completed module 1. Now it's time to test what you've learned!"
+      },
+      {
+        "by": "bot",
+        "message": "Let's begin?"
+      },
+      {
+        "by": "user",
+        "message": "Yes! I'm ready!"
+      },
+      {
+        "by": "bot",
+        "message": "1 + 2 x 3=?"
+      },
+      {
+        "by": "user",
+        "message": "7"
+      },
+      {
+        "by": "bot",
+        "message": "Which of the following is NOT a cryptocurrency?"
+      },
+      {
+        "by": "user",
+        "message": "Ethereum"
+      },
+      {
+        "by": "bot",
+        "message": "Who went to the space first?"
+      },
+      {
+        "by": "user",
+        "message": "Neil Armstrong"
+      }
+    ],
+    "answers": [
+      {
+        "id": "quiz-2-two-choices",
+        "shape": "user-selected-choice",
+        "selectedChoice": "Yes! I'm ready!"
+      },
+      {
+        "id": "quiz-3-quiz",
+        "shape": "user-selected-quiz-option",
+        "selectedOption": "7",
+        "correctAnswer": "option3",
+        "correct": true
+      },
+      {
+        "id": "quiz-5-quiz",
+        "shape": "user-selected-quiz-option",
+        "selectedOption": "Ethereum",
+        "correctAnswer": "option3",
+        "correct": false
+      },
+      {
+        "id": "quiz-7-quiz",
+        "shape": "user-selected-quiz-option",
+        "selectedOption": "Neil Armstrong",
+        "correctAnswer": "option3",
+        "correct": true
+      }
+    ],
+    "variables": [],
+    "flowVariables": {
+      "score": 2
+    },
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 5246
+    }
+  }
+}

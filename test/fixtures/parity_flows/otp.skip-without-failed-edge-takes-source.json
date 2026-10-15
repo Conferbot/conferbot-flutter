@@ -1,0 +1,202 @@
+{
+  "id": "otp.skip-without-failed-edge-takes-source",
+  "title": "otp-node skipped (allowSkip) when only \"source\" is wired: the widget falls back to source - the verified path (goPort fallback)",
+  "covers": [
+    "otp-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"QA - All Nodes\"",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "otp2",
+        "type": "otp-node",
+        "data": {
+          "questionText": "<p>Optional: verify a second address?</p>",
+          "channel": "email",
+          "emailSource": "ask",
+          "maxAttempts": 5,
+          "allowSkip": true,
+          "skipLabel": "Skip for now",
+          "answerVariable": "backup_email"
+        },
+        "position": {
+          "x": 1520,
+          "y": 120
+        }
+      },
+      {
+        "id": "otp2Ok",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Backup verified too.</p>"
+        },
+        "position": {
+          "x": 80,
+          "y": 540
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-otp2",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "otp2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-otp2-source-otp2Ok",
+        "source": "otp2",
+        "sourceHandle": "source",
+        "target": "otp2Ok",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "otp2",
+      "do": "otpSkip"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "otp2",
+        "type": "otp-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "otp2Ok",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1554
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "otp2",
+        "t": 1504
+      },
+      {
+        "node": "otp2Ok",
+        "t": 2294
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "otp2",
+        "text": "Optional: verify a second address? Not verified Skipped"
+      },
+      {
+        "node": "otp2Ok",
+        "text": "Backup verified too."
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "otp2",
+        "html": "<p>Optional: verify a second address?</p>",
+        "plain": "Optional: verify a second address?"
+      },
+      {
+        "node": "otp2Ok",
+        "html": "<p>Backup verified too.</p>",
+        "plain": "Backup verified too."
+      }
+    ],
+    "ports": [
+      {
+        "node": "otp2",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Optional: verify a second address?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Not verified"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Backup verified too.</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "otp2",
+        "shape": "user-otp",
+        "verified": false,
+        "channel": "email",
+        "reason": "skipped"
+      }
+    ],
+    "variables": [
+      {
+        "key": "backup_email",
+        "value": null,
+        "nodeId": "otp2"
+      },
+      {
+        "key": "backup_email_verified",
+        "value": false,
+        "nodeId": "column_mapped_backup_email_verified"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2294
+    }
+  }
+}

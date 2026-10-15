@@ -1,0 +1,143 @@
+{
+  "id": "delay.waits-then-first-edge",
+  "title": "delay-node: shows nothing, waits data.delay seconds, then the first edge",
+  "covers": [
+    "delay-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "d",
+        "type": "delay-node",
+        "data": {
+          "delay": 3
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "later",
+        "type": "message-node",
+        "data": {
+          "text": "<p>later</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-d",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "d",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-d-source-later",
+        "source": "d",
+        "sourceHandle": "source",
+        "target": "later",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "d",
+        "type": "delay-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "later",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 3700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "later",
+        "t": 4400
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "later",
+        "text": "later"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "later",
+        "html": "<p>later</p>",
+        "plain": "later"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>later</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 4400
+    }
+  }
+}

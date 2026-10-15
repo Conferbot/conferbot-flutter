@@ -1,0 +1,216 @@
+{
+  "id": "interpolation.prompts-and-options",
+  "title": "Prompts and option labels are filled too (n-choices choicePrompt and choiceText)",
+  "covers": [
+    "n-choices-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q",
+        "type": "ask-custom-question-node",
+        "data": {
+          "questionText": "<p>?</p>",
+          "answerVariable": "plan"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "c",
+        "type": "n-choices-node",
+        "data": {
+          "choicePrompt": "<p>Upgrade {plan}?</p>",
+          "choices": [
+            {
+              "id": "1",
+              "choiceText": "Yes, {plan}"
+            }
+          ],
+          "answerVariable": "ok"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q-source-c",
+        "source": "q",
+        "sourceHandle": "source",
+        "target": "c",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q",
+      "do": "text",
+      "value": "Pro"
+    },
+    {
+      "at": "c",
+      "do": "choose",
+      "id": "1"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q",
+        "type": "ask-custom-question-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "c",
+        "type": "n-choices-node",
+        "via": "edge:source",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q",
+        "t": 1350
+      },
+      {
+        "node": "c",
+        "t": 2050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q",
+        "text": "?"
+      },
+      {
+        "node": "c",
+        "text": "Upgrade Pro? Yes, Pro"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q",
+        "html": "<p>?</p>",
+        "plain": "?"
+      },
+      {
+        "node": "c",
+        "html": "<p>Upgrade Pro?</p>",
+        "plain": "Upgrade Pro?"
+      }
+    ],
+    "ports": [
+      {
+        "node": "c",
+        "handle": "source-1",
+        "wired": false
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Pro"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Upgrade {plan}?</p>"
+      },
+      {
+        "by": "user",
+        "message": "Yes, {plan}"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q",
+        "shape": "user-ask-custom-question-response",
+        "text": "Pro"
+      },
+      {
+        "id": "c",
+        "shape": "user-selected-choice",
+        "selectedChoice": "Yes, {plan}"
+      }
+    ],
+    "variables": [
+      {
+        "key": "plan",
+        "value": "Pro",
+        "nodeId": "q"
+      },
+      {
+        "key": "ok",
+        "value": "Yes, {plan}",
+        "nodeId": "c"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2050
+    }
+  }
+}

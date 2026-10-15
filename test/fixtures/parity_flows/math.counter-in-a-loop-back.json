@@ -1,0 +1,213 @@
+{
+  "id": "math.counter-in-a-loop-back",
+  "title": "math-operation-node saving to its own input counts up without duplicating the variable (\"n = n + 1\" twice)",
+  "covers": [
+    "math-operation-node",
+    "variable-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "v",
+        "type": "variable-node",
+        "data": {
+          "name": "n",
+          "value": "0",
+          "isNumber": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "i1",
+        "type": "math-operation-node",
+        "data": {
+          "leftValue": "n",
+          "operator": "+",
+          "rightValue": "1",
+          "answerVariable": "n"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "i2",
+        "type": "math-operation-node",
+        "data": {
+          "leftValue": "n",
+          "operator": "+",
+          "rightValue": "1",
+          "answerVariable": "n"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>n={n}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-v",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "v",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-v-source-i1",
+        "source": "v",
+        "sourceHandle": "source",
+        "target": "i1",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-i1-source-i2",
+        "source": "i1",
+        "sourceHandle": "source",
+        "target": "i2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-i2-source-m",
+        "source": "i2",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "v",
+        "type": "variable-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "i1",
+        "type": "math-operation-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "i2",
+        "type": "math-operation-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "t": 1400
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "m",
+        "text": "n=2"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "m",
+        "html": "<p>n=2</p>",
+        "plain": "n=2"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>n={n}</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "n",
+        "value": 2,
+        "nodeId": "v"
+      }
+    ],
+    "flowVariables": {
+      "n": 0
+    },
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1400
+    }
+  }
+}

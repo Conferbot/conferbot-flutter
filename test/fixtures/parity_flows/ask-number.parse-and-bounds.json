@@ -1,0 +1,344 @@
+{
+  "id": "ask-number.parse-and-bounds",
+  "title": "ask-number-node: \"1,200\" is 1200 (saved as a number), \"3,5\" is 3.5; enableConditions min/max refuse out-of-range with invalidNumberResponse ({min}/{max} filled)",
+  "covers": [
+    "ask-number-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q",
+        "type": "ask-number-node",
+        "data": {
+          "questionText": "<p>How many?</p>",
+          "enableConditions": {
+            "format": "",
+            "prefix": "",
+            "minVal": "",
+            "maxVal": ""
+          },
+          "answerVariable": "n1"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q2",
+        "type": "ask-number-node",
+        "data": {
+          "questionText": "<p>Budget?</p>",
+          "enableConditions": {
+            "minVal": "10",
+            "maxVal": "100"
+          },
+          "invalidNumberResponse": "<p>Between {min} and {max} please</p>",
+          "answerVariable": "n2"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q3",
+        "type": "ask-number-node",
+        "data": {
+          "questionText": "<p>Rate?</p>",
+          "enableConditions": {
+            "minVal": "",
+            "maxVal": ""
+          },
+          "answerVariable": "n3"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{n1} {n2} {n3}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q-source-q2",
+        "source": "q",
+        "sourceHandle": "source",
+        "target": "q2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q2-source-q3",
+        "source": "q2",
+        "sourceHandle": "source",
+        "target": "q3",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q3-source-m",
+        "source": "q3",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q",
+      "do": "text",
+      "value": "abc"
+    },
+    {
+      "at": "q",
+      "do": "text",
+      "value": "1,200"
+    },
+    {
+      "at": "q2",
+      "do": "text",
+      "value": "500"
+    },
+    {
+      "at": "q2",
+      "do": "text",
+      "value": "42"
+    },
+    {
+      "at": "q3",
+      "do": "text",
+      "value": "3,5"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q",
+        "type": "ask-number-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "q2",
+        "type": "ask-number-node",
+        "via": "edge:source",
+        "t": 2054
+      },
+      {
+        "node": "q3",
+        "type": "ask-number-node",
+        "via": "edge:source",
+        "t": 3454
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 4154
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q",
+        "t": 1354
+      },
+      {
+        "node": "q2",
+        "t": 2754
+      },
+      {
+        "node": "q3",
+        "t": 4154
+      },
+      {
+        "node": "m",
+        "t": 4854
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q",
+        "text": "How many? Please enter a number, like 42"
+      },
+      {
+        "node": "q2",
+        "text": "Budget? Between 10 and 100 please"
+      },
+      {
+        "node": "q3",
+        "text": "Rate?"
+      },
+      {
+        "node": "m",
+        "text": "1200 42 3.5"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q",
+        "html": "<p>How many?</p>",
+        "plain": "How many?"
+      },
+      {
+        "node": "q2",
+        "html": "<p>Budget?</p>",
+        "plain": "Budget?"
+      },
+      {
+        "node": "q3",
+        "html": "<p>Rate?</p>",
+        "plain": "Rate?"
+      },
+      {
+        "node": "m",
+        "html": "<p>1200 42 3.5</p>",
+        "plain": "1200 42 3.5"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>How many?</p>"
+      },
+      {
+        "by": "user",
+        "message": "1,200"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Budget?</p>"
+      },
+      {
+        "by": "user",
+        "message": "42"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Rate?</p>"
+      },
+      {
+        "by": "user",
+        "message": "3,5"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{n1} {n2} {n3}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q",
+        "shape": "user-ask-number-response",
+        "text": "1200"
+      },
+      {
+        "id": "q2",
+        "shape": "user-ask-number-response",
+        "text": "42"
+      },
+      {
+        "id": "q3",
+        "shape": "user-ask-number-response",
+        "text": "3.5"
+      }
+    ],
+    "variables": [
+      {
+        "key": "n1",
+        "value": 1200,
+        "nodeId": "q"
+      },
+      {
+        "key": "n2",
+        "value": 42,
+        "nodeId": "q2"
+      },
+      {
+        "key": "n3",
+        "value": 3.5,
+        "nodeId": "q3"
+      }
+    ],
+    "errors": [
+      {
+        "node": "q",
+        "message": "Please enter a number, like 42"
+      },
+      {
+        "node": "q2",
+        "message": "Between 10 and 100 please"
+      }
+    ],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 4854
+    }
+  }
+}

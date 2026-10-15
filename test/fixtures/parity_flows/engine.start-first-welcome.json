@@ -1,0 +1,148 @@
+{
+  "id": "engine.start-first-welcome",
+  "title": "The chat starts at the first welcome-node in nodes[], wherever it is; a second one is never the start",
+  "covers": [
+    "welcome-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "m0",
+        "type": "message-node",
+        "data": {
+          "text": "<p>not the start</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Start here</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "w2",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Other</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m1",
+        "type": "message-node",
+        "data": {
+          "text": "<p>after</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-m1",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "m1",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-m0-source-w2",
+        "source": "m0",
+        "sourceHandle": "source",
+        "target": "w2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "m1",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "m1",
+        "t": 1350
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Start here"
+      },
+      {
+        "node": "m1",
+        "text": "after"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Start here</p>",
+        "plain": "Start here"
+      },
+      {
+        "node": "m1",
+        "html": "<p>after</p>",
+        "plain": "after"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Start here</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>after</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1350
+    }
+  }
+}

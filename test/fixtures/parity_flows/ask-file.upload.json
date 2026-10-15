@@ -1,0 +1,201 @@
+{
+  "id": "ask-file.upload",
+  "title": "ask-file-node: the picked file is uploaded (POST /api/v1/bot/:id/media) and its URL saved",
+  "covers": [
+    "ask-file-node"
+  ],
+  "provenance": "executed",
+  "server": {
+    "http": {
+      "media": {
+        "status": 200,
+        "body": {
+          "url": "https://api.test/media/abc123"
+        }
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q",
+        "type": "ask-file-node",
+        "data": {
+          "questionText": "<p>File please</p>",
+          "answerVariable": "file"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{file}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q-source-m",
+        "source": "q",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q",
+      "do": "file",
+      "name": "cv.pdf",
+      "size": 20000,
+      "type": "application/pdf"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q",
+        "type": "ask-file-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1366
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q",
+        "t": 1366
+      },
+      {
+        "node": "m",
+        "t": 2066
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q",
+        "text": "File please Choose a file or drop it here Any file · up to 5 MB"
+      },
+      {
+        "node": "m",
+        "text": "https://api.test/media/abc123"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q",
+        "html": "<p>File please</p>",
+        "plain": "File please"
+      },
+      {
+        "node": "m",
+        "html": "<p>https://api.test/media/abc123</p>",
+        "plain": "https://api.test/media/abc123"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>File please</p>"
+      },
+      {
+        "by": "user",
+        "message": "https://api.test/media/abc123"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{file}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q",
+        "shape": "user-ask-file-response",
+        "fileName": "cv.pdf",
+        "url": "https://api.test/media/abc123"
+      }
+    ],
+    "variables": [
+      {
+        "key": "file",
+        "value": "https://api.test/media/abc123",
+        "nodeId": "q"
+      }
+    ],
+    "errors": [],
+    "http": [
+      {
+        "path": "media"
+      }
+    ],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2066
+    }
+  }
+}

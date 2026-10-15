@@ -1,0 +1,288 @@
+{
+  "id": "calendar.with-slots",
+  "title": "calendar-node with showTimeSelection: weekly hours cut into slotDuration slots; the saved value names both clocks",
+  "covers": [
+    "calendar-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "cal",
+        "type": "calendar-node",
+        "data": {
+          "calendarPrompt": "<p>Book a call</p>",
+          "timeZone": "Asia/Dubai",
+          "showPastDates": false,
+          "excludeDays": [
+            ""
+          ],
+          "excludeDates": [
+            ""
+          ],
+          "showTimeSelection": true,
+          "slotDuration": 30,
+          "bufferMinutes": 0,
+          "weeklyHours": [
+            {
+              "day": 0,
+              "dayName": "Sunday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "11:00"
+                }
+              ]
+            },
+            {
+              "day": 1,
+              "dayName": "Monday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "11:00"
+                }
+              ]
+            },
+            {
+              "day": 2,
+              "dayName": "Tuesday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "11:00"
+                }
+              ]
+            },
+            {
+              "day": 3,
+              "dayName": "Wednesday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "11:00"
+                }
+              ]
+            },
+            {
+              "day": 4,
+              "dayName": "Thursday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "11:00"
+                }
+              ]
+            },
+            {
+              "day": 5,
+              "dayName": "Friday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "11:00"
+                }
+              ]
+            },
+            {
+              "day": 6,
+              "dayName": "Saturday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "11:00"
+                }
+              ]
+            }
+          ],
+          "answerVariable": "meeting"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{meeting}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-cal",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "cal",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-cal-source-m",
+        "source": "cal",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "cal",
+      "do": "calendar",
+      "date": "2026-10-21",
+      "slot": "09:30"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "cal",
+        "type": "calendar-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1766
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "cal",
+        "t": 1366
+      },
+      {
+        "node": "m",
+        "t": 2466
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "cal",
+        "text": "Book a call October 2026 Sun Mon Tue Wed Thu Fri Sat 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 Please choose a time slot (shown in your local time): 05:00 - 05:30 05:30 - 06:00 06:00 - 06:30 06:30 - 07:00"
+      },
+      {
+        "node": "m",
+        "text": "Wednesday, October 21, 2026 05:30 - 06:00 (Visitor's local time) / 09:30 - 10:00 (Bot's time)"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "cal",
+        "html": "<p>Book a call</p>",
+        "plain": "Book a call"
+      },
+      {
+        "node": "m",
+        "html": "<p>Wednesday, October 21, 2026 05:30 - 06:00 (Visitor&#39;s local time) / 09:30 - 10:00 (Bot&#39;s time)</p>",
+        "plain": "Wednesday, October 21, 2026 05:30 - 06:00 (Visitor's local time) / 09:30 - 10:00 (Bot's time)"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Book a call</p>"
+      },
+      {
+        "by": "user",
+        "message": "Wednesday, October 21, 2026"
+      },
+      {
+        "by": "user",
+        "message": "Selected time: 09:30 - 10:00"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{meeting}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "cal",
+        "shape": "user-calendar-selection",
+        "data": {
+          "date": "Wednesday, October 21, 2026",
+          "selectedDate": "2026-10-21T08:00:00.000Z",
+          "botTimeZone": "Asia/Dubai",
+          "visitorTimeZone": "UTC",
+          "showTimeSelection": true,
+          "timeSlotSelected": "09:30 - 10:00",
+          "visitorTime": "05:30 - 06:00"
+        }
+      }
+    ],
+    "variables": [
+      {
+        "key": "meeting",
+        "value": "Wednesday, October 21, 2026 05:30 - 06:00 (Visitor's local time) / 09:30 - 10:00 (Bot's time)",
+        "nodeId": "cal"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "calendar-slot-selection-record",
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2466
+    }
+  }
+}

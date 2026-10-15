@@ -1,0 +1,107 @@
+{
+  "id": "engine.unknown-type-without-edge-ends",
+  "title": "An unknown step with no edge out ends the chat (real: ask-custom-node)",
+  "covers": [
+    "unknown"
+  ],
+  "provenance": "executed",
+  "source": "real node shape (anonymised)",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "x",
+        "type": "ask-custom-node",
+        "data": {
+          "questionText": "<p>Timber juniperj viol lumen:</p>",
+          "answerVariable": "var_aa9db3"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-x",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "x",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "x",
+        "type": "ask-custom-node",
+        "via": "edge:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [
+      {
+        "node": "x",
+        "type": "ask-custom-node"
+      }
+    ],
+    "end": {
+      "ended": true,
+      "t": 700
+    }
+  }
+}

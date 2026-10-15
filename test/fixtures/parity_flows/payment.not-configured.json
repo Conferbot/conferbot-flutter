@@ -1,0 +1,254 @@
+{
+  "id": "payment.not-configured",
+  "title": "payment-node: pay/start answers not_configured -> the card says so and the step fails (source-failed) after 1600 ms",
+  "covers": [
+    "payment-node"
+  ],
+  "provenance": "executed",
+  "server": {
+    "http": {
+      "pay/start": {
+        "status": 400,
+        "body": {
+          "code": "not_configured"
+        }
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "pay",
+        "type": "payment-node",
+        "data": {
+          "questionText": "<p>You're almost done - complete the payment below.</p>",
+          "credentialId": "cred",
+          "amountMode": "fixed",
+          "amount": "25",
+          "currency": "usd",
+          "productName": "Setup fee",
+          "buttonLabel": "Pay now",
+          "timeoutMinutes": 15,
+          "answerVariable": "payment"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ok",
+        "type": "message-node",
+        "data": {
+          "text": "<p>paid</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "fail",
+        "type": "message-node",
+        "data": {
+          "text": "<p>failed path</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-pay",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "pay",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-pay-source-ok",
+        "source": "pay",
+        "sourceHandle": "source",
+        "target": "ok",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-pay-source-failed-fail",
+        "source": "pay",
+        "sourceHandle": "source-failed",
+        "target": "fail",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "pay",
+        "type": "payment-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "fail",
+        "type": "message-node",
+        "via": "port:source-failed",
+        "t": 3188
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "pay",
+        "t": 1588
+      },
+      {
+        "node": "fail",
+        "t": 3888
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "pay",
+        "text": "You're almost done - complete the payment below. Payment cancelled Not charged"
+      },
+      {
+        "node": "fail",
+        "text": "failed path"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "fail",
+        "html": "<p>failed path</p>",
+        "plain": "failed path"
+      }
+    ],
+    "ports": [
+      {
+        "node": "pay",
+        "handle": "source-failed",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "You're almost done - complete the payment below. Setup fee"
+      },
+      {
+        "by": "user",
+        "message": "Payment cancelled"
+      },
+      {
+        "by": "bot",
+        "message": "<p>failed path</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "pay",
+        "shape": "user-payment",
+        "outcome": "failed",
+        "status": "failed",
+        "amount": null,
+        "currency": "usd",
+        "amountText": ""
+      }
+    ],
+    "variables": [
+      {
+        "key": "payment",
+        "value": {
+          "status": "failed",
+          "amount": null,
+          "currency": "USD",
+          "receiptUrl": "",
+          "paymentId": ""
+        },
+        "nodeId": "pay"
+      },
+      {
+        "key": "payment_status",
+        "value": "failed",
+        "nodeId": "column_mapped_payment_status"
+      },
+      {
+        "key": "payment_amount",
+        "value": null,
+        "nodeId": "column_mapped_payment_amount"
+      },
+      {
+        "key": "payment_currency",
+        "value": "USD",
+        "nodeId": "column_mapped_payment_currency"
+      },
+      {
+        "key": "payment_receipt_url",
+        "value": "",
+        "nodeId": "column_mapped_payment_receipt_url"
+      }
+    ],
+    "errors": [],
+    "http": [
+      {
+        "path": "pay/start",
+        "body": {
+          "nodeId": "pay",
+          "sessionId": "qa-session",
+          "step": "1"
+        }
+      }
+    ],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 3888
+    }
+  }
+}

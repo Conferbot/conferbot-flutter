@@ -1,0 +1,213 @@
+{
+  "id": "product-card.buy-button",
+  "title": "product-card-node: a path button leaves by \"source-\" + button id and saves its label",
+  "covers": [
+    "product-card-node"
+  ],
+  "provenance": "executed",
+  "source": "real node shape (anonymised)",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "p",
+        "type": "product-card-node",
+        "data": {
+          "questionText": "<p>Our pick</p>",
+          "image": "",
+          "title": "Pro plan",
+          "price": "$49/mo",
+          "description": "For teams",
+          "buttons": [
+            {
+              "id": "buy",
+              "label": "Buy now",
+              "action": "path"
+            },
+            {
+              "id": "more",
+              "label": "Details",
+              "action": "link",
+              "url": "https://example.com"
+            }
+          ],
+          "answerVariable": "product_action"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{product_action}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-p",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "p",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-p-source-buy-m",
+        "source": "p",
+        "sourceHandle": "source-buy",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "p",
+      "do": "choose",
+      "buttonId": "buy"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "p",
+        "type": "product-card-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "port:source-buy",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "p",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "t": 2050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "p",
+        "text": "Our pick Pro plan $49/mo For teams Buy now Details"
+      },
+      {
+        "node": "m",
+        "text": "Buy now"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "p",
+        "html": "<p>Our pick</p>",
+        "plain": "Our pick"
+      },
+      {
+        "node": "m",
+        "html": "<p>Buy now</p>",
+        "plain": "Buy now"
+      }
+    ],
+    "ports": [
+      {
+        "node": "p",
+        "handle": "source-buy",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "Our pick Pro plan · $49/mo"
+      },
+      {
+        "by": "user",
+        "message": "Buy now"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{product_action}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "p",
+        "shape": "user-selected-product-card",
+        "selectedChoice": "Buy now",
+        "selectedButtonId": "buy",
+        "product": {
+          "title": "Pro plan",
+          "price": "$49/mo"
+        }
+      }
+    ],
+    "variables": [
+      {
+        "key": "product_action",
+        "value": "Buy now",
+        "nodeId": "p"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2050
+    }
+  }
+}

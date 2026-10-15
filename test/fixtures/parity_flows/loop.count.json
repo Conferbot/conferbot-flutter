@@ -1,0 +1,291 @@
+{
+  "id": "loop.count",
+  "title": "loop-node (count 3): each arrival starts a round on source-loop setting <v>_index (1-based), <v>_item, <v>_count; then source-done",
+  "covers": [
+    "loop-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "lp",
+        "type": "loop-node",
+        "data": {
+          "mode": "count",
+          "count": 3,
+          "variable": "round",
+          "maxIterations": 20
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "body",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Round {round_index} of {round_count}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "done",
+        "type": "message-node",
+        "data": {
+          "text": "<p>done</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-lp",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "lp",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-lp-source-loop-body",
+        "source": "lp",
+        "sourceHandle": "source-loop",
+        "target": "body",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-body-source-lp",
+        "source": "body",
+        "sourceHandle": "source",
+        "target": "lp",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-lp-source-done-done",
+        "source": "lp",
+        "sourceHandle": "source-done",
+        "target": "done",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "lp",
+        "type": "loop-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "body",
+        "type": "message-node",
+        "via": "port:source-loop",
+        "t": 700
+      },
+      {
+        "node": "lp",
+        "type": "loop-node",
+        "via": "edge:source",
+        "t": 1632
+      },
+      {
+        "node": "body",
+        "type": "message-node",
+        "via": "port:source-loop",
+        "t": 1632
+      },
+      {
+        "node": "lp",
+        "type": "loop-node",
+        "via": "edge:source",
+        "t": 2564
+      },
+      {
+        "node": "body",
+        "type": "message-node",
+        "via": "port:source-loop",
+        "t": 2564
+      },
+      {
+        "node": "lp",
+        "type": "loop-node",
+        "via": "edge:source",
+        "t": 3496
+      },
+      {
+        "node": "done",
+        "type": "message-node",
+        "via": "port:source-done",
+        "t": 3496
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "body",
+        "t": 1632
+      },
+      {
+        "node": "done",
+        "t": 4196
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "body",
+        "text": "Round 1 of 3"
+      },
+      {
+        "node": "body",
+        "text": "Round 2 of 3"
+      },
+      {
+        "node": "body",
+        "text": "Round 3 of 3"
+      },
+      {
+        "node": "done",
+        "text": "done"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "body",
+        "html": "<p>Round 1 of 3</p>",
+        "plain": "Round 1 of 3"
+      },
+      {
+        "node": "body",
+        "html": "<p>Round 2 of 3</p>",
+        "plain": "Round 2 of 3"
+      },
+      {
+        "node": "body",
+        "html": "<p>Round 3 of 3</p>",
+        "plain": "Round 3 of 3"
+      },
+      {
+        "node": "done",
+        "html": "<p>done</p>",
+        "plain": "done"
+      }
+    ],
+    "ports": [
+      {
+        "node": "lp",
+        "handle": "source-loop",
+        "wired": true
+      },
+      {
+        "node": "lp",
+        "handle": "source-loop",
+        "wired": true
+      },
+      {
+        "node": "lp",
+        "handle": "source-loop",
+        "wired": true
+      },
+      {
+        "node": "lp",
+        "handle": "source-done",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Round {round_index} of {round_count}</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Round {round_index} of {round_count}</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Round {round_index} of {round_count}</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>done</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "round_index",
+        "value": 3,
+        "nodeId": "column_mapped_round_index"
+      },
+      {
+        "key": "round_item",
+        "value": 3,
+        "nodeId": "column_mapped_round_item"
+      },
+      {
+        "key": "round_count",
+        "value": 3,
+        "nodeId": "column_mapped_round_count"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 4196
+    }
+  }
+}

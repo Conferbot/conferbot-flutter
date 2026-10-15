@@ -1,0 +1,239 @@
+{
+  "id": "ranking.reorder",
+  "title": "ranking-node: items reordered (move \"Support\" up twice); saves the list of texts in the final order; -> source",
+  "covers": [
+    "ranking-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "rk",
+        "type": "ranking-node",
+        "data": {
+          "questionText": "<p>Rank these</p>",
+          "items": [
+            {
+              "id": "a",
+              "text": "Price"
+            },
+            {
+              "id": "b",
+              "text": "Speed"
+            },
+            {
+              "id": "c",
+              "text": "Support"
+            }
+          ],
+          "submitLabel": "Submit",
+          "answerVariable": "ranking"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{ranking}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-rk",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "rk",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-rk-source-m",
+        "source": "rk",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "rk",
+      "do": "rankingMove",
+      "id": "c",
+      "dir": -1
+    },
+    {
+      "at": "rk",
+      "do": "rankingMove",
+      "id": "c",
+      "dir": -1
+    },
+    {
+      "at": "rk",
+      "do": "rankingSubmit"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "rk",
+        "type": "ranking-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1410
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "rk",
+        "t": 1360
+      },
+      {
+        "node": "m",
+        "t": 2110
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "rk",
+        "text": "Rank these Support Price Speed Submit"
+      },
+      {
+        "node": "m",
+        "text": "Support, Price, Speed"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "rk",
+        "html": "<p>Rank these</p>",
+        "plain": "Rank these"
+      },
+      {
+        "node": "m",
+        "html": "<p>Support, Price, Speed</p>",
+        "plain": "Support, Price, Speed"
+      }
+    ],
+    "ports": [
+      {
+        "node": "rk",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Rank these</p>"
+      },
+      {
+        "by": "user",
+        "message": "1. Support · 2. Price · 3. Speed"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{ranking}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "rk",
+        "shape": "user-ranking",
+        "order": [
+          {
+            "id": "c",
+            "text": "Support"
+          },
+          {
+            "id": "a",
+            "text": "Price"
+          },
+          {
+            "id": "b",
+            "text": "Speed"
+          }
+        ],
+        "value": [
+          "Support",
+          "Price",
+          "Speed"
+        ],
+        "display": "1. Support · 2. Price · 3. Speed"
+      }
+    ],
+    "variables": [
+      {
+        "key": "ranking",
+        "value": [
+          "Support",
+          "Price",
+          "Speed"
+        ],
+        "nodeId": "rk"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2110
+    }
+  }
+}

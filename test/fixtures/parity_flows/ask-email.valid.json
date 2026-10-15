@@ -1,0 +1,186 @@
+{
+  "id": "ask-email.valid",
+  "title": "ask-email-node: a valid address is saved as typed (trimmed)",
+  "covers": [
+    "ask-email-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"all nodes test\"",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q",
+        "type": "ask-email-node",
+        "data": {
+          "questionText": "<p>Email yemi</p>",
+          "incorrectEmailResponse": "<p>Correct email pampu</p>",
+          "answerVariable": "email"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>ok</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q-source-m",
+        "source": "q",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q",
+      "do": "text",
+      "value": " Ana.Smith@Example.org "
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q",
+        "type": "ask-email-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1360
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q",
+        "t": 1360
+      },
+      {
+        "node": "m",
+        "t": 2060
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q",
+        "text": "Email yemi"
+      },
+      {
+        "node": "m",
+        "text": "ok"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q",
+        "html": "<p>Email yemi</p>",
+        "plain": "Email yemi"
+      },
+      {
+        "node": "m",
+        "html": "<p>ok</p>",
+        "plain": "ok"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Email yemi</p>"
+      },
+      {
+        "by": "user",
+        "message": "Ana.Smith@Example.org"
+      },
+      {
+        "by": "bot",
+        "message": "<p>ok</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q",
+        "shape": "user-ask-email-response",
+        "text": "Ana.Smith@Example.org"
+      }
+    ],
+    "variables": [
+      {
+        "key": "email",
+        "value": "Ana.Smith@Example.org",
+        "nodeId": "q"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2060
+    }
+  }
+}

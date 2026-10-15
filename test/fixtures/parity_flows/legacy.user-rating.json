@@ -1,0 +1,176 @@
+{
+  "id": "legacy.user-rating",
+  "title": "user-rating-node type \"star\": five buttons, the value is the number; first edge",
+  "covers": [
+    "user-rating-node"
+  ],
+  "provenance": "executed",
+  "source": "real node shape (anonymised)",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ur",
+        "type": "user-rating-node",
+        "data": {
+          "ratingPrompt": "Rate?",
+          "type": "star",
+          "range": ""
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "next",
+        "type": "message-node",
+        "data": {
+          "text": "<p>next</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-ur",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "ur",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ur-source-1-next",
+        "source": "ur",
+        "sourceHandle": "source-1",
+        "target": "next",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "ur",
+      "do": "choose",
+      "value": 4
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "ur",
+        "type": "user-rating-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "next",
+        "type": "message-node",
+        "via": "edge:source-1",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "ur",
+        "t": 1350
+      },
+      {
+        "node": "next",
+        "t": 2050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "ur",
+        "text": "Rate?"
+      },
+      {
+        "node": "next",
+        "text": "next"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "next",
+        "html": "<p>next</p>",
+        "plain": "next"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "Rate?"
+      },
+      {
+        "by": "user",
+        "message": 4
+      },
+      {
+        "by": "bot",
+        "message": "<p>next</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "ur",
+        "shape": "user-selected-rating",
+        "type": "star",
+        "rating": 4
+      }
+    ],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2050
+    }
+  }
+}

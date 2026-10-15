@@ -1,0 +1,165 @@
+{
+  "id": "jump-to.into-email-step-sends-nothing",
+  "title": "An email-node reached by a jump only moves on: no email-node-trigger is sent (index.ts jump branch)",
+  "covers": [
+    "jump-to-node",
+    "email-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "j",
+        "type": "jump-to-node",
+        "data": {
+          "nodeId": "mail"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "mail",
+        "type": "email-node",
+        "data": {
+          "to": [
+            "ops@example.com"
+          ],
+          "subject": "Lead",
+          "body": "x"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "after",
+        "type": "message-node",
+        "data": {
+          "text": "<p>after</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-j",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "j",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-mail-source-after",
+        "source": "mail",
+        "sourceHandle": "source",
+        "target": "after",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "j",
+        "type": "jump-to-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "mail",
+        "type": "email-node",
+        "via": "jump",
+        "t": 700
+      },
+      {
+        "node": "after",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "after",
+        "t": 1400
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "after",
+        "text": "after"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "after",
+        "html": "<p>after</p>",
+        "plain": "after"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>after</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1400
+    }
+  }
+}

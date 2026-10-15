@@ -1,0 +1,230 @@
+{
+  "id": "address.manual",
+  "title": "address-node (real): typed by hand; saves the formatted address and <var>_line1/_city/_postal/_country; -> source",
+  "covers": [
+    "address-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"QA - All Nodes\"",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "addr2",
+        "type": "address-node",
+        "data": {
+          "questionText": "<p>And your billing address?</p>",
+          "countryCodes": "",
+          "allowMyLocation": false,
+          "showMap": false,
+          "allowManual": true,
+          "answerVariable": "bill"
+        },
+        "position": {
+          "x": 1160,
+          "y": 540
+        }
+      },
+      {
+        "id": "addr2Msg",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Billing: {bill_line1}, {bill_city} {bill_postal}</p>"
+        },
+        "position": {
+          "x": 1520,
+          "y": 540
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-addr2",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "addr2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-addr2-source-addr2Msg",
+        "source": "addr2",
+        "sourceHandle": "source",
+        "target": "addr2Msg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "addr2",
+      "do": "addressManual",
+      "line1": "221B Baker Street",
+      "city": "London",
+      "postal": "NW1 6XE",
+      "country": "United Kingdom"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "addr2",
+        "type": "address-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "addr2Msg",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1500
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "addr2",
+        "t": 1450
+      },
+      {
+        "node": "addr2Msg",
+        "t": 2576
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "addr2",
+        "text": "And your billing address? 221B Baker Street London, NW1 6XE, United Kingdom"
+      },
+      {
+        "node": "addr2Msg",
+        "text": "Billing: 221B Baker Street, London NW1 6XE"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "addr2",
+        "html": "<p>And your billing address?</p>",
+        "plain": "And your billing address?"
+      },
+      {
+        "node": "addr2Msg",
+        "html": "<p>Billing: 221B Baker Street, London NW1 6XE</p>",
+        "plain": "Billing: 221B Baker Street, London NW1 6XE"
+      }
+    ],
+    "ports": [
+      {
+        "node": "addr2",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>And your billing address?</p>"
+      },
+      {
+        "by": "user",
+        "message": "221B Baker Street, London, NW1 6XE, United Kingdom"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Billing: {bill_line1}, {bill_city} {bill_postal}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "addr2",
+        "shape": "user-address",
+        "value": {
+          "formatted": "221B Baker Street, London, NW1 6XE, United Kingdom",
+          "line1": "221B Baker Street",
+          "city": "London",
+          "region": "",
+          "postal": "NW1 6XE",
+          "country": "United Kingdom",
+          "countryCode": "",
+          "lat": null,
+          "lng": null
+        },
+        "display": "221B Baker Street, London, NW1 6XE, United Kingdom",
+        "source": "manual"
+      }
+    ],
+    "variables": [
+      {
+        "key": "bill",
+        "value": "221B Baker Street, London, NW1 6XE, United Kingdom",
+        "nodeId": "addr2"
+      },
+      {
+        "key": "bill_line1",
+        "value": "221B Baker Street",
+        "nodeId": "column_mapped_bill_line1"
+      },
+      {
+        "key": "bill_city",
+        "value": "London",
+        "nodeId": "column_mapped_bill_city"
+      },
+      {
+        "key": "bill_postal",
+        "value": "NW1 6XE",
+        "nodeId": "column_mapped_bill_postal"
+      },
+      {
+        "key": "bill_country",
+        "value": "United Kingdom",
+        "nodeId": "column_mapped_bill_country"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2576
+    }
+  }
+}

@@ -1,0 +1,227 @@
+{
+  "id": "ai-route.intent-not-wired-no-fallback-ends",
+  "title": "ai-route-node: a matched intent with no edge goes to source-fallback; with no fallback edge either the chat ENDS (no other fallback)",
+  "covers": [
+    "ai-route-node"
+  ],
+  "provenance": "executed",
+  "server": {
+    "http": {
+      "ai/route": {
+        "status": 200,
+        "body": {
+          "intentId": "i3",
+          "intent": "Billing",
+          "confidence": 0.8
+        }
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ar",
+        "type": "ai-route-node",
+        "data": {
+          "questionText": "<p>What can we help with today?</p>",
+          "source": "ask",
+          "intents": [
+            {
+              "id": "i1",
+              "name": "Sales",
+              "description": "Pricing, plans, buying, demos"
+            },
+            {
+              "id": "i2",
+              "name": "Support",
+              "description": "Something isn't working, how-to questions"
+            },
+            {
+              "id": "i3",
+              "name": "Billing",
+              "description": "Invoices, refunds, payment methods"
+            }
+          ],
+          "minConfidence": 0.5,
+          "apiKey": "<redacted>",
+          "selectedModel": "gpt-4o-mini",
+          "answerVariable": "intent"
+        },
+        "position": {
+          "x": 80,
+          "y": 1380
+        }
+      },
+      {
+        "id": "arSales",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Routed to Sales ({intent}, {intent_confidence}).</p>"
+        },
+        "position": {
+          "x": 440,
+          "y": 1380
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-ar",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "ar",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar-source-i1-arSales",
+        "source": "ar",
+        "sourceHandle": "source-i1",
+        "target": "arSales",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ar-source-arSales",
+        "source": "ar",
+        "sourceHandle": "source",
+        "target": "arSales",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "ar",
+      "do": "text",
+      "value": "refund please"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "ar",
+        "type": "ai-route-node",
+        "via": "edge:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "ar",
+        "t": 1468
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "ar",
+        "text": "What can we help with today?"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "ar",
+        "html": "<p>What can we help with today?</p>",
+        "plain": "What can we help with today?"
+      }
+    ],
+    "ports": [
+      {
+        "node": "ar",
+        "handle": "source-fallback",
+        "wired": false
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>What can we help with today?</p>"
+      },
+      {
+        "by": "user",
+        "message": "refund please"
+      }
+    ],
+    "answers": [
+      {
+        "id": "ar",
+        "shape": "user-ai-route",
+        "asked": true,
+        "input": "refund please",
+        "intentId": "i3",
+        "intent": "Billing",
+        "confidence": 0.8,
+        "fallback": false
+      }
+    ],
+    "variables": [
+      {
+        "key": "intent",
+        "value": "Billing",
+        "nodeId": "ar"
+      },
+      {
+        "key": "intent_confidence",
+        "value": 0.8,
+        "nodeId": "column_mapped_intent_confidence"
+      }
+    ],
+    "errors": [],
+    "http": [
+      {
+        "path": "ai/route",
+        "body": {
+          "nodeId": "ar",
+          "text": "refund please"
+        }
+      }
+    ],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1968
+    }
+  }
+}

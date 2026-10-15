@@ -1,0 +1,260 @@
+{
+  "id": "dynamic-choices.from-variable",
+  "title": "dynamic-choices-node: options from the JSON list in data.sourceVariable (labelField/valueField); saves the value, and <var>_label when it differs; -> source",
+  "covers": [
+    "dynamic-choices-node",
+    "variable-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "v",
+        "type": "variable-node",
+        "data": {
+          "name": "plans",
+          "value": "{\"items\":[{\"name\":\"Starter\",\"code\":\"st\"},{\"name\":\"Pro\",\"code\":\"pro\"},{\"name\":\"\"}]}",
+          "isNumber": false
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "d",
+        "type": "dynamic-choices-node",
+        "data": {
+          "questionText": "<p>Pick a plan</p>",
+          "source": "variable",
+          "sourceVariable": "plans",
+          "listPath": "items",
+          "labelField": "name",
+          "valueField": "code",
+          "maxOptions": 10,
+          "emptyMessage": "<p>Nothing</p>",
+          "answerVariable": "plan"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{plan} / {plan_label}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "empty",
+        "type": "message-node",
+        "data": {
+          "text": "<p>empty path</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-v",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "v",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-v-source-d",
+        "source": "v",
+        "sourceHandle": "source",
+        "target": "d",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-d-source-m",
+        "source": "d",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-d-source-empty-empty",
+        "source": "d",
+        "sourceHandle": "source-empty",
+        "target": "empty",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "d",
+      "do": "choose",
+      "index": 1
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "v",
+        "type": "variable-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "d",
+        "type": "dynamic-choices-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1400
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "d",
+        "t": 1400
+      },
+      {
+        "node": "m",
+        "t": 2152
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "d",
+        "text": "Pick a plan Starter Pro"
+      },
+      {
+        "node": "m",
+        "text": "pro / Pro"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "d",
+        "html": "<p>Pick a plan</p>",
+        "plain": "Pick a plan"
+      },
+      {
+        "node": "m",
+        "html": "<p>pro / Pro</p>",
+        "plain": "pro / Pro"
+      }
+    ],
+    "ports": [
+      {
+        "node": "d",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Pick a plan</p>"
+      },
+      {
+        "by": "user",
+        "message": "Pro"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{plan} / {plan_label}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "d",
+        "shape": "user-selected-dynamic-choice",
+        "selectedChoice": "Pro",
+        "value": "pro"
+      }
+    ],
+    "variables": [
+      {
+        "key": "plans",
+        "value": "{\"items\":[{\"name\":\"Starter\",\"code\":\"st\"},{\"name\":\"Pro\",\"code\":\"pro\"},{\"name\":\"\"}]}",
+        "nodeId": "v"
+      },
+      {
+        "key": "plan",
+        "value": "pro",
+        "nodeId": "d"
+      },
+      {
+        "key": "plan_label",
+        "value": "Pro",
+        "nodeId": "column_mapped_plan_label"
+      }
+    ],
+    "flowVariables": {
+      "plans": "{\"items\":[{\"name\":\"Starter\",\"code\":\"st\"},{\"name\":\"Pro\",\"code\":\"pro\"},{\"name\":\"\"}]}"
+    },
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2152
+    }
+  }
+}

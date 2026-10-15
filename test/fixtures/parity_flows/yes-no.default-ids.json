@@ -1,0 +1,221 @@
+{
+  "id": "yes-no.default-ids",
+  "title": "yes-or-no-choice-node: options [{id:\"1\",label:\"Yes\"},{id:\"2\",label:\"No\"}]; \"No\" leaves by source-2",
+  "covers": [
+    "yes-or-no-choice-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"all nodes test\"",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "yn",
+        "type": "yes-or-no-choice-node",
+        "data": {
+          "questionText": "<p>Ready?</p>",
+          "options": [
+            {
+              "id": "1",
+              "label": "Yes"
+            },
+            {
+              "id": "2",
+              "label": "No"
+            }
+          ],
+          "answerVariable": "yes_no_answer"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "yes",
+        "type": "message-node",
+        "data": {
+          "text": "<p>yes</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "no",
+        "type": "message-node",
+        "data": {
+          "text": "<p>no</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-yn",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "yn",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-yn-source-1-yes",
+        "source": "yn",
+        "sourceHandle": "source-1",
+        "target": "yes",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-yn-source-2-no",
+        "source": "yn",
+        "sourceHandle": "source-2",
+        "target": "no",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "yn",
+      "do": "choose",
+      "id": "2"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "yn",
+        "type": "yes-or-no-choice-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "no",
+        "type": "message-node",
+        "via": "port:source-2",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "yn",
+        "t": 1350
+      },
+      {
+        "node": "no",
+        "t": 2050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "yn",
+        "text": "Ready? Yes No"
+      },
+      {
+        "node": "no",
+        "text": "no"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "yn",
+        "html": "<p>Ready?</p>",
+        "plain": "Ready?"
+      },
+      {
+        "node": "no",
+        "html": "<p>no</p>",
+        "plain": "no"
+      }
+    ],
+    "ports": [
+      {
+        "node": "yn",
+        "handle": "source-2",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Ready?</p>"
+      },
+      {
+        "by": "user",
+        "message": "No"
+      },
+      {
+        "by": "bot",
+        "message": "<p>no</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "yn",
+        "shape": "user-selected-yes-or-no-choice",
+        "selectedYesOrNoChoice": "No"
+      }
+    ],
+    "variables": [
+      {
+        "key": "yes_no_answer",
+        "value": "No",
+        "nodeId": "yn"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2050
+    }
+  }
+}

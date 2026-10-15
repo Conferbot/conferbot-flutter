@@ -1,0 +1,259 @@
+{
+  "id": "carousel.path-button",
+  "title": "carousel-node: a path button leaves by \"source-\" + button id and saves \"Card title - Button label\"; link buttons never move the flow",
+  "covers": [
+    "carousel-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "car",
+        "type": "carousel-node",
+        "data": {
+          "questionText": "<p>Our plans</p>",
+          "cards": [
+            {
+              "id": "c1",
+              "image": "",
+              "title": "Starter",
+              "description": "For one",
+              "buttons": [
+                {
+                  "id": "b1",
+                  "label": "Pick Starter",
+                  "action": "path"
+                },
+                {
+                  "id": "l1",
+                  "label": "Docs",
+                  "action": "link",
+                  "url": "docs.example.com"
+                }
+              ]
+            },
+            {
+              "id": "c2",
+              "image": "",
+              "title": "Pro",
+              "description": "For teams",
+              "buttons": [
+                {
+                  "id": "b2",
+                  "label": "Pick Pro",
+                  "action": "path"
+                }
+              ]
+            },
+            {
+              "id": "c3",
+              "image": "",
+              "title": "",
+              "description": "",
+              "buttons": [
+                {
+                  "id": "b3",
+                  "label": "Hidden",
+                  "action": "path"
+                }
+              ]
+            }
+          ],
+          "answerVariable": "carousel_choice"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "starter",
+        "type": "message-node",
+        "data": {
+          "text": "<p>starter</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "pro",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{carousel_choice}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-car",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "car",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-car-source-b1-starter",
+        "source": "car",
+        "sourceHandle": "source-b1",
+        "target": "starter",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-car-source-b2-pro",
+        "source": "car",
+        "sourceHandle": "source-b2",
+        "target": "pro",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "car",
+      "do": "choose",
+      "buttonId": "b2"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "car",
+        "type": "carousel-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "pro",
+        "type": "message-node",
+        "via": "port:source-b2",
+        "t": 1354
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "car",
+        "t": 1354
+      },
+      {
+        "node": "pro",
+        "t": 2058
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "car",
+        "text": "Our plans Starter For one Pick Starter Docs Pro For teams Pick Pro"
+      },
+      {
+        "node": "pro",
+        "text": "Pro - Pick Pro"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "car",
+        "html": "<p>Our plans</p>",
+        "plain": "Our plans"
+      },
+      {
+        "node": "pro",
+        "html": "<p>Pro - Pick Pro</p>",
+        "plain": "Pro - Pick Pro"
+      }
+    ],
+    "ports": [
+      {
+        "node": "car",
+        "handle": "source-b2",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Our plans</p>"
+      },
+      {
+        "by": "user",
+        "message": "Pro - Pick Pro"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{carousel_choice}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "car",
+        "shape": "user-selected-carousel",
+        "selectedChoice": "Pro - Pick Pro",
+        "selectedCardId": "c2",
+        "selectedButtonId": "b2"
+      }
+    ],
+    "variables": [
+      {
+        "key": "carousel_choice",
+        "value": "Pro - Pick Pro",
+        "nodeId": "car"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2058
+    }
+  }
+}

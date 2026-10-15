@@ -1,0 +1,278 @@
+{
+  "id": "calendar.date-only",
+  "title": "calendar-node without time selection: the picked day is saved as the formatted date; next after 400 ms",
+  "covers": [
+    "calendar-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "cal",
+        "type": "calendar-node",
+        "data": {
+          "calendarPrompt": "<p>Pick a day</p>",
+          "timeZone": "UTC",
+          "showPastDates": false,
+          "excludeDays": [
+            ""
+          ],
+          "excludeDates": [
+            ""
+          ],
+          "showTimeSelection": false,
+          "weeklyHours": [
+            {
+              "day": 0,
+              "dayName": "Sunday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 1,
+              "dayName": "Monday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 2,
+              "dayName": "Tuesday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 3,
+              "dayName": "Wednesday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 4,
+              "dayName": "Thursday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 5,
+              "dayName": "Friday",
+              "available": true,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            },
+            {
+              "day": 6,
+              "dayName": "Saturday",
+              "available": false,
+              "slots": [
+                {
+                  "start": "09:00",
+                  "end": "17:00"
+                }
+              ]
+            }
+          ],
+          "answerVariable": "calendar_answer"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{calendar_answer}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-cal",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "cal",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-cal-source-m",
+        "source": "cal",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "cal",
+      "do": "calendar",
+      "date": "2026-10-20"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "cal",
+        "type": "calendar-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1760
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "cal",
+        "t": 1360
+      },
+      {
+        "node": "m",
+        "t": 2464
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "cal",
+        "text": "Pick a day October 2026 Sun Mon Tue Wed Thu Fri Sat 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31"
+      },
+      {
+        "node": "m",
+        "text": "Tuesday, October 20, 2026"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "cal",
+        "html": "<p>Pick a day</p>",
+        "plain": "Pick a day"
+      },
+      {
+        "node": "m",
+        "html": "<p>Tuesday, October 20, 2026</p>",
+        "plain": "Tuesday, October 20, 2026"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Pick a day</p>"
+      },
+      {
+        "by": "user",
+        "message": "Tuesday, October 20, 2026"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{calendar_answer}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "cal",
+        "shape": "user-calendar-selection",
+        "data": {
+          "date": "Tuesday, October 20, 2026",
+          "selectedDate": "2026-10-20",
+          "botTimeZone": "UTC",
+          "visitorTimeZone": "UTC",
+          "showTimeSelection": false
+        }
+      }
+    ],
+    "variables": [
+      {
+        "key": "calendar_answer",
+        "value": "Tuesday, October 20, 2026",
+        "nodeId": "cal"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2464
+    }
+  }
+}

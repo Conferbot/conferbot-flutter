@@ -1,0 +1,202 @@
+{
+  "id": "legacy.two-choices",
+  "title": "two-choices-node: choiceText1 -> source-1, choiceText2 -> source-2; disableSecondChoice hides the second; no variable is saved",
+  "covers": [
+    "two-choices-node"
+  ],
+  "provenance": "executed",
+  "source": "real node shape (anonymised)",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "t",
+        "type": "two-choices-node",
+        "data": {
+          "choicePrompt": "Let's begin?",
+          "choiceText1": "Yes!",
+          "choiceText2": "Later",
+          "disableSecondChoice": false
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "yes",
+        "type": "message-node",
+        "data": {
+          "text": "<p>yes</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "later",
+        "type": "message-node",
+        "data": {
+          "text": "<p>later</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-1-t",
+        "source": "w",
+        "sourceHandle": "source-1",
+        "target": "t",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-t-source-1-yes",
+        "source": "t",
+        "sourceHandle": "source-1",
+        "target": "yes",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-t-source-2-later",
+        "source": "t",
+        "sourceHandle": "source-2",
+        "target": "later",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "t",
+      "do": "choose",
+      "index": 1
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "t",
+        "type": "two-choices-node",
+        "via": "edge:source-1",
+        "t": 700
+      },
+      {
+        "node": "later",
+        "type": "message-node",
+        "via": "port:source-2",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "t",
+        "t": 1350
+      },
+      {
+        "node": "later",
+        "t": 2050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "t",
+        "text": "Let's begin? Yes! Later"
+      },
+      {
+        "node": "later",
+        "text": "later"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "later",
+        "html": "<p>later</p>",
+        "plain": "later"
+      }
+    ],
+    "ports": [
+      {
+        "node": "t",
+        "handle": "source-2",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "Let's begin?"
+      },
+      {
+        "by": "user",
+        "message": "Later"
+      },
+      {
+        "by": "bot",
+        "message": "<p>later</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "t",
+        "shape": "user-selected-choice",
+        "selectedChoice": "Later"
+      }
+    ],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2050
+    }
+  }
+}

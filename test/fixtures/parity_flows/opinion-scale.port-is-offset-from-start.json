@@ -1,0 +1,260 @@
+{
+  "id": "opinion-scale.port-is-offset-from-start",
+  "title": "opinion-scale-choice-node from 2 to 4: picking 3 leaves by source-1 (value - from) and saves the number 3",
+  "covers": [
+    "opinion-scale-choice-node"
+  ],
+  "provenance": "executed",
+  "source": "real node shape (anonymised): opinion-scale {from:2,to:4}",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "o",
+        "type": "opinion-scale-choice-node",
+        "data": {
+          "questionText": "<p>Rate this scale</p>",
+          "from": 2,
+          "fromLabel": "",
+          "to": 4,
+          "toLabel": "",
+          "answerVariable": "opinion_scale_answer",
+          "numOfOptions": 3
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "two",
+        "type": "message-node",
+        "data": {
+          "text": "<p>two</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "three",
+        "type": "message-node",
+        "data": {
+          "text": "<p>three</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>{opinion_scale_answer}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-o",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "o",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-o-source-0-two",
+        "source": "o",
+        "sourceHandle": "source-0",
+        "target": "two",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-o-source-1-three",
+        "source": "o",
+        "sourceHandle": "source-1",
+        "target": "three",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-three-source-m",
+        "source": "three",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "o",
+      "do": "choose",
+      "value": 3
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "o",
+        "type": "opinion-scale-choice-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "three",
+        "type": "message-node",
+        "via": "port:source-1",
+        "t": 1390
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 2090
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "o",
+        "t": 1390
+      },
+      {
+        "node": "three",
+        "t": 2090
+      },
+      {
+        "node": "m",
+        "t": 2822
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "o",
+        "text": "Rate this scale 2 3 4"
+      },
+      {
+        "node": "three",
+        "text": "three"
+      },
+      {
+        "node": "m",
+        "text": "3"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "o",
+        "html": "<p>Rate this scale</p>",
+        "plain": "Rate this scale"
+      },
+      {
+        "node": "three",
+        "html": "<p>three</p>",
+        "plain": "three"
+      },
+      {
+        "node": "m",
+        "html": "<p>3</p>",
+        "plain": "3"
+      }
+    ],
+    "ports": [
+      {
+        "node": "o",
+        "handle": "source-1",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Rate this scale</p>"
+      },
+      {
+        "by": "user",
+        "message": "3"
+      },
+      {
+        "by": "bot",
+        "message": "<p>three</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>{opinion_scale_answer}</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "o",
+        "shape": "user-selected-opinion-scale-choice",
+        "selectedOpinionScaleChoice": "3",
+        "value": 3
+      }
+    ],
+    "variables": [
+      {
+        "key": "opinion_scale_answer",
+        "value": 3,
+        "nodeId": "o"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2822
+    }
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "id": "engine.unknown-type-continues-on-first-edge",
+  "title": "A step type the widget does not run (real: time-out-node) shows nothing and continues along its first edge",
+  "covers": [
+    "unknown"
+  ],
+  "provenance": "executed",
+  "source": "real node shape (anonymised)",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "x",
+        "type": "time-out-node",
+        "data": {
+          "answerVariable": "number",
+          "questionText": "<p>Umbe Peb Delt</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "after",
+        "type": "message-node",
+        "data": {
+          "text": "<p>after unknown</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-x",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "x",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-x-source-3-after",
+        "source": "x",
+        "sourceHandle": "source-3",
+        "target": "after",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "x",
+        "type": "time-out-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "after",
+        "type": "message-node",
+        "via": "edge:source-3",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "after",
+        "t": 1400
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "after",
+        "text": "after unknown"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "after",
+        "html": "<p>after unknown</p>",
+        "plain": "after unknown"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>after unknown</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [
+      {
+        "node": "x",
+        "type": "time-out-node"
+      }
+    ],
+    "end": {
+      "ended": true,
+      "t": 1400
+    }
+  }
+}

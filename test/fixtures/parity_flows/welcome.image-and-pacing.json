@@ -1,0 +1,163 @@
+{
+  "id": "welcome.image-and-pacing",
+  "title": "welcome-node shows text (+ image unless disableImage) and moves on; typing time follows nodeLogic paceFor",
+  "covers": [
+    "welcome-node",
+    "message-node"
+  ],
+  "provenance": "executed",
+  "source": "builder default (store/dndNodes.ts Welcome)",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Welcome to the chatbot!</p>",
+          "image": "https://botdefaults.s3.ap-south-1.amazonaws.com/welcome_gif_1.gif",
+          "disableImage": false
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>A rather longer message so the typing time grows with it, as a person would type.</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m2",
+        "type": "message-node",
+        "data": {
+          "text": "<p>ok</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-m",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-m-source-m2",
+        "source": "m",
+        "sourceHandle": "source",
+        "target": "m2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 776
+      },
+      {
+        "node": "m2",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 2018
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 776
+      },
+      {
+        "node": "m",
+        "t": 2018
+      },
+      {
+        "node": "m2",
+        "t": 4100
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Welcome to the chatbot!"
+      },
+      {
+        "node": "m",
+        "text": "A rather longer message so the typing time grows with it, as a person would type."
+      },
+      {
+        "node": "m2",
+        "text": "ok"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Welcome to the chatbot!</p>",
+        "plain": "Welcome to the chatbot!"
+      },
+      {
+        "node": "m",
+        "html": "<p>A rather longer message so the typing time grows with it, as a person would type.</p>",
+        "plain": "A rather longer message so the typing time grows with it, as a person would type."
+      },
+      {
+        "node": "m2",
+        "html": "<p>ok</p>",
+        "plain": "ok"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Welcome to the chatbot!</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>A rather longer message so the typing time grows with it, as a person would type.</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>ok</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 4100
+    }
+  }
+}

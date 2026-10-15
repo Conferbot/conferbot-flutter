@@ -1,0 +1,212 @@
+{
+  "id": "human-handover.pre-chat-then-no-agents",
+  "title": "human-handover-node: pre-chat questions first (email checked), then handoverMessage and initiate-handover; nobody free -> fallbackMessage, then the first edge",
+  "covers": [
+    "human-handover-node"
+  ],
+  "provenance": "executed",
+  "customizations": {
+    "chatLeaveMessage": false
+  },
+  "server": {
+    "handover": "no-agents"
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "ho",
+        "type": "human-handover-node",
+        "data": {
+          "handoverMessage": "<p>Connecting you…</p>",
+          "maxWaitTime": 2,
+          "fallbackMessage": "<p>All agents are busy.</p>",
+          "assignmentType": "auto",
+          "enablePreChatQuestions": true,
+          "preChatQuestions": [
+            {
+              "id": "pq1",
+              "questionText": "<p>Your email?</p>",
+              "answerVariable": "email"
+            }
+          ],
+          "enablePostChatSurveyQuestions": false,
+          "postChatSurveyQuestions": []
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "after",
+        "type": "message-node",
+        "data": {
+          "text": "<p>after handover {email}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-ho",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "ho",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-ho-source-after",
+        "source": "ho",
+        "sourceHandle": "source",
+        "target": "after",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "ho",
+      "do": "text",
+      "value": "bad"
+    },
+    {
+      "at": "ho",
+      "do": "text",
+      "value": "ana@acme.io"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "ho",
+        "type": "human-handover-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "after",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 6400
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "after",
+        "t": 7164
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi Your email? Please enter a valid email address Connecting you… Connecting you to the team Our team will be with you soon Max wait 2:00 All agents are busy."
+      },
+      {
+        "node": "after",
+        "text": "after handover ana@acme.io"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "ho",
+        "html": "<p>Connecting you…</p>",
+        "plain": "Connecting you…"
+      },
+      {
+        "node": "<p>All agents are busy.</p>",
+        "html": "<p>All agents are busy.</p>",
+        "plain": "All agents are busy."
+      },
+      {
+        "node": "after",
+        "html": "<p>after handover ana@acme.io</p>",
+        "plain": "after handover ana@acme.io"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Your email?</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Your email?</p>"
+      },
+      {
+        "by": "user",
+        "message": "ana@acme.io"
+      },
+      {
+        "by": "bot",
+        "message": "<p>All agents are busy.</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>after handover {email}</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "email",
+        "value": "ana@acme.io",
+        "nodeId": "pq1"
+      }
+    ],
+    "errors": [
+      {
+        "node": "ho",
+        "message": "Please enter a valid email address"
+      }
+    ],
+    "http": [],
+    "emits": [
+      "initiate-handover",
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 7164
+    }
+  }
+}

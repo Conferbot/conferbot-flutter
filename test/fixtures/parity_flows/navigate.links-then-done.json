@@ -1,0 +1,202 @@
+{
+  "id": "navigate.links-then-done",
+  "title": "navigate-node: links open pages and do not advance; Done (doneNavigatingText, default \"Done\") moves on after 600 ms",
+  "covers": [
+    "navigate-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "nav",
+        "type": "navigate-node",
+        "data": {
+          "navigatePrompt": "<p>Have a look</p>",
+          "navigateOptions": [
+            {
+              "id": "a",
+              "navigateText": "Docs",
+              "navigateLink": "https://docs.example.com",
+              "openInNewTab": true
+            },
+            {
+              "id": "b",
+              "navigateText": "",
+              "navigateLink": "x"
+            }
+          ],
+          "doneNavigatingText": "",
+          "answerVariable": "navigate_choice"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>after</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-nav",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "nav",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-nav-source-m",
+        "source": "nav",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "nav",
+      "do": "navigateLink",
+      "index": 0
+    },
+    {
+      "at": "nav",
+      "do": "navigateDone"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "nav",
+        "type": "navigate-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 2370
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "nav",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "t": 3070
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "nav",
+        "text": "Have a look Docs Done"
+      },
+      {
+        "node": "m",
+        "text": "after"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "nav",
+        "html": "<p>Have a look</p>",
+        "plain": "Have a look"
+      },
+      {
+        "node": "m",
+        "html": "<p>after</p>",
+        "plain": "after"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Have a look</p>"
+      },
+      {
+        "by": "user",
+        "message": "Done"
+      },
+      {
+        "by": "bot",
+        "message": "<p>after</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "nav",
+        "shape": "user-navigate-link-click",
+        "text": "Docs",
+        "url": "https://docs.example.com"
+      },
+      {
+        "id": "nav",
+        "shape": "user-navigate-done",
+        "text": "Done"
+      }
+    ],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 3070
+    }
+  }
+}

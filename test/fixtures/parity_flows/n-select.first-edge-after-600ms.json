@@ -1,0 +1,215 @@
+{
+  "id": "n-select.first-edge-after-600ms",
+  "title": "n-select-option-node: saves the option text (HTML stripped) and moves on along the FIRST edge after 600 ms - options have no ports",
+  "covers": [
+    "n-select-option-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"Answer Vars Test\"",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "s",
+        "type": "n-select-option-node",
+        "data": {
+          "selectPrompt": "<p>N select options ans var</p>",
+          "options": [
+            {
+              "id": "1",
+              "optionText": "<p>option 1</p>"
+            },
+            {
+              "id": "2",
+              "optionText": "<p>op &amp; 2</p>"
+            }
+          ],
+          "answerVariable": "selected_option"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "first",
+        "type": "message-node",
+        "data": {
+          "text": "<p>first</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "second",
+        "type": "message-node",
+        "data": {
+          "text": "<p>second</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-s",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "s",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-s-source-1-first",
+        "source": "s",
+        "sourceHandle": "source-1",
+        "target": "first",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-s-source-2-second",
+        "source": "s",
+        "sourceHandle": "source-2",
+        "target": "second",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "s",
+      "do": "choose",
+      "id": "2"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "s",
+        "type": "n-select-option-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "first",
+        "type": "message-node",
+        "via": "edge:source-1",
+        "t": 1950
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "s",
+        "t": 1350
+      },
+      {
+        "node": "first",
+        "t": 2650
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "s",
+        "text": "N select options ans var option 1 op & 2"
+      },
+      {
+        "node": "first",
+        "text": "first"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "s",
+        "html": "<p>N select options ans var</p>",
+        "plain": "N select options ans var"
+      },
+      {
+        "node": "first",
+        "html": "<p>first</p>",
+        "plain": "first"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>N select options ans var</p>"
+      },
+      {
+        "by": "user",
+        "message": "op & 2"
+      },
+      {
+        "by": "bot",
+        "message": "<p>first</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "s",
+        "shape": "user-selected-option",
+        "selectedOption": "op & 2"
+      }
+    ],
+    "variables": [
+      {
+        "key": "selected_option",
+        "value": "op & 2",
+        "nodeId": "s"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2650
+    }
+  }
+}

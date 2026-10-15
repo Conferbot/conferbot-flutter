@@ -1,0 +1,212 @@
+{
+  "id": "subflow.path-end-returns",
+  "title": "A sub-flow whose path just ends (no Return step) also returns to Run sub-flow",
+  "covers": [
+    "run-subflow-node",
+    "subflow-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "run",
+        "type": "run-subflow-node",
+        "data": {
+          "subflowId": "sf",
+          "inputs": [],
+          "outputs": []
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "back",
+        "type": "message-node",
+        "data": {
+          "text": "<p>back</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "sf",
+        "type": "subflow-node",
+        "data": {
+          "name": "Inner"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "in",
+        "type": "message-node",
+        "data": {
+          "text": "<p>inside</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-run",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "run",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-run-source-back",
+        "source": "run",
+        "sourceHandle": "source",
+        "target": "back",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-sf-source-in",
+        "source": "sf",
+        "sourceHandle": "source",
+        "target": "in",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "run",
+        "type": "run-subflow-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "sf",
+        "type": "subflow-node",
+        "via": "jump",
+        "t": 700
+      },
+      {
+        "node": "in",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 700
+      },
+      {
+        "node": "back",
+        "type": "message-node",
+        "via": "jump",
+        "t": 1400
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "in",
+        "t": 1400
+      },
+      {
+        "node": "back",
+        "t": 2050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "in",
+        "text": "inside"
+      },
+      {
+        "node": "back",
+        "text": "back"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "in",
+        "html": "<p>inside</p>",
+        "plain": "inside"
+      },
+      {
+        "node": "back",
+        "html": "<p>back</p>",
+        "plain": "back"
+      }
+    ],
+    "ports": [
+      {
+        "node": "sf",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>inside</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>back</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2050
+    }
+  }
+}

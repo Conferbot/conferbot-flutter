@@ -1,0 +1,275 @@
+{
+  "id": "loop.safety-cap",
+  "title": "loop-node: count \"{n}\" (5) above maxIterations (2) stops at the cap: 2 rounds then source-done",
+  "covers": [
+    "loop-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "v",
+        "type": "variable-node",
+        "data": {
+          "name": "n",
+          "value": "5",
+          "isNumber": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "lp",
+        "type": "loop-node",
+        "data": {
+          "mode": "count",
+          "count": "{n}",
+          "variable": "i",
+          "maxIterations": 2
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "body",
+        "type": "math-operation-node",
+        "data": {
+          "leftValue": "i_index",
+          "operator": "*",
+          "rightValue": "10",
+          "answerVariable": "last"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "done",
+        "type": "message-node",
+        "data": {
+          "text": "<p>last={last} count={i_count}</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-v",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "v",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-v-source-lp",
+        "source": "v",
+        "sourceHandle": "source",
+        "target": "lp",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-lp-source-loop-body",
+        "source": "lp",
+        "sourceHandle": "source-loop",
+        "target": "body",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-body-source-lp",
+        "source": "body",
+        "sourceHandle": "source",
+        "target": "lp",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-lp-source-done-done",
+        "source": "lp",
+        "sourceHandle": "source-done",
+        "target": "done",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "v",
+        "type": "variable-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "lp",
+        "type": "loop-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "body",
+        "type": "math-operation-node",
+        "via": "port:source-loop",
+        "t": 700
+      },
+      {
+        "node": "lp",
+        "type": "loop-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "body",
+        "type": "math-operation-node",
+        "via": "port:source-loop",
+        "t": 700
+      },
+      {
+        "node": "lp",
+        "type": "loop-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "done",
+        "type": "message-node",
+        "via": "port:source-done",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "done",
+        "t": 1524
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "done",
+        "text": "last=20 count=2"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "done",
+        "html": "<p>last=20 count=2</p>",
+        "plain": "last=20 count=2"
+      }
+    ],
+    "ports": [
+      {
+        "node": "lp",
+        "handle": "source-loop",
+        "wired": true
+      },
+      {
+        "node": "lp",
+        "handle": "source-loop",
+        "wired": true
+      },
+      {
+        "node": "lp",
+        "handle": "source-done",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>last={last} count={i_count}</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "n",
+        "value": 5,
+        "nodeId": "v"
+      },
+      {
+        "key": "i_index",
+        "value": 2,
+        "nodeId": "column_mapped_i_index"
+      },
+      {
+        "key": "i_item",
+        "value": 2,
+        "nodeId": "column_mapped_i_item"
+      },
+      {
+        "key": "i_count",
+        "value": 2,
+        "nodeId": "column_mapped_i_count"
+      },
+      {
+        "key": "last",
+        "value": 20,
+        "nodeId": "body"
+      }
+    ],
+    "flowVariables": {
+      "n": 5
+    },
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1524
+    }
+  }
+}

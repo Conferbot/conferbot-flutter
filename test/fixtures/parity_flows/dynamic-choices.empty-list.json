@@ -1,0 +1,180 @@
+{
+  "id": "dynamic-choices.empty-list",
+  "title": "dynamic-choices-node with nothing in the list: says emptyMessage and leaves by source-empty (or \"source\" when only that is wired)",
+  "covers": [
+    "dynamic-choices-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "d",
+        "type": "dynamic-choices-node",
+        "data": {
+          "questionText": "<p>Pick</p>",
+          "source": "variable",
+          "sourceVariable": "nothing",
+          "emptyMessage": "<p>Sorry, nothing to choose.</p>",
+          "answerVariable": "x"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>fell back to source</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-d",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "d",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-d-source-m",
+        "source": "d",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "d",
+        "type": "dynamic-choices-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "d",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "t": 2078
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "d",
+        "text": "Sorry, nothing to choose."
+      },
+      {
+        "node": "m",
+        "text": "fell back to source"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "d",
+        "html": "<p>Pick</p>",
+        "plain": "Pick"
+      },
+      {
+        "node": "m",
+        "html": "<p>fell back to source</p>",
+        "plain": "fell back to source"
+      }
+    ],
+    "ports": [
+      {
+        "node": "d",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Pick</p>"
+      },
+      {
+        "by": "bot",
+        "message": "Sorry, nothing to choose."
+      },
+      {
+        "by": "bot",
+        "message": "<p>fell back to source</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [
+      {
+        "key": "x",
+        "value": null,
+        "nodeId": "d"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2078
+    }
+  }
+}

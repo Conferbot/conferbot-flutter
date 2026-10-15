@@ -1,0 +1,186 @@
+{
+  "id": "legacy.user-input-email",
+  "title": "user-input-node type \"email\": checked, incorrectEmailResponse on a bad one; first edge after 500 ms; no variable",
+  "covers": [
+    "user-input-node"
+  ],
+  "provenance": "executed",
+  "source": "real node shape (anonymised)",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "u",
+        "type": "user-input-node",
+        "data": {
+          "type": "email",
+          "inputPrompt": "Your email?",
+          "incorrectEmailResponse": "Bad email"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "next",
+        "type": "message-node",
+        "data": {
+          "text": "<p>next</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-u",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "u",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-u-source-1-next",
+        "source": "u",
+        "sourceHandle": "source-1",
+        "target": "next",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "u",
+      "do": "text",
+      "value": "nope"
+    },
+    {
+      "at": "u",
+      "do": "text",
+      "value": "a@b.io"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "u",
+        "type": "user-input-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "next",
+        "type": "message-node",
+        "via": "edge:source-1",
+        "t": 2550
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "u",
+        "t": 1350
+      },
+      {
+        "node": "next",
+        "t": 3250
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "u",
+        "text": "Your email? Bad email"
+      },
+      {
+        "node": "next",
+        "text": "next"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "next",
+        "html": "<p>next</p>",
+        "plain": "next"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "Your email?"
+      },
+      {
+        "by": "user",
+        "message": "a@b.io"
+      },
+      {
+        "by": "bot",
+        "message": "<p>next</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "u",
+        "shape": "user-input-response",
+        "type": "email",
+        "text": "a@b.io"
+      }
+    ],
+    "variables": [],
+    "errors": [
+      {
+        "node": "u",
+        "message": "Bad email"
+      }
+    ],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 3250
+    }
+  }
+}

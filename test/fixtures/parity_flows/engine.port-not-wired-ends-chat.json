@@ -1,0 +1,177 @@
+{
+  "id": "engine.port-not-wired-ends-chat",
+  "title": "A branch taken from a handle with no edge ends the chat - no fallback to another edge",
+  "covers": [
+    "n-choices-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "c",
+        "type": "n-choices-node",
+        "data": {
+          "choicePrompt": "<p>Pick</p>",
+          "choices": [
+            {
+              "id": "1",
+              "choiceText": "One"
+            },
+            {
+              "id": "2",
+              "choiceText": "Two"
+            }
+          ],
+          "answerVariable": "pick"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "one",
+        "type": "message-node",
+        "data": {
+          "text": "<p>one</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-c",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "c",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-c-source-1-one",
+        "source": "c",
+        "sourceHandle": "source-1",
+        "target": "one",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "c",
+      "do": "choose",
+      "id": "2"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "c",
+        "type": "n-choices-node",
+        "via": "edge:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "c",
+        "t": 1350
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "c",
+        "text": "Pick One Two"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "c",
+        "html": "<p>Pick</p>",
+        "plain": "Pick"
+      }
+    ],
+    "ports": [
+      {
+        "node": "c",
+        "handle": "source-2",
+        "wired": false
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Pick</p>"
+      },
+      {
+        "by": "user",
+        "message": "Two"
+      }
+    ],
+    "answers": [
+      {
+        "id": "c",
+        "shape": "user-selected-choice",
+        "selectedChoice": "Two"
+      }
+    ],
+    "variables": [
+      {
+        "key": "pick",
+        "value": "Two",
+        "nodeId": "c"
+      }
+    ],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1350
+    }
+  }
+}

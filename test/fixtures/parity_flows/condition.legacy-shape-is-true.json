@@ -1,0 +1,149 @@
+{
+  "id": "condition.legacy-shape-is-true",
+  "title": "Real data: an old condition-node saved as {varName, condition, value} is read as an empty rule, which is TRUE (source-0); with no source-0 edge the chat ends",
+  "covers": [
+    "condition-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"testing\"",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "cd",
+        "type": "condition-node",
+        "data": {
+          "varName": "score",
+          "condition": "=",
+          "value": "3"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "two",
+        "type": "message-node",
+        "data": {
+          "text": "<p>source-2 path</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "one",
+        "type": "message-node",
+        "data": {
+          "text": "<p>source-1 path</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-cd",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "cd",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-cd-source-2-two",
+        "source": "cd",
+        "sourceHandle": "source-2",
+        "target": "two",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-cd-source-1-one",
+        "source": "cd",
+        "sourceHandle": "source-1",
+        "target": "one",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "cd",
+        "type": "condition-node",
+        "via": "edge:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      }
+    ],
+    "ports": [
+      {
+        "node": "cd",
+        "handle": "source-0",
+        "wired": false
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 700
+    }
+  }
+}

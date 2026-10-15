@@ -1,0 +1,180 @@
+{
+  "id": "engine.next-is-first-edge-any-handle",
+  "title": "A step that does not branch follows the FIRST edge from it in edges[], whatever its handle",
+  "covers": [
+    "message-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "a",
+        "type": "message-node",
+        "data": {
+          "text": "<p>A</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "b",
+        "type": "message-node",
+        "data": {
+          "text": "<p>B</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "c",
+        "type": "message-node",
+        "data": {
+          "text": "<p>C</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-7-a",
+        "source": "w",
+        "sourceHandle": "source-7",
+        "target": "a",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-w-source-b",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "b",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-a-source-c",
+        "source": "a",
+        "sourceHandle": "source",
+        "target": "c",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "a",
+        "type": "message-node",
+        "via": "edge:source-7",
+        "t": 700
+      },
+      {
+        "node": "c",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "a",
+        "t": 1350
+      },
+      {
+        "node": "c",
+        "t": 2000
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "a",
+        "text": "A"
+      },
+      {
+        "node": "c",
+        "text": "C"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "a",
+        "html": "<p>A</p>",
+        "plain": "A"
+      },
+      {
+        "node": "c",
+        "html": "<p>C</p>",
+        "plain": "C"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>A</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>C</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2000
+    }
+  }
+}

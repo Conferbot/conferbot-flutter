@@ -1,0 +1,233 @@
+{
+  "id": "legacy.user-range",
+  "title": "user-range-node: below minVal -> source-1, within -> source-2, above maxVal -> source-3; text refused",
+  "covers": [
+    "user-range-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "rg",
+        "type": "user-range-node",
+        "data": {
+          "rangePrompt": "Budget?",
+          "type": "",
+          "range": "",
+          "minVal": "100",
+          "maxVal": "500"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "low",
+        "type": "message-node",
+        "data": {
+          "text": "<p>low</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "mid",
+        "type": "message-node",
+        "data": {
+          "text": "<p>mid</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "high",
+        "type": "message-node",
+        "data": {
+          "text": "<p>high</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-rg",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "rg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-rg-source-1-low",
+        "source": "rg",
+        "sourceHandle": "source-1",
+        "target": "low",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-rg-source-2-mid",
+        "source": "rg",
+        "sourceHandle": "source-2",
+        "target": "mid",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-rg-source-3-high",
+        "source": "rg",
+        "sourceHandle": "source-3",
+        "target": "high",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "rg",
+      "do": "text",
+      "value": "lots"
+    },
+    {
+      "at": "rg",
+      "do": "text",
+      "value": "1,000"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "rg",
+        "type": "user-range-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "high",
+        "type": "message-node",
+        "via": "port:source-3",
+        "t": 2050
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "rg",
+        "t": 1350
+      },
+      {
+        "node": "high",
+        "t": 2750
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "rg",
+        "text": "Budget? Please enter a number, like 42"
+      },
+      {
+        "node": "high",
+        "text": "high"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "high",
+        "html": "<p>high</p>",
+        "plain": "high"
+      }
+    ],
+    "ports": [
+      {
+        "node": "rg",
+        "handle": "source-3",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "Budget?"
+      },
+      {
+        "by": "user",
+        "message": "1,000"
+      },
+      {
+        "by": "bot",
+        "message": "<p>high</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "rg",
+        "shape": "user-input-response-range",
+        "type": "",
+        "text": "1,000"
+      }
+    ],
+    "variables": [],
+    "errors": [
+      {
+        "node": "rg",
+        "message": "Please enter a number, like 42"
+      }
+    ],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2750
+    }
+  }
+}

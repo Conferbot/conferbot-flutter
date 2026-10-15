@@ -1,0 +1,211 @@
+{
+  "id": "ask-file.rules-and-skip",
+  "title": "ask-file-node: over maxFileSizeMB or not in allowedFileTypes is refused; \"(optional)\" in the question offers Skip -> next with no variable",
+  "covers": [
+    "ask-file-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "q",
+        "type": "ask-file-node",
+        "data": {
+          "questionText": "<p>Your logo (optional)</p>",
+          "allowedFileTypes": [
+            "png",
+            "image/jpeg"
+          ],
+          "maxFileSizeMB": 1,
+          "answerVariable": "logo"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>[{logo}]</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-q",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "q",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-q-source-m",
+        "source": "q",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "q",
+      "do": "file",
+      "name": "big.png",
+      "size": 3145728,
+      "type": "image/png"
+    },
+    {
+      "at": "q",
+      "do": "file",
+      "name": "doc.pdf",
+      "size": 1000,
+      "type": "application/pdf"
+    },
+    {
+      "at": "q",
+      "do": "skip"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "q",
+        "type": "ask-file-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1420
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "q",
+        "t": 1420
+      },
+      {
+        "node": "m",
+        "t": 2120
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "q",
+        "text": "Your logo (optional) Choose a file or drop it here That file can't be sent here - choose PNG or IMAGE/JPEG."
+      },
+      {
+        "node": "m",
+        "text": "[]"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "q",
+        "html": "<p>Your logo (optional)</p>",
+        "plain": "Your logo (optional)"
+      },
+      {
+        "node": "m",
+        "html": "<p>[]</p>",
+        "plain": "[]"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Your logo (optional)</p>"
+      },
+      {
+        "by": "user",
+        "message": "Skipped"
+      },
+      {
+        "by": "bot",
+        "message": "<p>[{logo}]</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "q",
+        "shape": "user-ask-file-response",
+        "skipped": true
+      }
+    ],
+    "variables": [
+      {
+        "key": "logo",
+        "value": null,
+        "nodeId": "q"
+      }
+    ],
+    "errors": [
+      {
+        "node": "q",
+        "message": "That file is over 1 MB - choose a smaller one."
+      },
+      {
+        "node": "q",
+        "message": "That file can't be sent here - choose PNG or IMAGE/JPEG."
+      }
+    ],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2120
+    }
+  }
+}

@@ -1,0 +1,221 @@
+{
+  "id": "legacy.three-choices",
+  "title": "three-choices-node: choiceText1..3 -> source-1..3",
+  "covers": [
+    "three-choices-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "t",
+        "type": "three-choices-node",
+        "data": {
+          "choicePrompt": "Pick",
+          "choiceText1": "A",
+          "choiceText2": "B",
+          "choiceText3": "C"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "a",
+        "type": "message-node",
+        "data": {
+          "text": "<p>a</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "b",
+        "type": "message-node",
+        "data": {
+          "text": "<p>b</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "c",
+        "type": "message-node",
+        "data": {
+          "text": "<p>c</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-t",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "t",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-t-source-1-a",
+        "source": "t",
+        "sourceHandle": "source-1",
+        "target": "a",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-t-source-2-b",
+        "source": "t",
+        "sourceHandle": "source-2",
+        "target": "b",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-t-source-3-c",
+        "source": "t",
+        "sourceHandle": "source-3",
+        "target": "c",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "t",
+      "do": "choose",
+      "index": 2
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "t",
+        "type": "three-choices-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "c",
+        "type": "message-node",
+        "via": "port:source-3",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "t",
+        "t": 1350
+      },
+      {
+        "node": "c",
+        "t": 2050
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "t",
+        "text": "Pick A B C"
+      },
+      {
+        "node": "c",
+        "text": "c"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "c",
+        "html": "<p>c</p>",
+        "plain": "c"
+      }
+    ],
+    "ports": [
+      {
+        "node": "t",
+        "handle": "source-3",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "Pick"
+      },
+      {
+        "by": "user",
+        "message": "C"
+      },
+      {
+        "by": "bot",
+        "message": "<p>c</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "t",
+        "shape": "user-selected-choice",
+        "selectedChoice": "C"
+      }
+    ],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2050
+    }
+  }
+}

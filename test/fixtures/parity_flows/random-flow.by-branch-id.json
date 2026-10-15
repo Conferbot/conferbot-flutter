@@ -1,0 +1,181 @@
+{
+  "id": "random-flow.by-branch-id",
+  "title": "random-flow-node: picks a wired branch by weight (Math.random 0.8 of weights 1:1 -> the second); leaves by \"source-\" + branch id",
+  "covers": [
+    "random-flow-node"
+  ],
+  "provenance": "executed",
+  "random": [
+    0.8
+  ],
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "r",
+        "type": "random-flow-node",
+        "data": {
+          "branches": [
+            {
+              "id": "a",
+              "weight": 1
+            },
+            {
+              "id": "b",
+              "weight": 1
+            }
+          ]
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "A",
+        "type": "message-node",
+        "data": {
+          "text": "<p>A</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "B",
+        "type": "message-node",
+        "data": {
+          "text": "<p>B</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-r",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "r",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-r-source-a-A",
+        "source": "r",
+        "sourceHandle": "source-a",
+        "target": "A",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-r-source-b-B",
+        "source": "r",
+        "sourceHandle": "source-b",
+        "target": "B",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "r",
+        "type": "random-flow-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "B",
+        "type": "message-node",
+        "via": "port:source-b",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "B",
+        "t": 1400
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "B",
+        "text": "B"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "B",
+        "html": "<p>B</p>",
+        "plain": "B"
+      }
+    ],
+    "ports": [
+      {
+        "node": "r",
+        "handle": "source-b",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>B</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 1400
+    }
+  }
+}

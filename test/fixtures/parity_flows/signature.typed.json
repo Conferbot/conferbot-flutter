@@ -1,0 +1,247 @@
+{
+  "id": "signature.typed",
+  "title": "signature-node (real): typed name drawn as a signature, uploaded (POST media); saves the URL and <var>_at/_method/_name; -> source",
+  "covers": [
+    "signature-node"
+  ],
+  "provenance": "executed",
+  "source": "QA bot \"QA - All Nodes\"",
+  "server": {
+    "http": {
+      "media": {
+        "status": 200,
+        "body": {
+          "url": "https://api.test/media/sig1"
+        }
+      }
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "sg2",
+        "type": "signature-node",
+        "data": {
+          "questionText": "<p>And initial here (typed is fine).</p>",
+          "consentText": "",
+          "allowTyped": true,
+          "requireName": false,
+          "penColor": "auto",
+          "submitLabel": "Sign",
+          "answerVariable": "initials"
+        },
+        "position": {
+          "x": 1520,
+          "y": 2220
+        }
+      },
+      {
+        "id": "sg2Msg",
+        "type": "message-node",
+        "data": {
+          "text": "<p>Initials: {initials_method} {initials_name}.</p>"
+        },
+        "position": {
+          "x": 1880,
+          "y": 2220
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-sg2",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "sg2",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-sg2-source-sg2Msg",
+        "source": "sg2",
+        "sourceHandle": "source",
+        "target": "sg2Msg",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "sg2",
+      "do": "signEmpty"
+    },
+    {
+      "at": "sg2",
+      "do": "signTyped",
+      "name": "A"
+    },
+    {
+      "at": "sg2",
+      "do": "signTyped",
+      "name": "Ana Lima"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "sg2",
+        "type": "signature-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "sg2Msg",
+        "type": "message-node",
+        "via": "port:source",
+        "t": 1528
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "sg2",
+        "t": 1498
+      },
+      {
+        "node": "sg2Msg",
+        "t": 2556
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "sg2",
+        "text": "And initial here (typed is fine). Signed Ana Lima · Oct 15, 2026, 10:00 AM"
+      },
+      {
+        "node": "sg2Msg",
+        "text": "Initials: typed Ana Lima."
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "sg2",
+        "html": "<p>And initial here (typed is fine).</p>",
+        "plain": "And initial here (typed is fine)."
+      },
+      {
+        "node": "sg2Msg",
+        "html": "<p>Initials: typed Ana Lima.</p>",
+        "plain": "Initials: typed Ana Lima."
+      }
+    ],
+    "ports": [
+      {
+        "node": "sg2",
+        "handle": "source",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>And initial here (typed is fine).</p>"
+      },
+      {
+        "by": "user",
+        "message": "Signed: https://api.test/media/sig1"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Initials: {initials_method} {initials_name}.</p>"
+      }
+    ],
+    "answers": [
+      {
+        "id": "sg2",
+        "shape": "user-signature",
+        "url": "https://api.test/media/sig1",
+        "method": "typed",
+        "name": "Ana Lima",
+        "width": 192,
+        "height": 114
+      }
+    ],
+    "variables": [
+      {
+        "key": "initials",
+        "value": "https://api.test/media/sig1",
+        "nodeId": "sg2"
+      },
+      {
+        "key": "initials_at",
+        "value": "2026-10-15T10:00:01.528Z",
+        "nodeId": "column_mapped_initials_at"
+      },
+      {
+        "key": "initials_method",
+        "value": "typed",
+        "nodeId": "column_mapped_initials_method"
+      },
+      {
+        "key": "initials_name",
+        "value": "Ana Lima",
+        "nodeId": "column_mapped_initials_name"
+      }
+    ],
+    "errors": [
+      {
+        "node": "sg2",
+        "message": "Draw your signature in the box - or type your name instead."
+      },
+      {
+        "node": "sg2",
+        "message": "Type your full name to sign."
+      }
+    ],
+    "http": [
+      {
+        "path": "media"
+      }
+    ],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2556
+    }
+  }
+}

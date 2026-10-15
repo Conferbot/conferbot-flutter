@@ -1,0 +1,155 @@
+{
+  "id": "engine.port-to-missing-node-crashes",
+  "title": "A wired branch whose target node is missing: the widget throws (nextNode.type) and the chat stops where it is",
+  "covers": [
+    "n-choices-node"
+  ],
+  "provenance": "executed",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "c",
+        "type": "n-choices-node",
+        "data": {
+          "choicePrompt": "<p>Pick</p>",
+          "choices": [
+            {
+              "id": "1",
+              "choiceText": "One"
+            }
+          ]
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-c",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "c",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-c-source-1-ghost",
+        "source": "c",
+        "sourceHandle": "source-1",
+        "target": "ghost",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "at": "c",
+      "do": "choose",
+      "id": "1"
+    }
+  ],
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "c",
+        "type": "n-choices-node",
+        "via": "edge:source",
+        "t": 700
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "c",
+        "t": 1350
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "c",
+        "text": "Pick One"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "c",
+        "html": "<p>Pick</p>",
+        "plain": "Pick"
+      }
+    ],
+    "ports": [
+      {
+        "node": "c",
+        "handle": "source-1",
+        "wired": true
+      }
+    ],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "<p>Pick</p>"
+      },
+      {
+        "by": "user",
+        "message": "One"
+      }
+    ],
+    "answers": [
+      {
+        "id": "c",
+        "shape": "user-selected-choice",
+        "selectedChoice": "One"
+      }
+    ],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [],
+    "unsupported": [],
+    "end": {
+      "ended": false,
+      "crashed": true,
+      "at": "c",
+      "reason": "edge target missing"
+    }
+  }
+}

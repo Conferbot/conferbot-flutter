@@ -1,0 +1,156 @@
+{
+  "id": "audio.reads-data-audio",
+  "title": "audio-node shows a player for data.audio and moves on at once",
+  "covers": [
+    "audio-node"
+  ],
+  "provenance": "executed",
+  "source": "real node shape (anonymised): 6 of 8 live audio nodes save a URL string",
+  "flow": {
+    "nodes": [
+      {
+        "id": "w",
+        "type": "welcome-node",
+        "data": {
+          "text": "<p>Hi</p>",
+          "disableImage": true
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "a",
+        "type": "audio-node",
+        "data": {
+          "audio": "https://cdn.example.com/media/sample-audio.mp3"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "m",
+        "type": "message-node",
+        "data": {
+          "text": "<p>after audio</p>"
+        },
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-w-source-a",
+        "source": "w",
+        "sourceHandle": "source",
+        "target": "a",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      },
+      {
+        "id": "e-a-source-m",
+        "source": "a",
+        "sourceHandle": "source",
+        "target": "m",
+        "targetHandle": "target",
+        "type": "customedge",
+        "animated": true
+      }
+    ]
+  },
+  "expect": {
+    "path": [
+      {
+        "node": "w",
+        "type": "welcome-node",
+        "via": "start",
+        "t": 0
+      },
+      {
+        "node": "a",
+        "type": "audio-node",
+        "via": "edge:source",
+        "t": 700
+      },
+      {
+        "node": "m",
+        "type": "message-node",
+        "via": "edge:source",
+        "t": 1350
+      }
+    ],
+    "shown": [
+      {
+        "node": "w",
+        "t": 700
+      },
+      {
+        "node": "a",
+        "t": 1350
+      },
+      {
+        "node": "m",
+        "t": 2016
+      }
+    ],
+    "drawn": [
+      {
+        "node": "w",
+        "text": "Hi"
+      },
+      {
+        "node": "a",
+        "text": "0:00 0:00"
+      },
+      {
+        "node": "m",
+        "text": "after audio"
+      }
+    ],
+    "rendered": [
+      {
+        "node": "w",
+        "html": "<p>Hi</p>",
+        "plain": "Hi"
+      },
+      {
+        "node": "m",
+        "html": "<p>after audio</p>",
+        "plain": "after audio"
+      }
+    ],
+    "ports": [],
+    "transcript": [
+      {
+        "by": "bot",
+        "message": "<p>Hi</p>"
+      },
+      {
+        "by": "bot",
+        "message": "https://cdn.example.com/media/sample-audio.mp3"
+      },
+      {
+        "by": "bot",
+        "message": "<p>after audio</p>"
+      }
+    ],
+    "answers": [],
+    "variables": [],
+    "errors": [],
+    "http": [],
+    "emits": [
+      "chat-flow-completed"
+    ],
+    "unsupported": [],
+    "end": {
+      "ended": true,
+      "t": 2016
+    }
+  }
+}
