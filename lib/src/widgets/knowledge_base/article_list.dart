@@ -18,6 +18,9 @@ class ArticleList extends StatelessWidget {
   final bool showRatings;
   final ConferBotTheme? theme;
 
+  /// Drawn above the articles, scrolling with them (the Recent articles).
+  final Widget? header;
+
   const ArticleList({
     super.key,
     required this.articles,
@@ -32,11 +35,13 @@ class ArticleList extends StatelessWidget {
     this.showReadTime = true,
     this.showRatings = true,
     this.theme,
+    this.header,
   });
 
   @override
   Widget build(BuildContext context) {
     final effectiveTheme = theme ?? defaultTheme;
+    final lead = header == null ? 0 : 1;
 
     if (isLoading) {
       return _buildLoadingState(effectiveTheme);
@@ -59,14 +64,16 @@ class ArticleList extends StatelessWidget {
       },
       child: ListView.separated(
         padding: EdgeInsets.symmetric(vertical: effectiveTheme.spacing.sm),
-        itemCount: articles.length + (isLoadingMore || hasMore ? 1 : 0),
+        itemCount: lead + articles.length + (isLoadingMore || hasMore ? 1 : 0),
         separatorBuilder: (_, __) => Divider(
           height: 1,
           color: effectiveTheme.colors.divider,
           indent: effectiveTheme.spacing.md,
           endIndent: effectiveTheme.spacing.md,
         ),
-        itemBuilder: (context, index) {
+        itemBuilder: (context, i) {
+          if (i < lead) return header!;
+          final index = i - lead;
           if (index == articles.length) {
             return _buildLoadMoreIndicator(effectiveTheme);
           }
