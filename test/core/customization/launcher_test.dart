@@ -31,6 +31,7 @@ void main() {
     expect(Launcher.resolve({'launcherShape': 'squircle', 'widgetSize': 50}).corners.topLeft, 15);
     final tab = Launcher.resolve({'launcherShape': 'tab', 'widgetSize': 50});
     expect([tab.width, tab.side, tab.tucked], [41, 0, 0]);
+    expect(tab.glyph, 25);
     expect(tab.corners, const BubbleCorners(15, 0, 0, 15));
     expect(Launcher.resolve({'launcherShape': 'peek', 'widgetSize': 50}).tucked, 17);
   });
