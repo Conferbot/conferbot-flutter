@@ -492,17 +492,57 @@ class AgentJoinedMessageRecord extends RecordItem {
 class SystemMessageRecord extends RecordItem {
   final String text;
 
+  /// A live chat line's own kind, as the web records it: agent-joined-message,
+  /// agent-left-chat, queue-self-resolved, agent-chat-ended (null for others).
+  final String? kind;
+
+  /// An AI handing the visitor on: the "Connecting you with the team…" line.
+  final bool handover;
+
+  /// How that wait ended (joined, unavailable, cancelled, ended); null while pending.
+  final String? settled;
+
+  /// A smaller line under it ("They can see your conversation so far").
+  final String? note;
+
+  /// Who joined or left.
+  final String? agentId;
+
   const SystemMessageRecord({
     required super.id,
     required super.time,
     required this.text,
+    this.kind,
+    this.handover = false,
+    this.settled,
+    this.note,
+    this.agentId,
   }) : super(type: MessageType.systemMessage);
+
+  /// A Connecting line still waiting (its dots run).
+  bool get handoverPending => handover && settled == null;
+
+  SystemMessageRecord copyWith({String? text, String? settled, String? note}) => SystemMessageRecord(
+        id: id,
+        time: time,
+        text: text ?? this.text,
+        kind: kind,
+        handover: handover,
+        settled: settled ?? this.settled,
+        note: note ?? this.note,
+        agentId: agentId,
+      );
 
   factory SystemMessageRecord.fromJson(Map<String, dynamic> json) {
     return SystemMessageRecord(
       id: json['_id'].toString(),
       time: DateTime.parse(json['time'] as String),
       text: json['text'] as String? ?? '',
+      kind: json['kind'] as String?,
+      handover: json['handover'] == true,
+      settled: json['settled'] as String?,
+      note: json['note'] as String?,
+      agentId: json['agentId']?.toString(),
     );
   }
 
@@ -513,6 +553,11 @@ class SystemMessageRecord extends RecordItem {
       'type': type.value,
       'time': time.toIso8601String(),
       'text': text,
+      if (kind != null) 'kind': kind,
+      if (handover) 'handover': true,
+      if (settled != null) 'settled': settled,
+      if (note != null) 'note': note,
+      if (agentId != null) 'agentId': agentId,
     };
   }
 }
