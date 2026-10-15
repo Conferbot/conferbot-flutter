@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'agent_reply.dart';
 import 'media/audio_player_widget.dart';
+import 'media/video_player_widget.dart';
+import 'package:flutter_html/flutter_html.dart';
 import '../core/live_chat/live_chat.dart';
 import '../core/customization/customizations.dart';
 import 'bubble_outline.dart';
@@ -104,13 +106,29 @@ class MessageBubble extends StatelessWidget {
                 child: Image.network(
                   imageUrl,
                   fit: BoxFit.fitWidth,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  // The image step moves on once its picture is in (or failed),
+                  // as the web does, rather than at the 4 s cap.
+                  frameBuilder: (context, child, frame, _) {
+                    if (frame != null) _mediaSettled(context);
+                    return child;
+                  },
+                  errorBuilder: (context, __, ___) {
+                    _mediaSettled(context);
+                    return const SizedBox.shrink();
+                  },
                 ),
               ),
             ),
           ),
         );
       }
+    }
+
+    // A flow step's video, audio, file, HTML or link line (video-node,
+    // audio-node, file-node, html-node, user-redirect-node).
+    if (message is BotMessageRecord) {
+      final media = _buildFlowMedia(context, effectiveTheme, (message as BotMessageRecord).nodeData);
+      if (media != null) return media;
     }
 
     // A file in a live chat, from the agent or the visitor: the image itself,
@@ -309,6 +327,102 @@ class MessageBubble extends StatelessWidget {
           Flexible(child: content),
         ],
       ),
+    );
+  }
+
+  /// The step whose media this is tells the flow it settled.
+  void _mediaSettled(BuildContext context) {
+    final nodeId = (message as BotMessageRecord).nodeData?['mediaNodeId']?.toString();
+    if (nodeId == null) return;
+    try {
+      Provider.of<ConferBotProvider>(context, listen: false).flowEngine.mediaSettled(nodeId);
+    } catch (_) {
+      // No provider above (a bubble drawn on its own).
+    }
+  }
+
+  /// A flow step's media line, indented past the avatar like the image.
+  Widget? _buildFlowMedia(BuildContext context, ConferBotTheme theme, Map<String, dynamic>? data) {
+    if (data == null) return null;
+    final video = data['videoUrl']?.toString() ?? '';
+    final audio = data['audioUrl']?.toString() ?? '';
+    final file = data['fileUrl']?.toString() ?? '';
+    final html = data['html']?.toString() ?? '';
+    final link = data['linkUrl']?.toString() ?? '';
+    Widget? content;
+    if (video.isNotEmpty) {
+      content = SizedBox(
+        width: theme.layout.maxBubbleWidth,
+        child: VideoPlayerWidget(
+          videoUrl: video,
+          theme: theme,
+          onError: (_) => _mediaSettled(context),
+        ),
+      );
+      // The player is up: the step need not wait for the whole video.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _mediaSettled(context));
+    } else if (audio.isNotEmpty) {
+      content = SizedBox(
+        width: theme.layout.maxBubbleWidth,
+        child: AudioPlayerWidget(audioUrl: audio, theme: theme, config: const AudioPlayerConfig(compactMode: true)),
+      );
+    } else if (file.isNotEmpty) {
+      final name = data['fileName']?.toString() ?? LiveChat.fileNameOf(null, file);
+      content = _fileRow(theme, name, _getTextColor(theme), () => launchUrl(Uri.parse(file), mode: LaunchMode.externalApplication));
+    } else if (html.isNotEmpty) {
+      content = Container(
+        constraints: BoxConstraints(maxWidth: theme.layout.maxBubbleWidth),
+        padding: EdgeInsets.all(theme.spacing.md),
+        decoration: BoxDecoration(
+          color: _getBaseBubbleColor(theme),
+          borderRadius: BorderRadius.circular(theme.borderRadius.bubble),
+        ),
+        child: Html(
+          data: html,
+          onLinkTap: (url, _, __) {
+            if (url != null) launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+          },
+          style: {
+            'body': Style(margin: Margins.zero, padding: HtmlPaddings.zero, color: _getTextColor(theme)),
+          },
+        ),
+      );
+    } else if (link.isNotEmpty) {
+      final label = data['linkLabel']?.toString() ?? '';
+      content = Material(
+        color: _getBaseBubbleColor(theme),
+        borderRadius: BorderRadius.circular(theme.borderRadius.bubble),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(theme.borderRadius.bubble),
+          onTap: () => launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication),
+          child: Padding(
+            padding: EdgeInsets.all(theme.spacing.md),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.open_in_new, size: 18, color: _getTextColor(theme)),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    label.isNotEmpty ? label : link,
+                    style: TextStyle(color: _getTextColor(theme), decoration: TextDecoration.underline),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    if (content == null) return null;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: theme.spacing.chatContentPadding + theme.layout.avatarSize + 10,
+        right: theme.spacing.chatContentPadding,
+        top: theme.spacing.xs,
+        bottom: theme.spacing.xs,
+      ),
+      child: Align(alignment: Alignment.centerLeft, child: content),
     );
   }
 
