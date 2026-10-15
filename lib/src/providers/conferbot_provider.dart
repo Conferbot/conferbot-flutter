@@ -26,6 +26,7 @@ import 'analytics_provider.dart';
 import '../core/live_chat/live_chat.dart';
 import '../core/live_chat/live_chat_extras.dart';
 import '../core/customization/customizations.dart';
+import '../core/customization/widget_theme.dart';
 
 /// ConferBot provider configuration
 class ConferBotConfig {
@@ -194,7 +195,41 @@ class ConferBotProvider with ChangeNotifier {
   int get unreadCount => _unreadCount;
 
   /// Server customizations (theme, bot name, avatar, etc.)
-  Map<String, dynamic>? get serverCustomizations => _serverCustomizations;
+  /// The settings with the widget theme's palette applied (theme colours),
+  /// as the web widget renders them; null until the bot's settings arrive.
+  Map<String, dynamic>? get serverCustomizations => _themed;
+
+  /// The phone's dark mode: a theme set to "auto" follows it.
+  bool _prefersDark = false;
+  Map<String, dynamic>? _themedFor;
+  Map<String, dynamic>? _themedCache;
+  ResolvedWidgetTheme _widgetTheme = const ResolvedWidgetTheme();
+
+  Map<String, dynamic>? get _themed {
+    final raw = _serverCustomizations;
+    if (raw == null) return null;
+    if (!identical(raw, _themedFor)) {
+      _themedFor = raw;
+      _themedCache = WidgetTheme.withThemePalette(raw, _prefersDark);
+      _widgetTheme = WidgetTheme.resolve(_themedCache, _prefersDark);
+    }
+    return _themedCache;
+  }
+
+  /// The widget theme in force (tokens, shape, scheme).
+  ResolvedWidgetTheme get widgetTheme {
+    _themed;
+    return _widgetTheme;
+  }
+
+  /// The phone switched between light and dark: a bot whose theme follows
+  /// the phone ("auto") repaints. The chat widget calls this; apps need not.
+  void setSystemDarkMode(bool dark) {
+    if (dark == _prefersDark) return;
+    _prefersDark = dark;
+    _themedFor = null;
+    notifyListeners();
+  }
 
   /// The bot's AI agent when it is a no-flow agent bot (Agent Studio), else null.
   AgentBot? get agentBot => _agentBot;
@@ -230,7 +265,7 @@ class ConferBotProvider with ChangeNotifier {
   ConferBotTheme get serverTheme => _buildServerTheme();
 
   /// The bot's settings as the web widget applies them (core/customization); defaults until it loads.
-  ResolvedCustomizations get customizations => Customizations.resolve(_serverCustomizations);
+  ResolvedCustomizations get customizations => Customizations.resolve(_themed, theme: widgetTheme);
 
   /// Whether the conversation is in live chat mode (agent connected)
   bool get isLiveChatMode => _isLiveChatMode;
@@ -1230,13 +1265,14 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Build a ConferBotTheme by applying server customizations over defaults
   ConferBotTheme _buildServerTheme() {
-    final c = _serverCustomizations;
+    final c = _themed;
     if (c == null) return defaultTheme;
+    final tokens = widgetTheme.tokens;
 
     // The web widget's defaults and fallbacks (core/customization): #0b4eb8
     // bot bubbles with white text, light grey visitor bubbles with dark
     // text, choices in the option colours else the bot's.
-    final look = Customizations.resolve(c);
+    final look = customizations;
     final headerBg = _parseHexColor(look.headerBg);
     final headerText = _parseHexColor(look.headerText);
     final botBubble = _parseHexColor(look.botBubbleColor) ?? const Color(0xFF0B4EB8);
@@ -1263,10 +1299,28 @@ class ConferBotProvider with ChangeNotifier {
       background: chatBgColor,
     );
 
+    // The widget theme's surfaces and text (every theme but classic in
+    // light): chat, composer, cards, quiet text, lines. The owner's own chat
+    // background stays theirs.
+    final themed = tokens == null
+        ? colors
+        : colors.copyWith(
+            background: look.surface != null ? _parseHexColor(tokens.bg) : chatBgColor,
+            surface: _parseHexColor(tokens.bg),
+            systemBubble: _parseHexColor(tokens.card2),
+            systemBubbleText: _parseHexColor(tokens.text),
+            text: _parseHexColor(tokens.ink),
+            textSecondary: _parseHexColor(tokens.muted),
+            textDisabled: _parseHexColor(tokens.faint),
+            border: _parseHexColor(tokens.line2),
+            divider: _parseHexColor(tokens.line),
+          );
+
     // Font size: 14 counts as unset (14.5 on the web). Bubble corners come
     // from the resolved settings in the bubbles themselves.
     return defaultTheme.copyWith(
-      colors: colors,
+      brightness: widgetTheme.isDark ? Brightness.dark : Brightness.light,
+      colors: themed,
       typography: ConferBotTypography(messageSize: look.fontSize),
     );
   }
