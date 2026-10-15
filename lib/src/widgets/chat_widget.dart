@@ -27,6 +27,7 @@ import '../core/customization/customizations.dart';
 import '../core/customization/chat_background.dart';
 import 'chat_background.dart';
 import '../core/live_chat/live_chat.dart';
+import '../core/help_centre/help_centre.dart';
 import 'package:file_picker/file_picker.dart';
 
 /// Complete drop-in chat widget with node rendering support
@@ -48,8 +49,14 @@ class ChatWidget extends StatefulWidget {
   /// Pagination configuration
   final MessageListPaginationConfig? paginationConfig;
 
-  /// Whether to show the Knowledge Base button in the header
-  final bool showKnowledgeBase;
+  /// The help centre (knowledge base) button, as an override of the
+  /// owner's setting:
+  ///  - `null` (default): follow the server. Shown while the owner's
+  ///    `enableKnowledgeBase` is on and a published article exists, as on
+  ///    the web widget.
+  ///  - `false`: never shown.
+  ///  - `true`: always shown, even with the owner's switch off.
+  final bool? showKnowledgeBase;
 
   /// Optional callback when an article is inserted into chat
   final ValueChanged<KnowledgeBaseArticle>? onArticleInsert;
@@ -81,7 +88,7 @@ class ChatWidget extends StatefulWidget {
     this.theme,
     this.enablePagination = true,
     this.paginationConfig,
-    this.showKnowledgeBase = true,
+    this.showKnowledgeBase,
     this.onArticleInsert,
     this.showOfflineIndicator = true,
     this.showDeliveryStatus = true,
@@ -168,24 +175,58 @@ class _ChatWidgetState extends State<ChatWidget> {
     if (mounted) setState(() {});
   }
 
-  void _initKnowledgeBase() {
-    if (!widget.showKnowledgeBase) return;
+  ConferBotProvider? _chatProvider;
 
-    final provider = context.read<ConferBotProvider>();
-    _kbProvider = KnowledgeBaseProvider(
+  void _initKnowledgeBase() {
+    if (!mounted) return;
+    // AI sources and rich article cards open articles through this chat.
+    _chatProvider = context.read<ConferBotProvider>();
+    _chatProvider!.articleOpener = _openArticleById;
+  }
+
+  /// Is the help centre offered? The app's override first, else the owner's
+  /// setting and the articles the server sent (core/help_centre).
+  bool _helpCentreVisible(ConferBotProvider provider) => HelpCentre.isVisible(
+        override: widget.showKnowledgeBase,
+        customizations: provider.serverCustomizations,
+        data: provider.helpCentreData,
+      );
+
+  KnowledgeBaseProvider _ensureKbProvider(ConferBotProvider provider) {
+    final kb = _kbProvider ??= KnowledgeBaseProvider(
       apiKey: provider.apiKey,
       botId: provider.botId,
+      baseUrl: provider.baseUrl,
       visitorId: provider.visitorId,
+      initialData: provider.helpCentreData,
     );
+    // The owner's hideRecentArticles (the list itself needs articles).
+    kb.showRecentArticles = provider.serverCustomizations?['hideRecentArticles'] != true;
+    kb.setInitialData(provider.helpCentreData);
+    kb.setVisitorId(provider.visitorId ?? '');
+    return kb;
   }
 
   void _openKnowledgeBase() {
-    if (_kbProvider == null) return;
+    final provider = context.read<ConferBotProvider>();
+    if (!_helpCentreVisible(provider)) return;
+    final kb = _ensureKbProvider(provider);
     setState(() {
       _showKnowledgeBase = true;
     });
-    _kbProvider!.setVisitorId(context.read<ConferBotProvider>().visitorId ?? '');
-    _kbProvider!.initialize();
+    kb.initialize();
+  }
+
+  /// An AI source or a rich article card: the article, in the help centre.
+  void _openArticleById(String articleId) {
+    if (!mounted) return;
+    final provider = context.read<ConferBotProvider>();
+    if (!_helpCentreVisible(provider)) return;
+    final kb = _ensureKbProvider(provider);
+    setState(() {
+      _showKnowledgeBase = true;
+    });
+    kb.openArticle(articleId);
   }
 
   void _closeKnowledgeBase() {
@@ -276,6 +317,7 @@ class _ChatWidgetState extends State<ChatWidget> {
   void dispose() {
     _connectivity.removeListener(_onConnectivityChange);
     _messageQueue.removeListener(_onQueueChange);
+    _chatProvider?.articleOpener = null;
     _kbProvider?.dispose();
     super.dispose();
   }
@@ -359,7 +401,7 @@ class _ChatWidgetState extends State<ChatWidget> {
         Navigator.of(context).pop();
       },
       showConnectionStatus: true,
-      showKnowledgeBase: widget.showKnowledgeBase,
+      showKnowledgeBase: _helpCentreVisible(provider),
       onKnowledgeBaseTap: _openKnowledgeBase,
       theme: provider.serverTheme,
       // Show handover indicator in header
@@ -697,7 +739,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       disabled: provider.isProcessing || repliesOff,
       enableAttachments: widget.enableAttachments || canAttach,
       onAttachmentPress: canAttach ? _pickLiveFile : null,
-      showKnowledgeBase: widget.showKnowledgeBase,
+      showKnowledgeBase: _helpCentreVisible(provider),
       onKnowledgeBaseTap: _openKnowledgeBase,
       showOfflineIndicator: isOffline,
       // "Powered by Conferbot", the owner's text, or nothing (plan-gated by the server).
