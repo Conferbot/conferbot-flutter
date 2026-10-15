@@ -27,6 +27,9 @@ import '../core/agent/agent_handover.dart';
 import 'analytics_provider.dart';
 import '../core/live_chat/live_chat.dart';
 import '../core/live_chat/live_chat_extras.dart';
+import '../core/live_chat/handover_lifecycle.dart';
+import '../core/live_chat/handover_state.dart';
+import '../core/live_chat/reply_time.dart';
 import '../core/customization/customizations.dart';
 import '../core/customization/widget_theme.dart';
 
@@ -94,6 +97,19 @@ class ConferBotProvider with ChangeNotifier {
   /// Live chat extras: queue position, leave a message, receipts, locks,
   /// file requests, the lead card and the post-chat rating.
   late final LiveChatExtras liveChat;
+
+  /// The handover's lifecycle: the Connecting line and its outcome, the 20s
+  /// waiting signal, leaving the queue, and a live chat picked back up after
+  /// a restart (core/live_chat/handover_lifecycle.dart).
+  late final HandoverLifecycle handover;
+
+  // The session whose flow has been started (or picked back up): bot data
+  // comes again on every reconnect and must not run the flow again.
+  String? _flowStartedFor;
+
+  // Start-up (the saved session restored, the socket, pagination): the chat
+  // opens only once it is done, or a restored session would be missed.
+  final Completer<void> _started = Completer<void>();
 
   // Pagination controller
   MessagePaginationController? _paginationController;
@@ -182,8 +198,33 @@ class ConferBotProvider with ChangeNotifier {
     );
     liveChat.addListener(notifyListeners);
 
+    handover = HandoverLifecycle(
+      socket: () => _socketClient,
+      sessionId: () => _chatSessionId,
+      isOpen: () => _isOpen,
+      addLine: (line) {
+        _addMessageToRecord(line);
+        notifyListeners();
+      },
+      updateLines: _updateAllMessages,
+      flow: _EngineHandoverFlow(() => _flowEngine),
+      setLive: (on) {
+        _isLiveChatMode = on;
+        ChatState.instance.setLiveChatMode(on);
+        if (!on) _currentAgent = null;
+        notifyListeners();
+      },
+      setAgent: (a) {
+        _currentAgent = Agent(id: a.id, name: a.name, email: a.email);
+        notifyListeners();
+      },
+    );
+
     if (config.autoConnect) {
-      _initialize();
+      // Done even when start-up fails, so openChat never waits forever.
+      _initialize().whenComplete(() {
+        if (!_started.isCompleted) _started.complete();
+      });
     }
   }
 
@@ -305,6 +346,55 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Whether the connected agent is currently typing
   bool get agentTyping => _agentTyping;
+
+  /// A person (not the AI) is in the chat, from the record (web handoverState.ts).
+  bool get personInChat => handover.personInChat;
+
+  /// "Talk to a person" may be offered: nobody is coming or here.
+  bool get talkToPersonAllowed => handover.talkToPersonAllowed;
+
+  // Retired once tapped, or once a handover took it off: an AI reply
+  // arriving mid-handover cannot bring it back (web quickActions.ts).
+  bool _talkToPersonRetired = false;
+
+  /// "Talk to a person" on the quick actions: an AI agent bot whose owner
+  /// turned it on, only while no handover is under way and nobody is here.
+  bool get offerTalkToPerson =>
+      _agentBot != null && _serverCustomizations?['chatTalkToHuman'] == true && !_talkToPersonRetired && talkToPersonAllowed;
+
+  /// The visitor taps "Talk to a person": it goes, and the AI is asked.
+  Future<void> talkToPerson() async {
+    _talkToPersonRetired = true;
+    notifyListeners();
+    await sendMessage(LiveChat.talkToPersonAsk);
+  }
+
+  /// The header's line under the bot name: "Online", the team's reply time
+  /// ("Typically replies in a few minutes", "Online · team back Monday 9 AM"),
+  /// or plain "Online" once a person is in the chat; null when the owner
+  /// turned the status off (core/live_chat/reply_time.dart).
+  String? get headerStatus => ReplyTime.headerStatus(
+        _serverCustomizations?['replyTime'],
+        personInChat: personInChat,
+        agentBot: _agentBot != null,
+        hidden: _serverCustomizations != null && !customizations.showOnline,
+      );
+
+  /// The visitor leaves the queue (queue-self-resolve): the team stops
+  /// seeing them waiting and the flow carries on. False when a person has
+  /// already picked the chat up (they stay).
+  Future<bool> leaveQueue() async {
+    final left = await handover.leaveQueue();
+    notifyListeners();
+    return left;
+  }
+
+  /// Listen to a widget signal, as the web widget's window events:
+  /// `cb:waiting-for-human` ({offline, reason, backAt, emailCaptured}),
+  /// `cb:human-joined` ({name}) and `cb:wait-over` ({reason: unavailable |
+  /// cancelled | ended}). Call the returned function to stop listening.
+  void Function() onWidgetSignal(String name, void Function(Map<String, dynamic> detail) listener) =>
+      handover.onSignal(name, listener);
 
   /// Whether a previous session was restored from persistence
   bool get sessionRestored => _sessionRestored;
@@ -495,6 +585,7 @@ class ConferBotProvider with ChangeNotifier {
   void _setupSocketListeners() {
     _setupAgentBotListeners();
     liveChat.setupListeners();
+    handover.setupListeners();
     // Connection events
     _socketClient.on(SocketEvents.connect, (_) {
       _isConnected = true;
@@ -642,53 +733,39 @@ class ConferBotProvider with ChangeNotifier {
 
     // Agent accepted handover
     _socketClient.on(SocketEvents.agentAccepted, (data) {
+      if (data is! Map || !_isOwnSession(data)) return;
+      // The wait is over: the Connecting line settles (joined, or
+      // unavailable when the AI takes the chat back), the waiting signal
+      // stops (core/live_chat/handover_state.dart acceptedPlan).
+      final plan = handover.onAccepted(data);
+      if (plan.humanJoined) _talkToPersonRetired = true;
       // An agent bot's own AI agent taking the chat it already greeted:
       // nothing to announce, the held messages go out.
       if (_onAgentBotAccepted(data)) return;
-      if (data != null && data is Map<String, dynamic>) {
-        final agentDetails = data['agentDetails'] as Map<String, dynamic>?;
-        if (agentDetails != null) {
-          final agentName = agentDetails['name']?.toString() ?? 'Agent';
-          _currentAgent = Agent(
-            id: agentDetails['_id']?.toString() ?? '',
-            name: agentName,
-            email: agentDetails['email']?.toString(),
-          );
+      final agentDetails = data['agentDetails'] is Map ? Map<String, dynamic>.from(data['agentDetails'] as Map) : null;
+      if (agentDetails == null) return;
+      final agentName = agentDetails['name']?.toString() ?? 'Agent';
+      _currentAgent = Agent(
+        id: agentDetails['_id']?.toString() ?? '',
+        name: agentName,
+        email: agentDetails['email']?.toString(),
+        avatar: agentDetails['avatar']?.toString(),
+      );
 
-          // Set live chat mode
-          _isLiveChatMode = true;
-          ChatState.instance.setLiveChatMode(true);
+      // Set live chat mode
+      _isLiveChatMode = true;
+      ChatState.instance.setLiveChatMode(true);
 
-          // Add system message "{agent name} has joined the chat"
-          final joinMessageId = 'agent_joined_${DateTime.now().millisecondsSinceEpoch}';
-          final systemMessage = SystemMessageRecord(
-            id: joinMessageId,
-            time: DateTime.now(),
-            text: '$agentName has joined the chat',
-          );
-          _addMessageToRecord(systemMessage);
+      // "<name> joined the chat" - not again for the same person (a repeat
+      // after a reconnect), with "They can see your conversation so far"
+      // after an AI handover.
+      if (plan.announce) handover.addJoin(agentDetails, plan);
 
-          // Add to ChatState record
-          ChatState.instance.pushToRecord(RecordEntry(
-            id: joinMessageId,
-            shape: 'agent-joined-message',
-            type: 'agent-joined-message',
-            data: {
-              'name': agentName,
-              'agentDetails': agentDetails,
-            },
-          ));
-
-          // Add to transcript
-          ChatState.instance.addToTranscript('bot', '$agentName has joined the chat');
-
-          // Notify flow engine of agent acceptance; the handover step's
-          // waiting card goes ("{name} has joined" is already a line).
-          _flowEngine.handleAgentAccepted(agentName);
-          _flowEngine.clearHandoverUI();
-          notifyListeners();
-        }
-      }
+      // Notify flow engine of agent acceptance; the handover step's
+      // waiting card goes (the join is already a line).
+      _flowEngine.handleAgentAccepted(agentName);
+      _flowEngine.clearHandoverUI();
+      notifyListeners();
     });
 
     // No agents available
@@ -738,32 +815,15 @@ class ConferBotProvider with ChangeNotifier {
       notifyListeners();
     });
 
-    // Agent left
+    // Agent left: an AI handing the visitor to the team is not leaving them
+    // (the Connecting line, not "<name> left"); an AI pausing an idle
+    // visitor draws nothing (core/live_chat/handover_state.dart agentLeftKind).
     _socketClient.on(SocketEvents.agentLeft, (data) {
-      final agentName = _currentAgent?.name ?? 'Agent';
-
-      // Add system message "{agent name} has left the chat"
-      final msgId = 'agent_left_${DateTime.now().millisecondsSinceEpoch}';
-      final systemMessage = SystemMessageRecord(
-        id: msgId,
-        time: DateTime.now(),
-        text: '$agentName has left the chat',
-      );
-      _addMessageToRecord(systemMessage);
-
-      // Add to ChatState record
-      ChatState.instance.pushToRecord(RecordEntry(
-        id: msgId,
-        shape: 'agent-left-chat',
-        type: 'agent-left-chat',
-        text: '$agentName has left the chat',
-      ));
-
-      // Add to transcript
-      ChatState.instance.addToTranscript('bot', '$agentName has left the chat');
-
-      _currentAgent = null;
-      _agentTyping = false;
+      if (!_isOwnSession(data)) return;
+      final kind = handover.onAgentLeft(data, fallbackName: _currentAgent?.name);
+      if (kind == AgentLeftKind.left) _currentAgent = null;
+      if (kind == AgentLeftKind.handover) _talkToPersonRetired = true;
+      if (kind != AgentLeftKind.ignore) _agentTyping = false;
       notifyListeners();
     });
 
@@ -775,14 +835,16 @@ class ConferBotProvider with ChangeNotifier {
         id: msgId,
         time: DateTime.now(),
         text: 'Chat has ended',
+        kind: 'agent-chat-ended',
       );
       _addMessageToRecord(systemMessage);
 
-      // Add to ChatState record
+      // Add to ChatState record, as the web records it (it closes the
+      // live episode for a restart).
       ChatState.instance.pushToRecord(RecordEntry(
         id: msgId,
-        shape: 'system-message',
-        type: 'chat-ended',
+        shape: 'agent-chat-ended',
+        type: 'agent-chat-ended',
         text: 'Chat has ended',
       ));
 
@@ -849,14 +911,17 @@ class ConferBotProvider with ChangeNotifier {
     _agentStartedFor = sessionId;
     ChatState.instance.setWorkspaceId(_serverWorkspaceId);
     final details = _agentDetailsOf(bot);
-    _currentAgent = Agent(id: details.id, name: details.name, avatar: bot.avatar);
+    final shown = [..._record, ...paginatedMessages];
+    final resumed = shown.any((m) =>
+        (m is AgentMessageRecord && m.id.startsWith('agent-greeting-')) || m is UserMessageRecord);
+    // A restored chat a person has (the AI handed it on): not the AI.
+    if (!(resumed && handover.personInChat)) {
+      _currentAgent = Agent(id: details.id, name: details.name, avatar: bot.avatar);
+    }
     // Visitor messages go the live way from the start.
     _isLiveChatMode = true;
     ChatState.instance.setLiveChatMode(true);
 
-    final shown = [..._record, ...paginatedMessages];
-    final resumed = shown.any((m) =>
-        (m is AgentMessageRecord && m.id.startsWith('agent-greeting-')) || m is UserMessageRecord);
     if (resumed) {
       _agentPendingHandover = null;
       _agentHandoverPending = false;
@@ -1110,6 +1175,28 @@ class ConferBotProvider with ChangeNotifier {
     return true;
   }
 
+  /// Change every message on screen that [change] answers for (the
+  /// handover lines settling): in the record and in the paginated list.
+  void _updateAllMessages(RecordItem? Function(RecordItem) change) {
+    var changed = false;
+    for (var i = 0; i < _record.length; i++) {
+      final next = change(_record[i]);
+      if (next != null) {
+        _record[i] = next;
+        changed = true;
+      }
+    }
+    final shown = _paginationController?.state.visibleMessages ?? const <RecordItem>[];
+    for (final m in shown) {
+      final next = change(m);
+      if (next != null) {
+        _paginationController!.updateMessage(next);
+        changed = true;
+      }
+    }
+    if (changed) notifyListeners();
+  }
+
   void _addMessageToRecord(RecordItem message) {
     // HIGH FIX 4: Deduplication by message ID
     if (_record.any((m) => m.id == message.id)) {
@@ -1171,7 +1258,10 @@ class ConferBotProvider with ChangeNotifier {
   void _onFlowEngineChange() {
     // Where the visitor stands: asked while the handover waits for a person.
     final ui = _flowEngine.currentUIState;
-    if (ui is HumanHandoverUIState && ui.state == HandoverState.waitingForAgent && !_isLiveChatMode) {
+    final waiting = ui is HumanHandoverUIState && ui.state == HandoverState.waitingForAgent && !_isLiveChatMode;
+    // The 20s waiting signal while the step waits for a person.
+    handover.setWaitingForPerson(waiting, _flowEngine.handoverNodeData);
+    if (waiting) {
       liveChat.startQueuePoll();
       liveChat.startWaitTimer(_flowEngine.handoverNodeData, ChatState.instance.workspaceId);
     } else {
@@ -1243,14 +1333,26 @@ class ConferBotProvider with ChangeNotifier {
         final resolvedName = _serverCustomizations?['botName']?.toString() ?? _serverCustomizations?['logoText']?.toString() ?? '';
         if (resolvedName.isNotEmpty) ChatState().setVariable('_botName', resolvedName);
         if (_chatSessionId != null && _isOpen) _startAgentBotChat();
+        if (_sessionRestored) _resumeRestoredAgentChat();
         notifyListeners();
         return;
       }
 
       _logger.debug('Loaded ${_steps.length} steps and ${_edges.length} edges');
 
-      // Start flow engine if we got steps and have a session
-      if (_steps.isNotEmpty && _chatSessionId != null) {
+      // Start flow engine if we got steps and have a session - once per
+      // session (this data comes again on every reconnect). A session
+      // restored from the device is picked back up instead (its live chat,
+      // or its wait for a person), never run again from the top.
+      if (_steps.isNotEmpty && _chatSessionId != null && _flowStartedFor != _chatSessionId) {
+        if (_sessionRestored) {
+          final resolvedName = _serverCustomizations?['botName']?.toString() ?? _serverCustomizations?['logoText']?.toString() ?? '';
+          if (resolvedName.isNotEmpty) ChatState().setVariable('_botName', resolvedName);
+          _resumeRestoredFlow();
+          notifyListeners();
+          return;
+        }
+        _flowStartedFor = _chatSessionId;
         _flowEngine.initialize(
           chatSessionId: _chatSessionId!,
           visitorId: _visitorId ?? '',
@@ -1367,9 +1469,63 @@ class ConferBotProvider with ChangeNotifier {
     );
   }
 
+  /// A flow chat restored from the device, once: ask the server where its
+  /// live chat stands and pick it back up - a person, the wait for one, or
+  /// carry on from the handover step - instead of running the flow again
+  /// (a second initiate-handover would open a second ticket). Anything else
+  /// resumes at the step it was on.
+  Future<void> _resumeRestoredFlow() async {
+    final sessionId = _chatSessionId;
+    if (sessionId == null || _steps.isEmpty || _flowStartedFor == sessionId) return;
+    _flowStartedFor = sessionId;
+    // The step it was on, read before the engine is set up again.
+    final savedNodeId = ChatState.instance.currentNodeId;
+    _flowEngine.initialize(
+      chatSessionId: sessionId,
+      visitorId: _visitorId ?? '',
+      botId: botId,
+      workspaceId: _serverWorkspaceId,
+      stepsData: _steps,
+      edgesData: _edges,
+    );
+    ChatState.instance.setCurrentNodeId(savedNodeId);
+    RestoreStep step;
+    try {
+      step = await handover.resumeRestored(steps: _steps, agentBot: false);
+    } catch (e) {
+      _logger.debug('Live chat restore failed: $e');
+      step = RestoreStep.start;
+    }
+    if (step == RestoreStep.start) {
+      if (savedNodeId != null) {
+        _flowEngine.resumeFromNode(savedNodeId);
+      } else {
+        _flowEngine.start();
+      }
+    }
+    notifyListeners();
+  }
+
+  /// An agent bot's chat restored from the device, once: a person the AI
+  /// handed it to is picked back up (the header and the composer stay theirs).
+  Future<void> _resumeRestoredAgentChat() async {
+    final sessionId = _chatSessionId;
+    if (sessionId == null || _flowStartedFor == sessionId || !_socketClient.isConnected) return;
+    _flowStartedFor = sessionId;
+    try {
+      await handover.resumeRestored(steps: _steps, agentBot: true);
+    } catch (e) {
+      _logger.debug('Live chat restore failed: $e');
+    }
+    notifyListeners();
+  }
+
   /// Open chat and start the flow
   /// If a previous session was restored, it will resume from where it left off
   Future<void> openChat() async {
+    // Not before start-up is done: a session being restored would be
+    // replaced by a new one (and its handover ticket left behind).
+    if (config.autoConnect && !_started.isCompleted) await _started.future;
     // Check if we have a restored session that we can resume
     if (_sessionRestored && _chatSessionId != null) {
       _logger.info('Resuming restored session: $_chatSessionId');
@@ -1387,29 +1543,15 @@ class ConferBotProvider with ChangeNotifier {
         _isOpen = true;
         _unreadCount = 0;
         _startAgentBotChat();
+        _resumeRestoredAgentChat();
         notifyListeners();
         return;
       }
 
-      // If we have steps, resume the flow engine
-      if (_steps.isNotEmpty) {
-        _flowEngine.initialize(
-          chatSessionId: _chatSessionId!,
-          visitorId: _visitorId ?? '',
-          botId: botId,
-          workspaceId: _serverWorkspaceId,
-          stepsData: _steps,
-          edgesData: _edges,
-        );
-
-        // Resume from saved node if available
-        final savedNodeId = ChatState.instance.currentNodeId;
-        if (savedNodeId != null) {
-          _flowEngine.resumeFromNode(savedNodeId);
-        } else {
-          _flowEngine.start();
-        }
-      }
+      // The flow is picked back up once (its live chat or its wait for a
+      // person from the server first); the bot data's arrival does it when
+      // it comes later.
+      if (_steps.isNotEmpty && _socketClient.isConnected) _resumeRestoredFlow();
 
       _isOpen = true;
       _unreadCount = 0;
@@ -1507,6 +1649,7 @@ class ConferBotProvider with ChangeNotifier {
           stepsData: _steps,
           edgesData: _edges,
         );
+        _flowStartedFor = _chatSessionId;
         _flowEngine.start();
       }
     }
@@ -1907,6 +2050,9 @@ class ConferBotProvider with ChangeNotifier {
 
     _flowEngine.reset();
     liveChat.reset();
+    handover.reset();
+    _flowStartedFor = null;
+    _talkToPersonRetired = false;
     _record.clear();
     _chatSessionId = null;
     _currentAgent = null;
@@ -1950,6 +2096,7 @@ class ConferBotProvider with ChangeNotifier {
     _flowEngine.removeListener(_onFlowEngineChange);
     liveChat.removeListener(notifyListeners);
     liveChat.dispose();
+    handover.dispose();
     _paginationController?.removeListener(_onPaginationChange);
     _analyticsProvider?.removeListener(_onAnalyticsChange);
 
@@ -1966,4 +2113,39 @@ class ConferBotProvider with ChangeNotifier {
 
     super.dispose();
   }
+}
+
+/// The flow engine as the handover lifecycle uses it.
+class _EngineHandoverFlow implements HandoverFlow {
+  _EngineHandoverFlow(this._engine);
+  final NodeFlowEngine Function() _engine;
+
+  @override
+  bool get atHandover => _engine().isAtHandover;
+
+  @override
+  Map<String, dynamic>? get handoverNodeData => _engine().handoverNodeData;
+
+  @override
+  bool waitAt(String nodeId, {required bool waiting}) {
+    final step = _engine().steps.where((s) => s['id'] == nodeId).firstOrNull;
+    final data = step?['data'] is Map ? Map<String, dynamic>.from(step!['data'] as Map) : const <String, dynamic>{};
+    final message = LiveChat.plainText(data['handoverMessage']?.toString() ?? '');
+    return _engine().waitAt(
+      nodeId,
+      waiting
+          ? HumanHandoverUIState(
+              state: HandoverState.waitingForAgent,
+              handoverMessage: message.isEmpty ? null : message,
+              nodeId: nodeId,
+            )
+          : null,
+    );
+  }
+
+  @override
+  void continueFlow() => _engine().continueAfterHandover();
+
+  @override
+  void resumeFrom(String nodeId) => _engine().resumeFromNode(nodeId);
 }
