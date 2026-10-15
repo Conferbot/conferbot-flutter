@@ -253,10 +253,21 @@ const ConferBotUser({
   this.email,
   this.phone,
   this.metadata,
+  this.hash,
 });
 ```
 
-How it is used today: when a chat session starts, the SDK calls `POST /session/init` with `userId: user.id` (falling back to the auto-generated visitor ID), so conversations are attributed to your user across sessions. The `name`, `email`, `phone`, and `metadata` fields are part of the public model but are not yet transmitted to the server by this SDK version - collect those via flow nodes (ask-question, pre-chat form) if you need them on the dashboard side.
+How it is used: when a chat session starts, the SDK calls `POST /session/init` with `userId: user.id` (falling back to the auto-generated visitor ID), so conversations are attributed to your user across sessions. The whole user (its `metadata`, then `id`, `name`, `email`, `phone`) also travels with every message record as the chat's visitor context, as the web widget's `visitorContext` does, so the dashboard shows the visitor's name, email and your own fields.
+
+### Identity verification
+
+To stop anyone posing as one of your users, turn on identity verification in your workspace and pass a `hash`: the HMAC-SHA256 (hex) of the user's `id` (or `email` when there is no id), keyed with your workspace's identity secret. Make it on your server and never ship the secret in the app.
+
+```dart
+ConferBotUser(id: 'user-42', email: 'jane@example.com', hash: hashFromYourServer)
+```
+
+The server checks the hash and drops it before storing. A chat with a matching hash is filed as verified; a wrong hash is rejected, and no hash leaves it unverified.
 
 If no user is passed, the SDK generates a persistent anonymous visitor ID (stored via Hive) and reuses it across app restarts.
 
@@ -441,7 +452,7 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 | `ConferBotFAB` | `const ConferBotFAB({required Widget child, ConferBotFABConfig config = const ConferBotFABConfig(), ConferBotTheme? theme})` | Floating chat bubble overlaying your app |
 | `ConferBotFABConfig` | `const ConferBotFABConfig({double size = 50.0, FabPosition position = FabPosition.right, double offsetX = 10.0, double offsetBottom = 10.0})` | FAB fallbacks (server values win) |
 | `ConferBotFABScope` | `const ConferBotFABScope({required String apiKey, required String botId, required Widget child, ConferBotFABConfig fabConfig = const ConferBotFABConfig(), ConferBotConfig providerConfig = const ConferBotConfig(), ConferBotCustomization? customization, ConferBotUser? user, String? baseUrl, String? socketUrl})` | Provider + FAB in one widget |
-| `ConferBotUser` | `const ConferBotUser({required String id, String? name, String? email, String? phone, Map<String, dynamic>? metadata})` | Visitor identity |
+| `ConferBotUser` | `const ConferBotUser({required String id, String? name, String? email, String? phone, Map<String, dynamic>? metadata, String? hash})` | Visitor identity, sent as the visitor context |
 | `StorageService.init` | `static Future<void> init()` | Initialize Hive persistence (call before `runApp`) |
 | `ConferBotEndpoints.configure` | `static void configure({String? apiBaseUrl, String? socketUrl})` | Global endpoint override |
 | `ConferBotNetworkConfig.configure` | `static void configure({Duration? apiTimeout, Duration? socketTimeout, int? reconnectionAttempts, Duration? reconnectionDelay, Duration? reconnectionDelayMax})` | Timeouts and retry policy |
