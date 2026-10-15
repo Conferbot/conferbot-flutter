@@ -1,10 +1,14 @@
 library conferbot_fab;
 
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import '../core/customization/launcher.dart';
+import '../core/customization/launcher_icons.dart';
+import '../core/customization/launcher_motion.dart';
 import '../models/user.dart';
 import '../providers/conferbot_provider.dart';
 import '../theme/conferbot_theme.dart';
@@ -1073,9 +1077,78 @@ class ConferBotFAB extends StatefulWidget {
 }
 
 class _ConferBotFABState extends State<ConferBotFAB>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _isOpen = false;
   bool _ctaDismissed = false;
+
+  // ── Motion (core/customization/launcher_motion.dart) ──────────────────────
+  /// When the chat was last opened in this app session: idle moments rest a while after.
+  static int _openedAt = 0;
+  Ticker? _ticker;
+  (String, int)? _moment;
+  (int, double, int)? _ripple;
+  int _played = 0;
+  Timer? _idleTimer;
+  bool _motionStarted = false;
+  int? _lastUnread;
+  List<OpFrame?>? _frame;
+  List<MotionRing?> _rings = const [null, null];
+
+  /// The ripple after the launcher settles (whatever the motion mode), and
+  /// idle moments: the first ~2s in, then the plan's pace.
+  void _startMotion(String mode) {
+    _motionStarted = true;
+    _ripple = (DateTime.now().millisecondsSinceEpoch, LauncherMotion.rippleDelay, LauncherMotion.rippleIter);
+    _run();
+    _scheduleIdle(mode);
+  }
+
+  void _scheduleIdle(String mode) {
+    _idleTimer?.cancel();
+    if (mode == 'off') return;
+    final wait = LauncherMotion.nextIdleDelay(mode, _played);
+    if (wait == null) return;
+    _idleTimer = Timer(Duration(milliseconds: wait), () {
+      if (!mounted || _isOpen) return;
+      if (_openedAt != 0 && DateTime.now().millisecondsSinceEpoch - _openedAt < LauncherMotion.openedRestMs) return;
+      _played += 1;
+      _moment = ('idle', DateTime.now().millisecondsSinceEpoch);
+      _run();
+      _scheduleIdle(mode);
+    });
+  }
+
+  /// One clock for the moment and the ripple; it stops when both are done.
+  void _run() {
+    _ticker ??= createTicker((_) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final provider = Provider.of<ConferBotProvider>(context, listen: false);
+      final look = Launcher.resolve(provider.serverCustomizations);
+      final m = _moment;
+      List<OpFrame?>? frame;
+      if (m != null && now - m.$2 < LauncherMotion.momentMs && !_isOpen) {
+        frame = LauncherMotion.iconFrame(LauncherIcons.byId(look.iconId), m.$1, (now - m.$2) / 1000);
+      } else {
+        _moment = null;
+      }
+      var rings = const <MotionRing?>[null, null];
+      final r = _ripple;
+      if (r != null) {
+        final t = (now - r.$1) / 1000;
+        if (_isOpen || t > r.$2 + LauncherMotion.rippleGap + LauncherMotion.rippleDur * r.$3) {
+          _ripple = null;
+        } else {
+          rings = [LauncherMotion.rippleRing(t, 0, iterations: r.$3, delay: r.$2), LauncherMotion.rippleRing(t, 1, iterations: r.$3, delay: r.$2)];
+        }
+      }
+      setState(() {
+        _frame = frame;
+        _rings = rings;
+      });
+      if (_moment == null && _ripple == null) _ticker?.stop();
+    });
+    if (!_ticker!.isActive) _ticker!.start();
+  }
 
   // FAB press animation
   late final AnimationController _pressCtrl;
@@ -1096,6 +1169,8 @@ class _ConferBotFABState extends State<ConferBotFAB>
 
   @override
   void dispose() {
+    _idleTimer?.cancel();
+    _ticker?.dispose();
     _pressCtrl.dispose();
     super.dispose();
   }
@@ -1161,6 +1236,8 @@ class _ConferBotFABState extends State<ConferBotFAB>
   // ── Open chat sheet ───────────────────────────────────────────────────────
 
   Future<void> _openChat(BuildContext context, ConferBotProvider provider) async {
+    _openedAt = DateTime.now().millisecondsSinceEpoch;
+    _idleTimer?.cancel();
     setState(() => _isOpen = true);
 
     await showModalBottomSheet<void>(
@@ -1252,12 +1329,32 @@ class _ConferBotFABState extends State<ConferBotFAB>
     // CTA horizontal offset from edge: beside the button
     final ctaEdgeOffset = offsetX + width + 10;
 
+    // The icon's idle and new-message moments and the ripple; nothing with
+    // the phone's animations off, or for an image or avatar launcher.
+    final still = !hasLook || MediaQuery.disableAnimationsOf(context) || imageUrl != null || avatar != null;
+    if (!still && !_motionStarted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_motionStarted) _startMotion(look.animation);
+      });
+    }
+    // A message while the chat is closed: the icon reacts and the ripple plays once more.
+    if (_lastUnread != null && unreadCount > _lastUnread! && !_isOpen && !still) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final now = DateTime.now().millisecondsSinceEpoch;
+        if (look.animation != 'off') _moment = ('msg', now);
+        _ripple = (now, 0, 1);
+        _run();
+      });
+    }
+    _lastUnread = unreadCount;
+
     // The web's launcher icons (core/customization/launcher_icons.dart).
     final iconId = hasLook ? look.iconId : _sc(provider)?['widgetIconSVG']?.toString();
     Widget glyph(double s) => CustomPaint(
           key: ValueKey(iconId),
           size: Size(s, s),
-          painter: LauncherIconPainter(iconId: iconId, ink: ink, bg: fabColor),
+          painter: LauncherIconPainter(iconId: iconId, ink: ink, bg: fabColor, frame: _frame),
         );
 
     Widget content;
@@ -1333,6 +1430,20 @@ class _ConferBotFABState extends State<ConferBotFAB>
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
+                  // The ripple: rings of the launcher's colour growing out from behind it.
+                  for (final ring in _rings)
+                    if (ring != null)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Transform.scale(
+                            scale: ring.scale,
+                            child: Opacity(
+                              opacity: ring.opacity,
+                              child: DecoratedBox(decoration: BoxDecoration(color: fabColor, borderRadius: radius)),
+                            ),
+                          ),
+                        ),
+                      ),
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
                     width: showLabel ? null : width,
