@@ -27,6 +27,7 @@ import '../core/customization/customizations.dart';
 import '../core/customization/chat_background.dart';
 import 'chat_background.dart';
 import '../core/live_chat/live_chat.dart';
+import '../core/state/chat_state.dart';
 import '../core/help_centre/help_centre.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -270,8 +271,9 @@ class _ChatWidgetState extends State<ChatWidget> {
   void _handleHandoverCancel() {
     final provider = context.read<ConferBotProvider>();
 
-    // Cancel the handover
-    provider.emit(SocketEvents.cancelHandover, {});
+    // Leave the queue on the server too (queue-self-resolve), then the flow
+    // carries on. The server has no cancel-handover.
+    provider.leaveQueue();
 
     setState(() {
       _queueInfo = null;
@@ -281,8 +283,15 @@ class _ChatWidgetState extends State<ChatWidget> {
   void _handleHandoverTimeout() {
     final provider = context.read<ConferBotProvider>();
 
-    // Emit timeout event
-    provider.emit(SocketEvents.handoverTimeout, {});
+    // The max wait passed: the server decides (handover-timeout with the
+    // step's assignment, as the web's maxWaitTimer sends it).
+    final sessionId = provider.chatId;
+    if (sessionId != null) {
+      provider.emit(
+        SocketEvents.handoverTimeout,
+        LiveChat.handoverTimeoutPayload(sessionId, provider.flowEngine.handoverNodeData, ChatState.instance.workspaceId),
+      );
+    }
 
     setState(() {
       _queueInfo = null;
@@ -292,8 +301,12 @@ class _ChatWidgetState extends State<ChatWidget> {
   void _handleSurveySubmit(SurveyResult result) {
     final provider = context.read<ConferBotProvider>();
 
-    // Submit survey via socket
-    provider.emit(SocketEvents.submitPostChatSurvey, result.toJson());
+    // The rating as the web widget sends it (submit-chat-rating); the
+    // server has no submit-post-chat-survey.
+    final sessionId = provider.chatId;
+    if (sessionId != null) {
+      provider.emit('submit-chat-rating', LiveChat.ratingPayload(sessionId, 'stars', result.rating, result.feedback));
+    }
 
     // Call custom callback if provided
     widget.onHandoverSurveySubmit?.call(result);
@@ -309,8 +322,10 @@ class _ChatWidgetState extends State<ChatWidget> {
   void _handleEndAgentChat() {
     final provider = context.read<ConferBotProvider>();
 
-    // End the agent chat
-    provider.emit(SocketEvents.visitorEndedChat, {});
+    // The server has no visitor end-chat (only an agent ends a live chat).
+    // Still in the queue: leave it (queue-self-resolve closes only a waiting
+    // ticket; with a person on it the visitor stays).
+    provider.leaveQueue();
   }
 
   @override
@@ -371,30 +386,14 @@ class _ChatWidgetState extends State<ChatWidget> {
   }
 
   Widget _buildHeader(ConferBotProvider provider, ConferBotTheme theme) {
-    final uiState = provider.currentUIState;
-    final isHandoverActive = uiState is HumanHandoverUIState &&
-        uiState.state == HandoverState.agentConnected;
-
-    // Show agent header during active handover
-    if (isHandoverActive && provider.currentAgent != null) {
-      return AgentInfoHeader(
-        agent: provider.currentAgent!,
-        isTyping: _isAgentTyping,
-        primaryColor: theme.colors.primary,
-        theme: theme,
-        onClose: () {
-          provider.closeChat();
-          Navigator.of(context).pop();
-        },
-        showCloseButton: true,
-      );
-    }
-
+    // The header keeps the bot (never the agent), as the web widget does:
+    // "Online" or the team's reply time under its name, plain "Online" once
+    // a person is in the chat (core/live_chat/reply_time.dart).
     return ChatHeaderWithKB(
       title: provider.botName ?? widget.title ?? 'Support Chat',
       look: provider.serverCustomizations != null ? provider.customizations : null,
       subtitle: _getSubtitle(provider),
-      agent: provider.currentAgent,
+      statusText: provider.headerStatus,
       botAvatarUrl: provider.botAvatarUrl,
       onClose: () {
         provider.closeChat();
@@ -489,6 +488,7 @@ class _ChatWidgetState extends State<ChatWidget> {
         liveChat: provider.liveChat,
         theme: theme,
         message: uiState.handoverMessage,
+        onLeave: () => provider.leaveQueue(),
       );
     }
 
@@ -778,28 +778,9 @@ class _ChatWidgetState extends State<ChatWidget> {
         uiState is MultipleQuestionsUIState;
   }
 
+  /// Under the bot's name in place of its status: being offline, or the
+  /// conversation being over. Never the agent (the web keeps the bot).
   String? _getSubtitle(ConferBotProvider provider) {
-    // Check for handover states
-    final uiState = provider.currentUIState;
-    if (uiState is HumanHandoverUIState) {
-      switch (uiState.state) {
-        case HandoverState.preChatQuestions:
-          return 'Please fill the form';
-        case HandoverState.waitingForAgent:
-          return 'Connecting to agent...';
-        case HandoverState.agentConnected:
-          return provider.currentAgent?.title ?? 'Live Agent';
-        case HandoverState.noAgentsAvailable:
-          return 'No agents available';
-        case HandoverState.postChatSurvey:
-          return 'Chat ended';
-      }
-    }
-
-    // An AI agent bot's agent is the bot itself: no "Live Agent" under its name.
-    if (provider.currentAgent != null && provider.agentBot == null) {
-      return provider.currentAgent!.email ?? 'Live Agent';
-    }
     if (!_connectivity.isOnline) {
       return 'Offline - messages queued';
     }
@@ -818,6 +799,11 @@ class _ChatWidgetState extends State<ChatWidget> {
 class ChatHeaderWithKB extends StatelessWidget {
   final String? title;
   final String? subtitle;
+
+  /// The words on the "Online" line: "Online", or the team's reply time
+  /// ("Typically replies in a few minutes", "Online · team back at 9 AM").
+  /// Null hides the line (the owner turned the status off).
+  final String? statusText;
   final dynamic agent;
   final String? botAvatarUrl;
   final VoidCallback? onClose;
@@ -834,6 +820,7 @@ class ChatHeaderWithKB extends StatelessWidget {
     super.key,
     this.title,
     this.subtitle,
+    this.statusText = 'Online',
     this.agent,
     this.botAvatarUrl,
     this.onClose,
@@ -890,8 +877,9 @@ class ChatHeaderWithKB extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  // The web's "Online" line: a 7px green dot with a soft ring (or the tagline).
-                  if (displaySubtitle == null && agent == null && look != null && (look!.tagline != null || look!.showOnline)) ...[
+                  // The web's "Online" line: a 7px green dot with a soft ring
+                  // and the status (or the tagline).
+                  if (displaySubtitle == null && agent == null && look != null && (look!.tagline != null || (look!.showOnline && statusText != null))) ...[
                     const SizedBox(height: 1),
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -910,7 +898,7 @@ class ChatHeaderWithKB extends StatelessWidget {
                         ],
                         Flexible(
                           child: Text(
-                            look!.tagline ?? 'Online',
+                            look!.tagline ?? statusText!,
                             style: TextStyle(fontSize: 12, color: t.colors.headerText.withOpacity(0.85)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
