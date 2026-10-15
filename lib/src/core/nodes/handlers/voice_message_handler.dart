@@ -102,10 +102,7 @@ class VoiceMessageHandler {
       return _handleVoiceRecordingResponse(response, nodeData, nodeId);
     }
 
-    return const NodeResult.error(
-      message: 'Invalid response format',
-      shouldProceed: false,
-    );
+    return NodeResult.invalid('Invalid response format');
   }
 
   /// Handle text fallback when user types instead of recording
@@ -117,10 +114,7 @@ class VoiceMessageHandler {
     final trimmedText = text.trim();
 
     if (trimmedText.isEmpty) {
-      return const NodeResult.error(
-        message: 'Please record a voice message or type your response',
-        shouldProceed: false,
-      );
+      return NodeResult.invalid('Please record a voice message or type your response');
     }
 
     state.setAnswerVariable(nodeId, trimmedText);
@@ -133,7 +127,7 @@ class VoiceMessageHandler {
       type: nodeType,
     );
 
-    return const NodeResult.proceed();
+    return NodeResult.next();
   }
 
   /// Handle voice recording response
@@ -147,10 +141,7 @@ class VoiceMessageHandler {
     final uploadedUrl = response['uploadedUrl'] as String?;
 
     if (localFilePath == null && uploadedUrl == null) {
-      return const NodeResult.error(
-        message: 'Invalid voice recording response',
-        shouldProceed: false,
-      );
+      return NodeResult.invalid('Invalid voice recording response');
     }
 
     final duration = durationMs != null
@@ -168,18 +159,12 @@ class VoiceMessageHandler {
         );
       } catch (e) {
         voiceLogger.error('Upload failed: $e');
-        return NodeResult.error(
-          message: 'Failed to upload voice message: $e',
-          shouldProceed: false,
-        );
+        return NodeResult.invalid('Failed to upload voice message: $e');
       }
     }
 
     if (audioUrl == null) {
-      return const NodeResult.error(
-        message: 'Failed to upload voice message',
-        shouldProceed: false,
-      );
+      return NodeResult.invalid('Failed to upload voice message');
     }
 
     // Store the audio URL as the answer
@@ -202,7 +187,7 @@ class VoiceMessageHandler {
       },
     );
 
-    return const NodeResult.delayedProceed(delay: Duration(milliseconds: 300));
+    return NodeResult.delayedProceed(null, 300);
   }
 
   /// Handle VoiceMessageResponse object
