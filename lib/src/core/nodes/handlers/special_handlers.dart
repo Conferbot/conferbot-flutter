@@ -330,6 +330,12 @@ class HumanHandoverNodeHandler extends BaseNodeHandler {
     return NodeResult.displayUI(_buildHandoverUIState(nodeData, nodeId));
   }
 
+  /// A restored chat back on this step (NodeFlowEngine.waitAt): it stands
+  /// where the server says, without asking for a person again.
+  void restoreAt(String nodeId, HandoverState stage) {
+    _handoverState[nodeId] = stage;
+  }
+
   /// Called when an agent accepts the handover
   /// This should be called from the socket event handler
   void onAgentAccepted(String nodeId, String agentName, {String? agentId}) {
