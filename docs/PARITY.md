@@ -26,7 +26,6 @@ Layout:
 2. The rest of the list below.
 3. **Test debt:**
    - #16: `media_service_test` fails because MockController is not an AudioPlayer.
-   - 3 stale tests in `test/core/chat_state_test.dart`: temp variable resolution, record for server, RecordEntry JSON.
 4. There's no `identify()` after construction; the user comes only from the provider's `user`.
 
 ## How to test
