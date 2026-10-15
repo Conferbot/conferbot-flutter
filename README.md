@@ -190,7 +190,7 @@ Full `ConferBotFABScope` parameters: `apiKey`, `botId`, `child` (required), plus
 
 ### What the launcher draws
 
-Once the bot's settings arrive, the launcher is drawn as the web widget draws it on a phone: colour or left-to-right gradient, icon ink that stays readable on light colours, launcher icon or uploaded image, left/right position, the phone size and offsets (`mobileWidgetSize`, `mobileOffsetBottom`, `mobileOffsetSide`; else 16 from the edges), shape (`launcherShape`: speech bubble by default, circle, squircle, tab, peek), style (`launcherStyle`: icon, the bot's avatar with an online dot, or the label pill on tablets; phones show the round button, as the web does), a soft glow in the header colour, and the greeting (`chatIconCtaText`) only when `chatIconCta` is on. All 56 dashboard launcher icons are drawn as on the web, and they move as on the web: an idle moment about 2s after the launcher shows and a few more after (`launcherAnimation` subtle / lively; off stops it), a reaction when a message arrives while the chat is closed, and the ripple rings. Nothing moves while the chat is open, after it was opened, or with the phone's animations turned off.
+Once the bot's settings arrive, the launcher is drawn as the web widget draws it on a phone: colour or left-to-right gradient, icon ink that stays readable on light colours, launcher icon or uploaded image, left/right position, the phone size and offsets (`mobileWidgetSize`, `mobileOffsetBottom`, `mobileOffsetSide`; else 16 from the edges), shape (`launcherShape`: speech bubble by default, circle, squircle, tab, peek), style (`launcherStyle`: icon, the bot's avatar with an online dot, or the label pill on tablets; phones show the round button, as the web does), a soft glow in the header colour, and the greeting card (see below). All 56 dashboard launcher icons are drawn as on the web, and they move as on the web: an idle moment about 2s after the launcher shows and a few more after (`launcherAnimation` subtle / lively; off stops it), a reaction when a message arrives while the chat is closed, and the ripple rings. Nothing moves while the chat is open, after it was opened, or with the phone's animations turned off.
 
 ### Local fallback config
 
@@ -209,7 +209,7 @@ const ConferBotFABConfig({
 
 - Tapping opens the chat in a `showModalBottomSheet` (draggable, 92% of screen height); the icon morphs to a close (X) while open.
 - Shows a red unread-count badge when messages arrive while the chat is closed.
-- Shows an animated CTA tooltip next to the bubble (after 2 seconds) when a `chatIconCtaText` is configured in the dashboard. Users can dismiss it.
+- Shows the web widget's greeting card above the bubble when the greeting is on (`chatIconCta` + `chatIconCtaText`, or greeting rules), after `greetingDelay` seconds (default 3), in the dashboard's `greetingStyle`: card, note, imessage (default), postcard, sticky, typewriter, glass, notification, neon, voice or aurora, each with its web reveal. Greeting rules work as on the web, with the app counted as the home page ("/"): audience (new/returning, signed in = the provider `user` has an id or email), schedule, visits, chatted, per-rule limits and priority. Rules for given pages, countries, sources or page attributes never apply. `greetingFrequency` is honoured: every launch with a 5-minute rest after a close, once per app session, or once every N days. Tapping the card opens the chat (or sends the message, or opens the rule's link); a starter chip opens the chat and sends that text; the X dismisses it. What it has seen is kept per bot in `shared_preferences` under `conferbot.greeting.<botId>`. The card uses the platform's nearest fonts (Noteworthy / Marker Felt / Georgia / Courier New on iOS; casual / serif / monospace on Android). No fonts are bundled.
 - Renders the same bubble icon set as the web widget (`WidgetBubbleIcon1` through `WidgetBubbleIcon15`), painted natively from the dashboard's `widgetIconSVG` setting.
 
 ### Server-driven bubble appearance
@@ -224,7 +224,7 @@ These flow-builder settings are read live from the server and override `ConferBo
 | `widgetOffsetLeft` / `widgetOffsetRight` / `widgetOffsetBottom` | Edge offsets |
 | `widgetBorderRadius` | Bubble corner radius (default: circle) |
 | `widgetIconSVG` | Which bubble icon to draw |
-| `chatIconCtaText` | CTA tooltip text |
+| `chatIconCta`, `chatIconCtaText`, `greetingRules`, `greetingDelay`, `greetingClickAction`, `greetingFrequency`, `greetingFrequencyDays`, `greetingStyle` | Greeting card above the bubble |
 
 ## Passing User Identity
 
