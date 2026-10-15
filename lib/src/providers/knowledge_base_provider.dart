@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../config/constants.dart';
 import '../models/knowledge_base.dart';
 import '../services/knowledge_base_service.dart';
 import '../utils/logger.dart';
@@ -45,17 +46,74 @@ class KnowledgeBaseProvider with ChangeNotifier {
   // Navigation history for back navigation
   final List<String> _navigationHistory = [];
 
+  // The help centre as the server sent it (categories with their articles,
+  // recent articles). Seeded from the socket's fetched-chatbot-data when the
+  // chat has it (no bodies), else loaded over REST (bodies included).
+  KnowledgeBaseData _data;
+  bool _dataLoaded;
+  Future<bool>? _loadingData;
+
+  /// Whether the owner shows "Recent articles" (`!hideRecentArticles`).
+  bool showRecentArticles;
+
   KnowledgeBaseProvider({
     required this.botId,
     required String apiKey,
     String? baseUrl,
     String? visitorId,
+    KnowledgeBaseData? initialData,
+    this.showRecentArticles = true,
+    KnowledgeBaseService? service,
   })  : _visitorId = visitorId,
-        _service = KnowledgeBaseService(
-          apiKey: apiKey,
-          botId: botId,
-          baseUrl: baseUrl ?? 'https://wdt.conferbot.com/api/v1/mobile',
-        );
+        _data = initialData ?? KnowledgeBaseData.empty,
+        _dataLoaded = initialData != null && initialData.isNotEmpty,
+        _service = service ??
+            KnowledgeBaseService(
+              apiKey: apiKey,
+              botId: botId,
+              // The app's configured server (ConferBotEndpoints), never a
+              // hard-coded production URL.
+              baseUrl: baseUrl ?? ConferBotEndpoints.apiBaseUrl,
+            );
+
+  /// The server this help centre reads from.
+  String get baseUrl => _service.baseUrl;
+
+  /// The help centre data in use.
+  KnowledgeBaseData get data => _data;
+
+  /// Replace the seed (a newer fetched-chatbot-data).
+  void setInitialData(KnowledgeBaseData data) {
+    if (data.isEmpty) return;
+    _data = data;
+    _dataLoaded = true;
+    _categories = data.categories;
+    _articles = data.articlesIn(_selectedCategoryId);
+    notifyListeners();
+  }
+
+  /// The Recent articles list: empty when the owner hides it.
+  List<KnowledgeBaseArticle> get recentArticles =>
+      showRecentArticles ? _data.recentArticles : const [];
+
+  /// Loads the help centre once over REST when no seed was given.
+  Future<bool> _ensureData({bool force = false}) {
+    if (_dataLoaded && !force) return Future.value(true);
+    return _loadingData ??= () async {
+      try {
+        final response = await _service.fetchHelpCentre();
+        if (response.success && response.data != null) {
+          _data = response.data!;
+          _dataLoaded = true;
+          return true;
+        }
+        _articlesError = response.error ?? 'Failed to load articles';
+        return false;
+      } finally {
+        _loadingData = null;
+      }
+    }();
+  }
 
   // Getters
   List<KnowledgeBaseArticle> get articles => List.unmodifiable(_articles);
@@ -104,16 +162,38 @@ class KnowledgeBaseProvider with ChangeNotifier {
 
   /// Initialize the knowledge base (load categories and initial articles)
   Future<void> initialize() async {
-    await Future.wait([
-      loadCategories(),
-      loadArticles(),
-    ]);
+    _isLoadingArticles = !_dataLoaded;
+    _isLoadingCategories = !_dataLoaded;
+    _articlesError = null;
+    _categoriesError = null;
+    notifyListeners();
+
+    final ok = await _ensureData();
+    if (ok) {
+      _categories = _data.categories;
+      _articles = _data.articlesIn(_selectedCategoryId);
+      _pagination = _onePage(_articles.length);
+    } else {
+      _categoriesError = _articlesError;
+    }
+    _isLoadingArticles = false;
+    _isLoadingCategories = false;
+    notifyListeners();
 
     // Load visitor ratings if visitor ID is set
-    if (_visitorId != null) {
+    if (_visitorId != null && _visitorId!.isNotEmpty) {
       await _loadVisitorRatings();
     }
   }
+
+  ArticlePagination _onePage(int count) => ArticlePagination(
+        page: 1,
+        limit: count,
+        totalItems: count,
+        totalPages: count == 0 ? 0 : 1,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      );
 
   /// Load categories
   Future<void> loadCategories() async {
@@ -121,56 +201,33 @@ class KnowledgeBaseProvider with ChangeNotifier {
     _categoriesError = null;
     notifyListeners();
 
-    try {
-      final response = await _service.fetchCategories(botId);
-
-      if (response.success && response.data != null) {
-        _categories = response.data!;
-        _categoriesError = null;
-      } else {
-        _categoriesError = response.error ?? 'Failed to load categories';
-      }
-    } catch (e) {
-      _categoriesError = e.toString();
-      kbLogger.error('Error loading categories', e);
+    if (await _ensureData()) {
+      _categories = _data.categories;
+    } else {
+      _categoriesError = _articlesError ?? 'Failed to load categories';
     }
 
     _isLoadingCategories = false;
     notifyListeners();
   }
 
-  /// Load articles with optional filters
+  /// Load articles with optional filters. The server sends the whole help
+  /// centre at once, so a category is filtered here.
   Future<void> loadArticles({
     String? categoryId,
     bool refresh = false,
   }) async {
-    if (_isLoadingArticles) return;
+    if (_isLoadingArticles && _dataLoaded) return;
 
     _isLoadingArticles = true;
     _articlesError = null;
-    if (refresh) {
-      _articles.clear();
-    }
     notifyListeners();
 
-    try {
-      final response = await _service.fetchArticles(
-        botId,
-        category: categoryId ?? _selectedCategoryId,
-        page: 1,
-        limit: 10,
-      );
-
-      if (response.success && response.data != null) {
-        _articles = response.data!.articles;
-        _pagination = response.data!.pagination;
-        _articlesError = null;
-      } else {
-        _articlesError = response.error ?? 'Failed to load articles';
-      }
-    } catch (e) {
-      _articlesError = e.toString();
-      kbLogger.error('Error loading articles', e);
+    if (await _ensureData(force: refresh && _data.isEmpty)) {
+      _articles = _data.articlesIn(categoryId ?? _selectedCategoryId);
+      _pagination = _onePage(_articles.length);
+    } else {
+      _articlesError ??= 'Failed to load articles';
     }
 
     _isLoadingArticles = false;
@@ -222,8 +279,25 @@ class KnowledgeBaseProvider with ChangeNotifier {
     await selectCategory(null);
   }
 
-  /// Fetch a single article
+  /// Open an article by id: from the help centre when it is there (its
+  /// body fetched if the list came without), else from the server, which
+  /// answers for this bot's published articles only.
   Future<void> fetchArticle(String articleId) async {
+    final known = _data.find(articleId);
+    if (known != null) {
+      selectArticle(known);
+      return;
+    }
+    await _loadBody(articleId, select: true);
+  }
+
+  /// Open an article by id, as an AI source or a rich article card asks.
+  Future<void> openArticle(String articleId) async {
+    if (!_dataLoaded) await _ensureData();
+    await fetchArticle(articleId);
+  }
+
+  Future<void> _loadBody(String articleId, {bool select = false}) async {
     _isLoadingArticle = true;
     _articleError = null;
     notifyListeners();
@@ -232,16 +306,17 @@ class KnowledgeBaseProvider with ChangeNotifier {
       final response = await _service.fetchArticle(articleId);
 
       if (response.success && response.data != null) {
-        _selectedArticle = response.data;
-        _articleError = null;
-
-        // Add to navigation history
-        _navigationHistory.add(articleId);
-
-        // Track view
-        if (_visitorId != null) {
-          _service.trackArticleView(articleId, _visitorId!);
+        final full = response.data!;
+        _data = _data.withArticle(full);
+        final merged = _data.find(articleId) ?? full;
+        if (select || _selectedArticle?.id == articleId) {
+          if (_selectedArticle?.id != articleId) {
+            _navigationHistory.add(articleId);
+            _trackView(articleId);
+          }
+          _selectedArticle = merged;
         }
+        _articles = _articles.map((a) => a.id == articleId ? merged : a).toList();
       } else {
         _articleError = response.error ?? 'Article not found';
       }
@@ -254,17 +329,22 @@ class KnowledgeBaseProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Select an article from the list
+  void _trackView(String articleId) {
+    if (_visitorId != null && _visitorId!.isNotEmpty) {
+      _service.trackArticleView(articleId, _visitorId!);
+    }
+  }
+
+  /// Select an article from the list. A list sent without bodies has the
+  /// title and description only: the body is fetched now.
   void selectArticle(KnowledgeBaseArticle article) {
     _selectedArticle = article;
+    _articleError = null;
     _navigationHistory.add(article.id);
-
-    // Track view
-    if (_visitorId != null) {
-      _service.trackArticleView(article.id, _visitorId!);
-    }
-
+    _trackView(article.id);
     notifyListeners();
+
+    if (!article.hasContent) _loadBody(article.id);
   }
 
   /// Clear selected article (go back to list)
@@ -327,9 +407,16 @@ class KnowledgeBaseProvider with ChangeNotifier {
 
     try {
       final response = await _service.searchArticles(botId, query);
+      // Titles and descriptions match here at once; the server adds matches
+      // inside article bodies (as the web widget merges them).
+      final local = _localMatches(query);
 
       if (response.success && response.data != null) {
-        _searchResults = response.data!;
+        final seen = local.map((r) => r.article.id).toSet();
+        _searchResults = [
+          ...local,
+          ...response.data!.where((r) => seen.add(r.article.id)),
+        ];
         _searchError = null;
 
         // Also update articles list with search results
@@ -342,6 +429,10 @@ class KnowledgeBaseProvider with ChangeNotifier {
           hasNextPage: false,
           hasPreviousPage: false,
         );
+      } else if (local.isNotEmpty) {
+        _searchResults = local;
+        _articles = local.map((r) => r.article).toList();
+        _pagination = _onePage(_articles.length);
       } else {
         _searchError = response.error ?? 'Search failed';
       }
@@ -352,6 +443,18 @@ class KnowledgeBaseProvider with ChangeNotifier {
 
     _isSearching = false;
     notifyListeners();
+  }
+
+  List<ArticleSearchResult> _localMatches(String query) {
+    final terms = query.toLowerCase().split(RegExp(r'\s+')).where((t) => t.length >= 2).toList();
+    if (terms.isEmpty) return [];
+    return _data.allArticles
+        .where((a) {
+          final text = '${a.title} ${a.summary ?? ''}'.toLowerCase();
+          return terms.every(text.contains);
+        })
+        .map((a) => ArticleSearchResult(article: a))
+        .toList();
   }
 
   /// Clear search and reload all articles
@@ -477,6 +580,8 @@ class KnowledgeBaseProvider with ChangeNotifier {
     _searchResults.clear();
     _navigationHistory.clear();
     clearErrors();
+    // Pull to refresh asks the server again.
+    _dataLoaded = false;
 
     await initialize();
   }
