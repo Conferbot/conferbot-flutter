@@ -10,6 +10,7 @@ import '../../core/nodes/handlers/choices/choice_ui_states.dart' as choice;
 import '../../core/nodes/handlers/legacy_handlers.dart' as legacy;
 import '../../core/live_chat/live_chat.dart';
 import '../../core/customization/customizations.dart';
+import '../../widgets/bubble_outline.dart';
 import '../../providers/conferbot_provider.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../widgets/avatar.dart';
@@ -2125,6 +2126,7 @@ class BotMessageBubble extends StatelessWidget {
           bottomRight: Radius.circular(_botCorners(context)?.bottomRight ?? theme.borderRadius.bubble),
           bottomLeft: Radius.circular(_botCorners(context)?.bottomLeft ?? theme.borderRadius.bubbleSmall),
         ),
+        border: bubbleOutline(_look(context)),
         boxShadow: [theme.shadows.sm],
       ),
       // The builder writes questions as rich text (<p>...</p>).
@@ -2200,6 +2202,16 @@ BubbleCorners? _botCorners(BuildContext context) {
   try {
     final provider = Provider.of<ConferBotProvider>(context, listen: false);
     return provider.serverCustomizations != null ? provider.customizations.botBubble : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// The bot's resolved look, or null before its settings arrive.
+ResolvedCustomizations? _look(BuildContext context) {
+  try {
+    final provider = Provider.of<ConferBotProvider>(context, listen: false);
+    return provider.serverCustomizations != null ? provider.customizations : null;
   } catch (_) {
     return null;
   }
