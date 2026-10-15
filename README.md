@@ -188,6 +188,10 @@ ConferBotFABScope(
 
 Full `ConferBotFABScope` parameters: `apiKey`, `botId`, `child` (required), plus optional `fabConfig` (`ConferBotFABConfig`), `providerConfig` (`ConferBotConfig`), `customization` (`ConferBotCustomization?`), `user` (`ConferBotUser?`), `baseUrl`, `socketUrl`.
 
+### What the launcher draws
+
+Once the bot's settings arrive, the launcher is drawn as the web widget draws it on a phone: colour or left-to-right gradient, icon ink that stays readable on light colours, launcher icon or uploaded image, left/right position, the phone size and offsets (`mobileWidgetSize`, `mobileOffsetBottom`, `mobileOffsetSide`; else 16 from the edges), shape (`launcherShape`: speech bubble by default, circle, squircle, tab, peek), style (`launcherStyle`: icon, the bot's avatar with an online dot, or the label pill on tablets; phones show the round button, as the web does), a soft glow in the header colour, and the greeting (`chatIconCtaText`) only when `chatIconCta` is on.
+
 ### Local fallback config
 
 `ConferBotFABConfig` holds compile-time fallbacks. Server values from the dashboard always take precedence when present:
