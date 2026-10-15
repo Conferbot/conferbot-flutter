@@ -51,7 +51,7 @@ Every web widget feature works the same in the 4 mobile SDKs: customization, lau
 | 56 launcher icons, drawn from the widget SVGs | done | done | done | done |
 | Launcher motion (idle moments, message reaction, ripple) | done | done | done | done |
 | Signed-in user as `visitorContext` + identity hash | done | done | done | done |
-| Greeting card (rules, frequency, 11 styles) | done | todo | todo | todo |
+| Greeting card (rules, frequency, 11 styles) | done | logic done, UI on a branch | todo | todo |
 | Launcher entrance / attention / idle call | todo | todo | todo | todo |
 | Home screen | todo | todo | todo | todo |
 | Mascots (incl. `mascotInGreeting`) | todo | todo | todo | todo |
