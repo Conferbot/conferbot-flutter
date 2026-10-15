@@ -381,6 +381,32 @@ Built in and on by default (`ConferBotConfig.enableOfflineMode`):
 
 On by default (`enablePersistence: true`). Sessions are stored in Hive and restored on restart within the `sessionTimeout` (default 30 minutes, matching the web widget). Requires `await StorageService.init()` before `runApp`. Related APIs: `provider.sessionRestored`, `provider.persistState()`, `provider.clearCurrentSession()`, `provider.clearAllPersistedData()`, `provider.getStorageStats()`.
 
+A restored session resumes at the step it was on; the flow is not run again from the top, and not again on a reconnect. `openChat()` waits for start-up, so opening the chat straight away still gets the restored session. A live chat comes back live: the SDK asks the server (`live-chat-state`) and picks up the person on the chat, the wait for one (without asking for a person a second time), or carries the flow on when the chat ended while the app was closed.
+
+### Handover lifecycle
+
+As on the web widget:
+
+- When an AI agent hands the visitor to the team, the conversation shows "Connecting you with the team…" with typing dots. The line settles to how the wait ended: "Connected with the team", "The team couldn't join just now", "You left the queue" or "Chat ended before the team joined". An AI pausing an idle visitor draws nothing.
+- A person joining draws "<name> joined the chat" (with "They can see your conversation so far" after an AI handover), once per person.
+- The header keeps the bot's name. Under it: the team's reply time ("Typically replies in a few minutes", "Online · team back Monday 9 AM", "Online · team replies by email"), or plain "Online" once a person is in the chat. `provider.headerStatus` gives the same words.
+- The handover step's wait card has **Leave queue** (`provider.leaveQueue()`). It sends `queue-self-resolve`, so the team stops seeing the visitor waiting, and the flow carries on. It returns `false` when a person has already picked the chat up; the visitor then stays.
+- An AI agent bot offers "Talk to a person" (when the owner turned it on) only while no handover is under way and nobody is here; it goes once tapped.
+- The handover request carries the step's settings: `enableHandoverEmail` (false keeps the team's email off), the sound settings, and `assignmentMethod` / `requiredSkills`.
+
+The web's waiting signals, for your own UI (for example a "we'll email you" prompt):
+
+```dart
+final stop = provider.onWidgetSignal(WidgetSignals.waitingForHuman, (detail) {
+  // detail: {offline, reason: 'offline' | 'busy', backAt, emailCaptured}
+});
+provider.onWidgetSignal(WidgetSignals.humanJoined, (detail) {});   // {name}
+provider.onWidgetSignal(WidgetSignals.waitOver, (detail) {});      // {reason: unavailable | cancelled | ended}
+stop(); // stop listening
+```
+
+`cb:waiting-for-human` fires from the server's `handover-waiting`, or 20 seconds into a wait for a person with nobody yet (once per wait, and only while the chat is open). No signal carries the visitor's email.
+
 ### Push token registration
 
 Register a device token (FCM, APNs, or any provider) against the current chat session:
@@ -481,6 +507,9 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 | `sendMessage` | `Future<void> sendMessage(String text)` | Send free text (flow answer or live chat) |
 | `submitResponse` | `void submitResponse(dynamic response)` | Answer the current interactive node |
 | `initiateHandover` | `void initiateHandover({String? message})` | Request a live agent |
+| `leaveQueue` | `Future<bool> leaveQueue()` | Leave the handover queue (`queue-self-resolve`); false when a person already has the chat |
+| `onWidgetSignal` | `void Function() onWidgetSignal(String name, void Function(Map<String, dynamic>) listener)` | Listen to `WidgetSignals.waitingForHuman` / `humanJoined` / `waitOver`; returns a stop function |
+| `talkToPerson` | `Future<void> talkToPerson()` | The quick action: asks the AI for a person and retires the button |
 | `sendTypingStatus` | `void sendTypingStatus(bool isTyping)` | Visitor typing indicator |
 | `sendLiveChatTyping` | `void sendLiveChatTyping(bool isTyping)` | Typing indicator during live chat only |
 | `registerPushToken` | `Future<void> registerPushToken(String token)` | Register device push token |
@@ -501,7 +530,7 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 
 ### Key getters
 
-`record` (`List<RecordItem>`), `paginatedMessages`, `hasMoreMessages`, `isConnected`, `isInitialized`, `isOpen`, `unreadCount`, `currentAgent` (`Agent?`), `agentTyping`, `isLiveChatMode`, `currentUIState`, `isProcessing`, `isFlowComplete`, `errorMessage`, `serverCustomizations` (`Map<String, dynamic>?`), `serverTheme` (`ConferBotTheme`), `botName`, `botAvatarUrl`, `sessionRestored`, `visitorId`, `chatSessionId` / `chatId`, `sessionAnalytics`.
+`record` (`List<RecordItem>`), `paginatedMessages`, `hasMoreMessages`, `isConnected`, `isInitialized`, `isOpen`, `unreadCount`, `currentAgent` (`Agent?`), `agentTyping`, `isLiveChatMode`, `currentUIState`, `isProcessing`, `isFlowComplete`, `errorMessage`, `serverCustomizations` (`Map<String, dynamic>?`), `serverTheme` (`ConferBotTheme`), `botName`, `botAvatarUrl`, `sessionRestored`, `visitorId`, `chatSessionId` / `chatId`, `sessionAnalytics`, `headerStatus` (the line under the bot name), `personInChat`, `talkToPersonAllowed`, `offerTalkToPerson`.
 
 ### Theming
 
