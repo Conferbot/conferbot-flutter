@@ -21,6 +21,8 @@ import '../core/state/message_storage_service.dart';
 import '../utils/logger.dart';
 import '../utils/chat_markdown.dart';
 import '../core/agent/agent_bot.dart';
+import '../core/help_centre/help_centre.dart';
+import '../models/knowledge_base.dart';
 import '../core/agent/agent_handover.dart';
 import 'analytics_provider.dart';
 import '../core/live_chat/live_chat.dart';
@@ -234,6 +236,36 @@ class ConferBotProvider with ChangeNotifier {
 
   /// The bot's AI agent when it is a no-flow agent bot (Agent Studio), else null.
   AgentBot? get agentBot => _agentBot;
+
+  // ---- Help centre (knowledge base) ----
+
+  KnowledgeBaseData _helpCentreData = KnowledgeBaseData.empty;
+  void Function(String articleId)? _articleOpener;
+
+  /// The help centre from fetched-chatbot-data: titles and descriptions,
+  /// no bodies (the article view fetches a body on open).
+  KnowledgeBaseData get helpCentreData => _helpCentreData;
+
+  /// The owner's help centre switch is on and it has a published article
+  /// (core/help_centre/help_centre.dart). The app's own override is applied
+  /// by ChatWidget.
+  bool get helpCentreOn =>
+      HelpCentre.isVisible(customizations: _serverCustomizations, data: _helpCentreData);
+
+  /// The chat on screen registers how it opens an article (null to clear).
+  set articleOpener(void Function(String articleId)? opener) => _articleOpener = opener;
+
+  /// Can an AI source or rich article card open this article in the help
+  /// centre? Only while a chat that shows the help centre is on screen.
+  bool canOpenArticle(String? articleId) =>
+      _articleOpener != null && HelpCentre.canOpenArticle(visible: true, articleId: articleId);
+
+  /// Open a help centre article by id; false when it cannot open here.
+  bool openArticle(String articleId) {
+    if (!canOpenArticle(articleId)) return false;
+    _articleOpener!(articleId);
+    return true;
+  }
 
   /// The AI reply as it is being written (one live bubble), or null.
   AgentStream? get agentStream => _agentStream;
@@ -1149,9 +1181,18 @@ class ConferBotProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Feeds a fetched-chatbot-data payload as the socket would (tests).
+  @visibleForTesting
+  void debugHandleChatbotData(Map<String, dynamic> data) {
+    _handleChatbotData(data);
+    notifyListeners();
+  }
+
   /// Handle incoming chatbot data (steps and edges)
   void _handleChatbotData(Map<String, dynamic> data) {
     final chatbotData = data['chatbotData'] as Map<String, dynamic>?;
+    final kb = data['knowledgeBaseData'];
+    _helpCentreData = kb is Map ? KnowledgeBaseData.fromJson(Map<String, dynamic>.from(kb)) : KnowledgeBaseData.empty;
     if (chatbotData != null) {
       liveChat.setChatbotData(chatbotData);
       // Server sends: { elements: [{ nodes: [...], edges: [...] }], customizations: {...}, ... }
