@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/knowledge_base.dart';
 import '../../theme/conferbot_theme.dart';
@@ -17,6 +18,12 @@ class ArticleDetail extends StatefulWidget {
   final VoidCallback? onInsertToChat;
   final ConferBotTheme? theme;
 
+  /// The body is on its way (a list sent without bodies).
+  final bool isLoadingContent;
+
+  /// The body could not be loaded.
+  final String? contentError;
+
   const ArticleDetail({
     super.key,
     required this.article,
@@ -29,7 +36,12 @@ class ArticleDetail extends StatefulWidget {
     this.ratingSuccess,
     this.onInsertToChat,
     this.theme,
+    this.isLoadingContent = false,
+    this.contentError,
   });
+
+  /// Article bodies are HTML (as the web widget renders them).
+  static bool isHtml(String content) => RegExp(r'<[a-zA-Z][^>]*>').hasMatch(content);
 
   @override
   State<ArticleDetail> createState() => _ArticleDetailState();
@@ -192,8 +204,48 @@ class _ArticleDetailState extends State<ArticleDetail> {
   }
 
   Widget _buildContent(ConferBotTheme theme) {
-    // Parse and render content
-    // For now, treating content as plain text with basic formatting
+    final content = widget.article.content;
+    if (content.trim().isEmpty) {
+      if (widget.isLoadingContent) {
+        return Padding(
+          padding: EdgeInsets.symmetric(vertical: theme.spacing.lg),
+          child: Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2, color: theme.colors.primary),
+            ),
+          ),
+        );
+      }
+      if (widget.contentError != null) {
+        return Text(
+          'This article could not be loaded.',
+          style: TextStyle(fontSize: theme.typography.fontSizeMd, color: theme.colors.textSecondary),
+        );
+      }
+    }
+    if (ArticleDetail.isHtml(content)) {
+      return Html(
+        data: content,
+        style: {
+          'body': Style(
+            fontSize: FontSize(theme.typography.fontSizeMd),
+            color: theme.colors.text,
+            lineHeight: LineHeight(theme.typography.lineHeightRelaxed),
+            margin: Margins.zero,
+            padding: HtmlPaddings.zero,
+          ),
+          'a': Style(color: theme.colors.primary),
+        },
+        onLinkTap: (url, _, __) {
+          final uri = url == null ? null : Uri.tryParse(url);
+          if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+            launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        },
+      );
+    }
     return SelectableText(
       widget.article.content,
       style: TextStyle(
