@@ -1,55 +1,45 @@
-/// Node Handlers - Barrel Export
-///
-/// This file provides a unified import point for all node handlers.
-/// The handlers have been organized into the following categories:
-///
-/// **Base Classes** (legacy_handlers.dart):
-/// - NodeHandler, BaseNodeHandler, NodeUIState, NodeResult
-///
-/// **Display Handlers** (display_handlers.dart):
-/// - MessageNodeHandler, ImageNodeHandler, VideoNodeHandler, etc.
-///
-/// **Choice Handlers** (choices/):
-/// - TwoChoicesNodeHandler, ThreeChoicesNodeHandler, NChoicesNodeHandler
-/// - SelectOptionNodeHandler, NSelectOptionNodeHandler, NCheckOptionsNodeHandler
-/// - ImageChoiceNodeHandler, RatingChoiceNodeHandler, etc.
-///
-/// **Ask Question Handlers** (ask_questions/):
-/// - AskNameNodeHandler, AskEmailNodeHandler, AskPhoneNodeHandler
-/// - AskMultipleQuestionsNodeHandler, CalendarNodeHandler, etc.
-///
-/// **Integration Handlers** (integrations/):
-/// - WebhookNodeHandler, GptNodeHandler, EmailNodeHandler
-/// - GoogleSheetsNodeHandler, SlackNodeHandler, StripeNodeHandler, etc.
-///
-/// **Logic Handlers** (logic_handlers.dart):
-/// - ConditionNodeHandler, BooleanLogicNodeHandler, VariableNodeHandler, etc.
-///
-/// **Special Handlers** (special_handlers.dart):
-/// - DelayNodeHandler, HumanHandoverNodeHandler
+/// Every step handler, and [registerAllHandlers] (React Native
+/// src/core/nodes/handlers/index.ts). Fields, ports, saved values and
+/// records follow the shared flow-node spec (conferbot-react-native
+/// scripts/parity/flows/nodes.spec.json).
 library;
 
-// Base classes and legacy handlers
-export 'legacy_handlers.dart';
+import '../node_handler.dart';
+import '../node_handler_registry.dart';
+import 'advanced_input_handlers.dart';
+import 'ask_handlers.dart';
+import 'choice_handlers.dart';
+import 'display_handlers.dart';
+import 'integration_handlers.dart';
+import 'legacy_handlers.dart';
+import 'logic_handlers.dart';
+import 'rich_handlers.dart';
+import 'special_handlers.dart';
 
-// Display handlers (CalendarState is the legacy handlers' - the Google
-// handlers build that one; exporting both was ambiguous)
-export 'display_handlers.dart' hide CalendarState;
-
-// Choice handlers (split into multiple files)
+export 'advanced_input_handlers.dart';
+export 'ask_handlers.dart';
 export 'choice_handlers.dart';
-
-// Ask question handlers (split into multiple files)
-export 'ask_question_handlers.dart';
-
-// Integration handlers (split into multiple files)
+export 'display_handlers.dart';
+export 'flow_kit.dart';
 export 'integration_handlers.dart';
-
-// Logic handlers
+export 'legacy_handlers.dart';
 export 'logic_handlers.dart';
-
-// Special handlers
+export 'rich_handlers.dart';
 export 'special_handlers.dart';
-
-// Voice message handler
 export 'voice_message_handler.dart';
+
+/// Every built-in handler.
+List<NodeHandler> allHandlers() => [
+      ...displayHandlers,
+      ...askHandlers,
+      ...choiceHandlers,
+      ...advancedInputHandlers,
+      ...legacyHandlers,
+      ...logicHandlers,
+      ...integrationHandlers,
+      ...specialHandlers,
+      ...richHandlers,
+    ];
+
+/// Registers every built-in handler (the last one for a type wins).
+void registerAllHandlers(NodeHandlerRegistry registry) => registry.registerAll(allHandlers());
