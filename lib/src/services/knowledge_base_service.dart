@@ -113,6 +113,24 @@ class KnowledgeBaseService {
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
         final data = jsonData['data'] as Map<String, dynamic>? ?? jsonData;
+        // The server sends the whole help centre ({recentArticles,
+        // categories}) and ignores paging and filters: the category is
+        // applied here.
+        if (data['categories'] is List || data['recentArticles'] is List) {
+          final kb = KnowledgeBaseData.fromJson(data);
+          final articles = kb.articlesIn(category != null && category.isNotEmpty ? category : null);
+          return KBApiResponse.success(ArticleListResponse(
+            articles: articles,
+            pagination: ArticlePagination(
+              page: 1,
+              limit: articles.length,
+              totalItems: articles.length,
+              totalPages: articles.isEmpty ? 0 : 1,
+              hasNextPage: false,
+              hasPreviousPage: false,
+            ),
+          ));
+        }
         return KBApiResponse.success(ArticleListResponse.fromJson(data));
       } else {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -152,11 +170,17 @@ class KnowledgeBaseService {
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
-        final categoriesData = jsonData['data'] as List<dynamic>? ??
-            jsonData['categories'] as List<dynamic>? ?? [];
+        // {success, data: {categories: [{_id, name, icon, articles}]}}
+        final data = jsonData['data'];
+        final categoriesData = data is List
+            ? data
+            : data is Map && data['categories'] is List
+                ? data['categories'] as List<dynamic>
+                : jsonData['categories'] as List<dynamic>? ?? const [];
 
         final categories = categoriesData
-            .map((c) => KnowledgeBaseCategory.fromJson(c as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((c) => KnowledgeBaseCategory.fromJson(Map<String, dynamic>.from(c)))
             .toList();
 
         // Sort by sortOrder
@@ -328,7 +352,8 @@ class KnowledgeBaseService {
 
       final queryParams = <String, String>{
         'botId': chatbotId,
-        'q': query,
+        // The server reads `query` only (mobileController.searchKBArticles).
+        'query': query,
         'page': page.toString(),
         'limit': limit.toString(),
       };
@@ -361,6 +386,29 @@ class KnowledgeBaseService {
       }
     } catch (e) {
       kbLogger.error('Error searching articles', e);
+      return KBApiResponse.failure(e.toString());
+    }
+  }
+
+  /// The whole help centre in one call: categories with their articles and
+  /// the recent articles, bodies included (`GET /knowledge-base/articles`).
+  Future<KBApiResponse<KnowledgeBaseData>> fetchHelpCentre() async {
+    try {
+      final uri = Uri.parse('$baseUrl/knowledge-base/articles');
+      kbLogger.debug('Fetching help centre', uri.toString());
+      final response = await _client
+          .get(uri, headers: _headers)
+          .timeout(Duration(milliseconds: ConferBotConstants.apiTimeout));
+      final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        return KBApiResponse.success(KnowledgeBaseData.fromJson(jsonData));
+      }
+      return KBApiResponse.failure(
+        jsonData['error'] as String? ?? 'Failed to load the help centre',
+        message: jsonData['message'] as String?,
+      );
+    } catch (e) {
+      kbLogger.error('Error fetching help centre', e);
       return KBApiResponse.failure(e.toString());
     }
   }
