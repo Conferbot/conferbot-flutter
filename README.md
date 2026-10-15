@@ -391,9 +391,24 @@ await provider.registerPushToken(deviceToken);
 
 Signature: `Future<void> registerPushToken(String token)` - it posts to `/push/register` with the session ID and platform. It is a no-op until a chat session exists (open the chat first). The SDK does not itself integrate Firebase; you obtain the token in your app.
 
-### Knowledge base
+### Knowledge base (help centre)
 
-A searchable help center is built in and reachable from the `ChatWidget` header (toggle with `showKnowledgeBase:`). You can also embed it directly:
+The help centre follows the owner's dashboard settings, as on the web widget:
+
+- The help button shows in the `ChatWidget` header while **Help articles** (`enableKnowledgeBase`) is on and at least one article is published. With it off, or with no published article, there is no button.
+- **Recent articles** shows above the full list unless the owner hides it (`hideRecentArticles`).
+- Article bodies are HTML and are drawn as such. The list comes with the bot's settings on connect (titles and descriptions only); an article's body is fetched when it is opened.
+- When an AI answer cites a help centre article (a source or an article card with an `articleId`), tapping it opens that article in the help centre. Without a help centre on screen, a source with a public link opens the link.
+
+`ChatWidget(showKnowledgeBase:)` overrides the owner's switch. The app's value wins:
+
+| `showKnowledgeBase` | Help button |
+|---|---|
+| `null` (default) | follows `enableKnowledgeBase` and needs a published article |
+| `false` | never |
+| `true` | always, even with the owner's switch off (the screen then loads the articles over REST) |
+
+You can also embed the help centre directly. It reads from the configured server (`ConferBotEndpoints` or `baseUrl`):
 
 ```dart
 ChangeNotifierProvider(
@@ -409,7 +424,7 @@ ChangeNotifierProvider(
 )
 ```
 
-`KnowledgeBaseService` exposes the underlying REST calls (`fetchArticles`, `searchArticles`, article detail, ratings). Articles can be inserted into the chat via `ChatWidget.onArticleInsert`.
+`KnowledgeBaseService` exposes the REST calls under `/mobile/knowledge-base`: `fetchHelpCentre` (categories with their articles, and the recent articles), `fetchCategories`, `fetchArticles`, `fetchArticle`, `searchArticles` (sends `query`), ratings and view tracking. `KnowledgeBaseProvider.openArticle(id)` opens an article by id. Articles can be inserted into the chat via `ChatWidget.onArticleInsert`.
 
 ### Analytics
 
@@ -448,7 +463,7 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 |---|---|---|
 | `ConferBotProvider` | `ConferBotProvider({required String apiKey, required String botId, ConferBotConfig config = const ConferBotConfig(), ConferBotCustomization? customization, ConferBotUser? user, String? baseUrl, String? socketUrl})` | Core state manager; connects socket and REST, runs the node flow engine |
 | `ConferBotConfig` | `const ConferBotConfig({bool enableNotifications = true, bool enableOfflineMode = true, bool autoConnect = true, int? reconnectionAttempts, int? reconnectionDelay, bool enablePagination = true, PaginationConfig? paginationConfig, bool enableAnalytics = true, Duration analyticsFlushInterval = const Duration(seconds: 30), bool enablePersistence = true, Duration sessionTimeout = const Duration(minutes: 30)})` | SDK behavior switches |
-| `ChatWidget` | `const ChatWidget({String? title, String? placeholder, bool showTimestamps = false, bool enableAttachments = false, ConferBotTheme? theme, bool enablePagination = true, MessageListPaginationConfig? paginationConfig, bool showKnowledgeBase = true, ValueChanged<KnowledgeBaseArticle>? onArticleInsert, bool showOfflineIndicator = true, bool showDeliveryStatus = true, bool showHandoverPreChatForm = true, bool showHandoverPostChatSurvey = true, int handoverMaxWaitMinutes = 5, ValueChanged<SurveyResult>? onHandoverSurveySubmit})` | Drop-in full chat UI |
+| `ChatWidget` | `const ChatWidget({String? title, String? placeholder, bool showTimestamps = false, bool enableAttachments = false, ConferBotTheme? theme, bool enablePagination = true, MessageListPaginationConfig? paginationConfig, bool? showKnowledgeBase, ValueChanged<KnowledgeBaseArticle>? onArticleInsert, bool showOfflineIndicator = true, bool showDeliveryStatus = true, bool showHandoverPreChatForm = true, bool showHandoverPostChatSurvey = true, int handoverMaxWaitMinutes = 5, ValueChanged<SurveyResult>? onHandoverSurveySubmit})` | Drop-in full chat UI |
 | `ConferBotFAB` | `const ConferBotFAB({required Widget child, ConferBotFABConfig config = const ConferBotFABConfig(), ConferBotTheme? theme})` | Floating chat bubble overlaying your app |
 | `ConferBotFABConfig` | `const ConferBotFABConfig({double size = 50.0, FabPosition position = FabPosition.right, double offsetX = 10.0, double offsetBottom = 10.0})` | FAB fallbacks (server values win) |
 | `ConferBotFABScope` | `const ConferBotFABScope({required String apiKey, required String botId, required Widget child, ConferBotFABConfig fabConfig = const ConferBotFABConfig(), ConferBotConfig providerConfig = const ConferBotConfig(), ConferBotCustomization? customization, ConferBotUser? user, String? baseUrl, String? socketUrl})` | Provider + FAB in one widget |
