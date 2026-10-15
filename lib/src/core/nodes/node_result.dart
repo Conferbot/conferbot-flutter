@@ -1,121 +1,106 @@
-/// Sealed class representing the possible results from a node handler
+/// What a step handler tells the flow engine to do next (as the React Native
+/// SDK's NodeResult, src/core/nodes/NodeHandler.ts).
 ///
-/// This is the single source of truth for all node result types.
-/// All handlers (legacy, v2, ask, special, logic) use this class.
-abstract class NodeResult {
+/// - [DisplayUIResult]: draw a UI state; the step waits for the visitor when
+///   its type takes input (NodeTypes.requiresUserInteraction) or when
+///   `awaitInput` is set, else the flow moves on along the first edge.
+/// - [ProceedResult]: `nextNodeId` null takes the step's FIRST edge;
+///   "__port:<handle>" takes exactly that handle (none: the chat ends);
+///   anything else jumps to that node.
+/// - [DelayedProceedResult]: the same after `delayMs`.
+/// - [JumpToResult]: to a node by id (a missing one ends the chat).
+/// - [InvalidResult]: a refused answer; the step keeps waiting.
+/// - [EndResult]: the chat is over.
+/// - [ErrorResult]: something failed; the flow stops where it is.
+sealed class NodeResult {
   const NodeResult();
 
-  /// Factory: proceed to next node (optionally via a specific port)
-  const factory NodeResult.proceed({String? targetPort}) = ProceedResult;
+  /// Draw [uiState]; [awaitInput] makes any step wait for the visitor.
+  factory NodeResult.displayUI(Object uiState, {bool awaitInput}) = DisplayUIResult;
 
-  /// Factory: display UI and wait for user interaction
-  /// Accepts any UI state object (legacy NodeUIState or v2 NodeUIState)
-  factory NodeResult.displayUI(Object uiState) = DisplayUIResult.positional;
+  /// Move on: the first edge (null), an exact handle ("__port:<h>") or a node id.
+  factory NodeResult.proceed(String? nextNodeId, [Map<String, dynamic>? data]) = ProceedResult;
 
-  /// Factory: proceed after a delay
-  const factory NodeResult.delayedProceed({required Duration delay, String? targetPort}) = DelayedProceedResult;
+  /// Move on after [delayMs].
+  factory NodeResult.delayedProceed(String? nextNodeId, int delayMs, [Map<String, dynamic>? data]) =
+      DelayedProceedResult;
 
-  /// Factory: jump to a specific node by ID
-  factory NodeResult.jumpTo(String targetNodeId) = JumpToResult.positional;
+  /// To a node by id.
+  factory NodeResult.jumpTo(String targetNodeId, [Map<String, dynamic>? data]) = JumpToResult;
 
-  /// Factory: error occurred during processing
-  const factory NodeResult.error({required String message, bool shouldProceed}) = ErrorResult;
+  /// A refused answer: say [message] and keep waiting. [inCard]: the card
+  /// shows it itself (no bot bubble).
+  factory NodeResult.invalid(String message, {Object? uiState, bool inCard}) = InvalidResult;
+
+  /// The chat is over.
+  factory NodeResult.end() = EndResult;
+
+  /// Something failed.
+  factory NodeResult.error(String message, {bool recoverable}) = ErrorResult;
+
+  /// Leave by exactly [handle]; [fallback] is taken when only it is wired
+  /// (web goPort).
+  static ProceedResult port(String handle, {String? fallback, Map<String, dynamic>? data}) =>
+      ProceedResult('__port:$handle', {...?data, if (fallback != null) 'fallbackPort': fallback});
+
+  /// Leave by the step's first edge.
+  static ProceedResult next([Map<String, dynamic>? data]) => ProceedResult(null, data);
 }
 
-/// Node requires UI display and user interaction
+/// Draw a UI state.
 class DisplayUIResult extends NodeResult {
-  /// The UI state object. Can be any NodeUIState subclass from either
-  /// the legacy or v2 type hierarchy.
   final Object uiState;
+  final bool awaitInput;
 
-  /// Primary positional constructor (used by both legacy and v2 handlers)
-  const DisplayUIResult(this.uiState);
-
-  /// Named constructor for explicit usage
-  const DisplayUIResult.withState({required this.uiState});
-
-  /// Alias for primary constructor (used by factory redirect)
-  const DisplayUIResult.positional(this.uiState);
+  const DisplayUIResult(this.uiState, {this.awaitInput = false});
 }
 
-/// Node processed successfully, proceed to next node
+/// Move on (see [NodeResult]).
 class ProceedResult extends NodeResult {
-  /// Optional target port for branching flows (e.g., "yes", "no", "option-1")
-  final String? targetPort;
+  final String? nextNodeId;
+  final Map<String, dynamic>? data;
 
-  const ProceedResult({this.targetPort});
+  const ProceedResult(this.nextNodeId, [this.data]);
+
+  /// The exact handle asked for, when this is a port.
+  String? get port => nextNodeId != null && nextNodeId!.startsWith('__port:') ? nextNodeId!.substring(7) : null;
 }
 
-/// Node processed with delay before proceeding
+/// Move on after a delay.
 class DelayedProceedResult extends NodeResult {
-  final Duration delay;
-  final String? targetPort;
+  final String? nextNodeId;
+  final int delayMs;
+  final Map<String, dynamic>? data;
 
-  const DelayedProceedResult({
-    required this.delay,
-    this.targetPort,
-  });
-
-  /// Create from milliseconds
-  factory DelayedProceedResult.fromMs(int delayMs, {String? targetPort}) {
-    return DelayedProceedResult(
-      delay: Duration(milliseconds: delayMs),
-      targetPort: targetPort,
-    );
-  }
+  const DelayedProceedResult(this.nextNodeId, this.delayMs, [this.data]);
 }
 
-/// Jump to specific node by ID
+/// To a node by id.
 class JumpToResult extends NodeResult {
   final String targetNodeId;
+  final Map<String, dynamic>? data;
 
-  const JumpToResult({required this.targetNodeId});
-
-  /// Positional constructor for factory redirect
-  const JumpToResult.positional(this.targetNodeId);
+  const JumpToResult(this.targetNodeId, [this.data]);
 }
 
-/// Error occurred during processing
+/// A refused answer.
+class InvalidResult extends NodeResult {
+  final String message;
+  final Object? uiState;
+  final bool inCard;
+
+  const InvalidResult(this.message, {this.uiState, this.inCard = false});
+}
+
+/// The chat is over.
+class EndResult extends NodeResult {
+  const EndResult();
+}
+
+/// Something failed.
 class ErrorResult extends NodeResult {
   final String message;
-  final bool shouldProceed;
+  final bool recoverable;
 
-  /// Named parameter constructor (used by v2 handlers via NodeResult.error())
-  const ErrorResult({
-    required this.message,
-    this.shouldProceed = true,
-  });
-}
-
-// ============================================================================
-// Type aliases and compatibility classes for handler backward compatibility
-// ============================================================================
-
-/// Alias for DisplayUIResult (handler compatibility)
-typedef DisplayUI = DisplayUIResult;
-
-/// Alias for ProceedResult (handler compatibility)
-typedef Proceed = ProceedResult;
-
-/// Alias for JumpToResult (handler compatibility)
-typedef JumpTo = JumpToResult;
-
-/// Legacy-compatible error class that accepts positional message parameter.
-/// Used by legacy handlers: NodeError('message', shouldProceed: false)
-class NodeError extends NodeResult {
-  final String message;
-  final bool shouldProceed;
-
-  const NodeError(this.message, {this.shouldProceed = true});
-}
-
-/// Handler-compatible delayed proceed (milliseconds-based)
-class DelayedProceed extends NodeResult {
-  final int delayMs;
-  final String? targetPort;
-
-  const DelayedProceed({required this.delayMs, this.targetPort});
-
-  /// Convert to DelayedProceedResult
-  DelayedProceedResult toResult() => DelayedProceedResult.fromMs(delayMs, targetPort: targetPort);
+  const ErrorResult(this.message, {this.recoverable = true});
 }
