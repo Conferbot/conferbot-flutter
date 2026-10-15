@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/customization/launcher.dart';
 import '../models/user.dart';
 import '../providers/conferbot_provider.dart';
 import '../theme/conferbot_theme.dart';
@@ -1194,20 +1195,49 @@ class _ConferBotFABState extends State<ConferBotFAB>
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
+  static Color? _hex(String? v) {
+    if (v == null || !v.startsWith('#')) return null;
+    var h = v.substring(1);
+    if (h.length == 3) h = h.split('').map((c) => '$c$c').join();
+    if (h.length != 6) return null;
+    final n = int.tryParse(h, radix: 16);
+    return n == null ? null : Color(0xFF000000 | n);
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ConferBotProvider>(context);
+    final hasLook = _sc(provider) != null;
+    // The launcher as the web draws it on a phone (core/customization/launcher.dart).
+    final look = Launcher.resolve(_sc(provider), screenWidth: MediaQuery.sizeOf(context).width);
 
-    final fabColor = _resolveColor(provider);
-    final size = _resolveSize(provider);
-    final position = _resolvePosition(provider);
-    final offsetX = _resolveOffsetX(provider);
-    final offsetBottom = _resolveOffsetBottom(provider);
-    final borderRadius = _resolveBorderRadius(provider, size);
-    final iconName = _resolveIconName(provider);
-    final ctaText = _resolveCtaText(provider);
+    final fabColor = hasLook ? (_hex(look.solid) ?? _resolveColor(provider)) : _resolveColor(provider);
+    final gradient = hasLook && look.gradient != null
+        ? LinearGradient(colors: look.gradient!.map((c) => _hex(c) ?? fabColor).toList())
+        : null;
+    final ink = hasLook ? (_hex(look.ink) ?? Colors.white) : Colors.white;
+    final glow = _hex(look.glow) ?? fabColor;
+    final size = hasLook ? look.size : _resolveSize(provider);
+    final width = hasLook ? look.width : size;
+    final position = hasLook ? (look.position == 'left' ? FabPosition.left : FabPosition.right) : _resolvePosition(provider);
+    final offsetX = hasLook ? look.side - look.tucked : _resolveOffsetX(provider);
+    final offsetBottom = hasLook ? look.bottom : _resolveOffsetBottom(provider);
+    final radius = hasLook
+        ? BorderRadius.only(
+            topLeft: Radius.circular(look.corners.topLeft),
+            topRight: Radius.circular(look.corners.topRight),
+            bottomRight: Radius.circular(look.corners.bottomRight),
+            bottomLeft: Radius.circular(look.corners.bottomLeft),
+          )
+        : BorderRadius.circular(_resolveBorderRadius(provider, size));
+    final iconName = _kIconShapes.containsKey(look.iconId) ? look.iconId! : _resolveIconName(provider);
+    // Only when the owner turned the greeting on.
+    final ctaText = hasLook ? look.ctaText : _resolveCtaText(provider);
     final unreadCount = provider.unreadCount;
-    final iconSize = size * 0.6;
+    final iconSize = hasLook ? look.glyph : size * 0.6;
+    final showLabel = hasLook && look.style == 'label';
+    final avatar = hasLook && look.style == 'avatar' ? look.avatar : null;
+    final imageUrl = hasLook ? look.imageUrl : null;
 
     final isLeft = position == FabPosition.left;
 
@@ -1219,8 +1249,45 @@ class _ConferBotFABState extends State<ConferBotFAB>
       20.0,
     );
 
-    // CTA horizontal offset from edge: offsetX + size + 10
-    final ctaEdgeOffset = offsetX + size + 10;
+    // CTA horizontal offset from edge: beside the button
+    final ctaEdgeOffset = offsetX + width + 10;
+
+    Widget glyph(double s) => CustomPaint(
+          key: ValueKey(iconName),
+          size: Size(s, s),
+          painter: _IconPainter(iconName: iconName, color: ink),
+        );
+
+    Widget content;
+    if (_isOpen) {
+      content = CustomPaint(key: const ValueKey('close'), size: Size(iconSize, iconSize), painter: _CloseIconPainter(ink));
+    } else if (imageUrl != null) {
+      content = ClipOval(child: Image.network(imageUrl, width: iconSize, height: iconSize, fit: BoxFit.cover));
+    } else if (avatar != null) {
+      // The photo fills the button inside a thin ring of its colour.
+      content = Padding(
+        padding: const EdgeInsets.all(3),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: Container(color: Colors.white, child: Image.network(avatar, width: width - 6, height: size - 6, fit: BoxFit.cover)),
+        ),
+      );
+    } else if (showLabel) {
+      content = Padding(
+        padding: EdgeInsets.symmetric(horizontal: (size - size * 0.52) / 2),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          glyph(size * 0.52),
+          SizedBox(width: size * 0.16),
+          Text(
+            look.label,
+            maxLines: 1,
+            style: TextStyle(color: ink, fontWeight: FontWeight.w600, fontSize: (size * 0.3).roundToDouble().clamp(13, 16).toDouble()),
+          ),
+        ]),
+      );
+    } else {
+      content = glyph(iconSize);
+    }
 
     return Stack(
       clipBehavior: Clip.none,
@@ -1264,41 +1331,41 @@ class _ConferBotFABState extends State<ConferBotFAB>
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // Shadow + pill container
-                  Material(
-                    elevation: 8,
-                    shadowColor: fabColor.withOpacity(0.45),
-                    borderRadius: BorderRadius.circular(borderRadius),
-                    color: fabColor,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      width: size,
-                      height: size,
-                      decoration: BoxDecoration(
-                        color: fabColor,
-                        borderRadius: BorderRadius.circular(borderRadius),
-                      ),
-                      child: Center(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: _isOpen
-                              ? CustomPaint(
-                                  key: const ValueKey('close'),
-                                  size: Size(iconSize, iconSize),
-                                  painter: _CloseIconPainter(Colors.white),
-                                )
-                              : CustomPaint(
-                                  key: ValueKey(iconName),
-                                  size: Size(iconSize, iconSize),
-                                  painter: _IconPainter(
-                                    iconName: iconName,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                        ),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    width: showLabel ? null : width,
+                    height: size,
+                    constraints: showLabel ? BoxConstraints(minWidth: size) : null,
+                    decoration: BoxDecoration(
+                      color: gradient == null ? fabColor : null,
+                      gradient: gradient,
+                      borderRadius: radius,
+                      // A soft glow in the header colour (0 0 4px), as the web draws it.
+                      boxShadow: [BoxShadow(color: glow, blurRadius: 4)],
+                    ),
+                    child: Center(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: content,
                       ),
                     ),
                   ),
+
+                  // The avatar's online dot.
+                  if (avatar != null && !_isOpen)
+                    Positioned(
+                      right: size >= 56 ? 2 : 1,
+                      bottom: size >= 56 ? 2 : 1,
+                      child: Container(
+                        width: math.max(10, size * 0.24),
+                        height: math.max(10, size * 0.24),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF22C55E),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
 
                   // Unread count badge (top-right of FAB)
                   if (unreadCount > 0 && !_isOpen)
