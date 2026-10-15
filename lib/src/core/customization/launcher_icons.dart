@@ -40,6 +40,43 @@ class IconGradient {
   }
 }
 
+/// An animated group a shape sits in, outer first (see launcher_motion.dart).
+class IconPart {
+  /// Its motion classes ("cbl-eye", "cbl-conf>*"...).
+  final List<String> c;
+
+  /// Group id: its box in LauncherIcon.boxes is the transform origin's box.
+  final int g;
+  final double? dx, dy;
+
+  /// Its own transform attribute (an animation on it replaces this).
+  final List<double>? t;
+
+  /// No class of its own: it turns about the icon's origin.
+  final bool unclassed;
+
+  /// Its own opacity attribute (an animated opacity replaces this).
+  final double? o;
+
+  /// The static transform between the previous part and this one.
+  final List<double>? pre;
+
+  const IconPart({required this.c, required this.g, this.dx, this.dy, this.t, this.unclassed = false, this.o, this.pre});
+
+  static List<double>? _m(dynamic v) => (v as List?)?.map((x) => (x as num).toDouble()).toList();
+
+  factory IconPart.fromJson(Map<String, dynamic> j) => IconPart(
+        c: (j['c'] as List).cast<String>(),
+        g: j['g'] as int,
+        dx: (j['dx'] as num?)?.toDouble(),
+        dy: (j['dy'] as num?)?.toDouble(),
+        t: _m(j['t']),
+        unclassed: j['u'] == 1,
+        o: (j['o'] as num?)?.toDouble(),
+        pre: _m(j['pre']),
+      );
+}
+
 class IconOp {
   final String d;
   final List<double>? m;
@@ -52,9 +89,21 @@ class IconOp {
   final bool evenOdd;
   final bool strokeFirst;
   final String? clip;
-  final List<String> part;
 
-  const IconOp({required this.d, this.m, this.fill, this.stroke, this.sw = 1, this.cap, this.join, this.op, this.evenOdd = false, this.strokeFirst = false, this.clip, this.part = const []});
+  /// How many of the parts the clip moves with.
+  final int clipDepth;
+
+  /// The shape itself is the innermost animated element.
+  final bool self;
+
+  /// The opacity from elements that are not animated parts (when it differs from op).
+  final double? opRest;
+
+  /// The static transform after the last part, down to the shape.
+  final List<double>? post;
+  final List<IconPart> parts;
+
+  const IconOp({required this.d, this.m, this.fill, this.stroke, this.sw = 1, this.cap, this.join, this.op, this.evenOdd = false, this.strokeFirst = false, this.clip, this.clipDepth = 0, this.self = false, this.opRest, this.post, this.parts = const []});
 
   factory IconOp.fromJson(Map<String, dynamic> j) => IconOp(
         d: j['d'] as String,
@@ -68,7 +117,11 @@ class IconOp {
         evenOdd: j['rule'] == 'evenodd',
         strokeFirst: j['strokeFirst'] == true,
         clip: j['clip'] as String?,
-        part: ((j['part'] as List?) ?? const []).cast<String>(),
+        clipDepth: (j['clipDepth'] as int?) ?? 0,
+        self: j['self'] == 1,
+        opRest: (j['opRest'] as num?)?.toDouble(),
+        post: (j['post'] as List?)?.map((x) => (x as num).toDouble()).toList(),
+        parts: ((j['parts'] as List?) ?? const []).map((p) => IconPart.fromJson(p as Map<String, dynamic>)).toList(),
       );
 }
 
@@ -77,7 +130,10 @@ class LauncherIcon {
   final String anim;
   final List<IconGradient> grads;
   final List<IconOp> ops;
-  const LauncherIcon(this.id, this.anim, this.grads, this.ops);
+
+  /// Each animated group's box (and 0, the whole icon): x, y, width, height.
+  final Map<int, List<double>> boxes;
+  const LauncherIcon(this.id, this.anim, this.grads, this.ops, [this.boxes = const {}]);
 }
 
 class LauncherIcons {
@@ -93,6 +149,7 @@ class LauncherIcons {
       j['anim'] as String,
       (j['grads'] as List).map((g) => IconGradient.fromJson(g as Map<String, dynamic>)).toList(),
       (j['ops'] as List).map((o) => IconOp.fromJson(o as Map<String, dynamic>)).toList(),
+      ((j['boxes'] as Map?) ?? const {}).map((k, v) => MapEntry(int.parse(k as String), (v as List).map((x) => (x as num).toDouble()).toList())),
     );
   }).toList();
 
