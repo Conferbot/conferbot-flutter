@@ -23,6 +23,7 @@ Layout:
 | #22 | Greeting card: rules, frequency, per-bot state, 11 styles; replaces the old CTA tooltip. Checked with widget-test images, not yet on a device | `core/customization/greeting.dart`, `widgets/greeting_controller.dart`, `widgets/greeting_card.dart`, `widgets/conferbot_fab.dart` |
 | #23, #29-#34, #48, #55, #66-#70 | Flow nodes: the engine and every node handler run the shared flow-node spec. **156 of 156 fixtures pass** (`test/parity/flows_test.dart`); none pending. See "Flow nodes" below | `core/node_flow_engine.dart`, `core/flow/*` (text, logic, flow_control, rich, inputs, calendar, zones, flow_context), `core/privacy/redact.dart`, `core/nodes/handlers/*`, `core/state/chat_state.dart`, `ui/widgets/node_widgets.dart`, `ui/widgets/rich_node_widgets.dart`, `widgets/message_bubble.dart` |
 | #24-#28, #37, #61-#63, #65 | Handover lifecycle, ported from RN: the Connecting line and its four outcomes, an AI's idle pause ignored, the 20s waiting signal and `onWidgetSignal`, the header keeping the bot with Online and the reply time, "Talk to a person" only when allowed, Leave queue (`queue-self-resolve`, `queue-left`), a live chat or a wait picked back up after a restart without a second ticket, the flow started once per session, `openChat` waiting for start-up, the step's email / sound / assignment settings on `initiate-handover`, End chat and the survey as the server handles them. Checked on the iPhone 16e simulator against a local embed-server | `core/live_chat/handover_state.dart`, `handover_waiting.dart`, `reply_time.dart`, `handover_lifecycle.dart`, `core/agent/agent_handover.dart`, `core/node_flow_engine.dart` (`waitAt`), `providers/conferbot_provider.dart`, `widgets/message_bubble.dart` (`LiveChatLine`), `widgets/live_chat_cards.dart`, `widgets/chat_widget.dart` |
+| #73 | Launcher entrance (12 effects), attention (8 modes) and idle call (5), ported from RN #57. `keyframes.dart` evaluates the web's Web Animations tracks and passes RN's Chrome golden (447 cases, 19,275 samples; largest error 0.0007px, 0.005deg, 0.00005 scale and opacity, 0.03px `left`, 0.42px on the plane's path). The tracks are rebuilt from the same code and match the golden's. The rules are in the three controllers. Checked with widget-test images, not yet on a device | `core/customization/keyframes.dart`, `launcher_entrance.dart`, `launcher_attention.dart`, `launcher_idle_call.dart`, `mascot_art.dart`, `fx_paint.dart`; `widgets/launcher_fx_controllers.dart`, `launcher_fx_views.dart`, `fx_svg.dart`, `conferbot_fab.dart`; `test/fixtures/launcherfx_golden.json` |
 
 ## Left in this SDK
 
@@ -33,17 +34,20 @@ Layout:
    - #64: the help articles shown while waiting (`queue-help`, "That solved it") are not drawn.
    - Leave queue was checked against the server with a visitor socket (this simulator has no tap tool); the button itself is covered by widget tests.
    - After a restore that is still waiting, the max-wait timer starts over rather than from the server's `waitEndsAt`.
-3. The rest of the list below.
-4. **Test debt:**
+3. **Launcher effects follow-ups (#73):**
+   - Check them on a device (iOS and Android). They are covered by unit tests on a fake clock, a launcher widget test and widget-test images only.
+   - As in RN, web filters (brightness, glows, blur, the mascot's bevel) are not drawn, and the waving hand is the system emoji.
+4. The rest of the list below.
+5. **Test debt:**
    - #16: `media_service_test` fails because MockController is not an AudioPlayer.
    - #58: the older help centre widget tests (`article_list_test`, `article_detail_test`, `category_chips_test`) and `message_bubble_test` don't compile or fail. The help centre is covered by `test/core/help_centre/`, `test/providers/knowledge_base_provider_test.dart` and `test/widgets/knowledge_base/help_centre_test.dart`.
-5. **Flow node follow-ups:**
+6. **Flow node follow-ups:**
    - Check the step cards on a device (iOS and Android). They are covered by widget tests and images only (no emulator or simulator run).
    - Address: no "Use my location" (it would need a location plugin); search, the map and typing by hand work.
    - Hidden fields read the page the chat runs on. An app has none: the provider passes no `NodeFlowEngineConfig.page`.
    - The visitor's time zone is the device's offset as a fixed `Etc/GMT` zone, because Dart does not expose the IANA name. The provider does not pass `NodeFlowEngineConfig.visitorTimeZone` yet.
-6. There's no `identify()` after construction; the user comes only from the provider's `user`.
-7. **Help centre follow-ups:**
+7. There's no `identify()` after construction; the user comes only from the provider's `user`.
+8. **Help centre follow-ups:**
    - Ratings still use the SDK's 1-5 stars over REST; the web sends helpful / not helpful (`rate-article`). Reading time and scroll depth (`track-article-engagement`) are not sent.
    - Search uses REST (`/knowledge-base/search?query=`) plus local title matches; the socket's `search-kb-articles` (with snippets) is not used.
    - No home screen yet, so Recent articles sit at the top of the help centre list rather than on a welcome screen.
@@ -55,6 +59,8 @@ Layout:
 - **Handover lifecycle:** `flutter test test/core/live_chat test/core/agent test/widgets/handover/handover_lifecycle_widgets_test.dart`. `handover_lifecycle_test.dart` drives the lifecycle against a fake socket and a fake clock.
 - **Handover on a device:** a temporary bot in local Mongo (`conferbotStaging`) with welcome -> human-handover-node (`enableHandoverEmail: false`) -> message, linked in `workspaces.chatbots` and `admins.chatbots` (the server finds a bot's workspace through `admins`). A node socket.io-client script plays the agent with a dashboard JWT signed with the server's `JWT_ACCESS_SECRET` (`auth: {userId, workspaceId, token}`): `accept-handover`, `leave-chat` with `agentDetails.isAIAgent: true` (the visitor sees an AI escalating), `end-chat`. Hot restart (`R`) checks the restore: count `initiate-handover` in the app log and the session's tickets. Delete the bot and everything for its sessions afterwards.
 - **Help centre:** `flutter test test/core/help_centre test/providers/knowledge_base_provider_test.dart test/services/knowledge_base_service_test.dart test/widgets/knowledge_base/help_centre_test.dart`. The payloads in `test/fixtures/kb_payloads.json` were captured from a local embed-server (socket `fetched-chatbot-data`, `get-kb-article`, `search-kb-articles`; REST `/mobile/chatbot/:id/kb` and `/mobile/knowledge-base/*`). To refresh them, run a small socket.io-client script against `:8001` with a bot that has published articles.
+- **Launcher entrance, attention, idle call:** `flutter test test/parity/launcherfx_test.dart` checks the evaluator against RN's Chrome golden and rebuilds every track the golden was sampled from; `tool/sync_launcherfx_golden.sh` copies the golden from the React Native repo (`RN_SDK` if it is not next door) and writes its RN revision to `test/fixtures/launcherfx_golden.REVISION`. `flutter test test/core/customization/launcher_fx_test.dart test/widgets/launcher_fx_controllers_test.dart test/widgets/launcher_fx_fab_test.dart` covers the settings, the rules on a fake clock and the launcher. `LAUNCHERFX_IMAGES_DIR=/abs/dir flutter test --update-goldens test/widgets/launcher_fx_images_test.dart` writes six frames of every effect (a 390 x 844 screen, a 50px launcher) to that directory, outside the repo.
+- **Full suite (2026-10-16):** 1180 pass, 60 skipped, 65 fail. The 65 are #16 (`media_service_test`) and #71 (provider, socket client, storage and validation tests); none in the launcher, flow or handover tests.
 - **Greeting card images:** `GREETING_GOLDEN_DIR=/abs/dir flutter test --update-goldens test/widgets/greeting_card_test.dart` writes one PNG per style to that directory, outside the repo. It loads Roboto from the Flutter SDK and macOS fonts in place of casual / serif / monospace. Without the variable the image group is skipped.
 - **Example app:**
   - To point it at a local server, add `ConferBotEndpoints.configure(apiBaseUrl: 'http://10.0.2.2:8001/api/v1/mobile', socketUrl: 'http://10.0.2.2:8001')` in `example/lib/main.dart` (`localhost` on the iOS simulator).
@@ -78,7 +84,7 @@ Every web widget feature works the same in the 4 mobile SDKs: customization, lau
 | Launcher motion (idle moments, message reaction, ripple) | done | done | done | done |
 | Signed-in user as `visitorContext` + identity hash | done | done | done | done |
 | Greeting card (rules, frequency, 11 styles) | done | logic done, UI on a branch | todo | done (device check pending) |
-| Launcher entrance / attention / idle call | todo | todo | todo | todo |
+| Launcher entrance / attention / idle call | done | todo | todo | done (device check pending) |
 | Home screen | todo | todo | todo | todo |
 | Mascots (incl. `mascotInGreeting`) | todo | todo | todo | todo |
 | `widgetLanguage` (i18n) | todo | todo | todo | todo |
@@ -96,11 +102,6 @@ Each SDK repo has its own `docs/PARITY.md`. The React Native one also covers the
 
 All paths are under `conferbot-widget/src/`.
 
-- **Launcher entrance / attention / idle call (all default off):**
-  - `ts/launcher/entrance.ts`, setting `launcherEntrance`: classic default; lightning, rocket, portal, ufo, drop, confetti, coin.
-  - `ts/launcher/attention.ts`, setting `launcherAttention`: off, pulse, wobble, bounce, wave, float, shine, heartbeat, orbit.
-  - `ts/launcher/idleCall.ts`, setting `launcherIdleCall`: off, psst, peek, wave, knock, tap; delay 12.
-  - The CSS is in `css/`.
 - **Home screen:** `ts/home/` (homeCopy, askBox, trust, pageAware, visitorMemory).
 - **Mascots:** `ts/home/mascotMotion.ts`, `ts/launcher/launcherStyle.ts`, `ts/launcher/art3d.ts`, `ts/visibility/greeting.ts`. The `mascot` typing style is accepted but not drawn yet.
 - **i18n:** `ts/i18n.ts` + `ts/i18n/{en,de,es,fr,nl}.ts`.
