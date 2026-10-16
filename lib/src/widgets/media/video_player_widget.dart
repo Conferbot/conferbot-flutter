@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/i18n/i18n.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 import '../../services/media_service.dart';
@@ -186,7 +187,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
       if (mounted) {
         setState(() {
           _hasError = true;
-          _errorMessage = 'Failed to load video';
+          _errorMessage = t('sdk.media.videoFailed');
         });
         widget.onError?.call(e.toString());
       }
@@ -409,7 +410,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
           ),
           SizedBox(height: theme.spacing.sm),
           Text(
-            _errorMessage ?? 'Failed to load video',
+            _errorMessage ?? t('sdk.media.videoFailed'),
             style: TextStyle(
               fontSize: theme.typography.fontSizeSm,
               color: Colors.white70,
@@ -426,7 +427,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
               _initializePlayer();
             },
             child: Text(
-              'Retry',
+              t('sdk.common.retry'),
               style: TextStyle(color: theme.colors.primary),
             ),
           ),
