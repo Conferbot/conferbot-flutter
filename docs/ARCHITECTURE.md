@@ -449,8 +449,8 @@ Uses `const` constructors where possible to prevent unnecessary rebuilds.
 
 ## Platform Support
 
-- **iOS**: >= 12.0
-- **Android**: >= API 21
+- **iOS**: >= 13.0 (url_launcher_ios, shared_preferences_foundation, path_provider_foundation, video_player_avfoundation)
+- **Android**: >= API 24 (video_player_android 2.9)
 - **Flutter**: >= 3.10.0
 - **Dart**: >= 3.0.0
 
