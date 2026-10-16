@@ -5,8 +5,9 @@
 /// preserveAspectRatio none), g (transform, clip-path, opacity), path,
 /// ellipse, circle, rect (rx), polygon; fill / stroke as a colour, none or a
 /// linear / radial gradient (object bounding box or user space, with a
-/// gradientTransform), their opacities, stroke width, caps and joins; and
-/// clipPath. No filters, as in RN.
+/// gradientTransform), their opacities, stroke width, caps, joins and
+/// dashes (stroke-dasharray, stroke-dashoffset); and clipPath. No filters,
+/// as in RN.
 library;
 
 import 'dart:math' as math;
@@ -129,6 +130,31 @@ ui.Path? _shape(_Node n) {
   return null;
 }
 
+/// [path] cut into dashes (SVG stroke-dasharray, [dashes] repeated, an odd
+/// list doubled; [offset] is stroke-dashoffset, how far into the pattern the
+/// path starts). No dashes, or none longer than zero: the path as it is.
+ui.Path dashPath(ui.Path path, List<double> dashes, [double offset = 0]) {
+  final d = dashes.length.isOdd ? [...dashes, ...dashes] : dashes;
+  final total = d.fold(0.0, (a, b) => a + b);
+  if (d.isEmpty || total <= 0 || d.any((x) => x < 0)) return path;
+  final out = ui.Path();
+  for (final m in path.computeMetrics()) {
+    // Where the pattern stands at the start of this contour.
+    var at = -(offset % total);
+    var i = 0;
+    while (at < m.length) {
+      final len = d[i % d.length];
+      final from = math.max(0.0, at), to = math.min(m.length, at + len);
+      if (i.isEven && to > from) out.addPath(m.extractPath(from, to), Offset.zero);
+      at += len;
+      i += 1;
+    }
+  }
+  return out;
+}
+
+List<double> _numbers(String? v) => (v ?? '').trim().split(RegExp(r'[\s,]+')).map(double.tryParse).whereType<double>().toList();
+
 Color _color(List<double> c, double opacity) =>
     Color.fromARGB((c[3] * opacity * 255).round().clamp(0, 255), c[0].round().clamp(0, 255), c[1].round().clamp(0, 255), c[2].round().clamp(0, 255));
 
@@ -208,7 +234,8 @@ void _draw(Canvas canvas, _Doc doc, _Node n, double inherited) {
         ..strokeWidth = _d(a, 'stroke-width', 1)
         ..strokeCap = switch (a['stroke-linecap']) { 'round' => StrokeCap.round, 'square' => StrokeCap.square, _ => StrokeCap.butt }
         ..strokeJoin = switch (a['stroke-linejoin']) { 'round' => StrokeJoin.round, 'bevel' => StrokeJoin.bevel, _ => StrokeJoin.miter };
-      canvas.drawPath(shape, stroke);
+      final dashes = _numbers(a['stroke-dasharray']);
+      canvas.drawPath(dashes.isEmpty ? shape : dashPath(shape, dashes, _d(a, 'stroke-dashoffset')), stroke);
     }
   } else if (n.kids.isNotEmpty) {
     // A group's opacity fades its drawing as one.
