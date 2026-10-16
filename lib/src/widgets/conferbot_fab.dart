@@ -13,6 +13,7 @@ import '../core/customization/launcher_attention.dart' show wavingHand;
 import '../core/customization/launcher_entrance.dart';
 import '../core/customization/launcher_motion.dart';
 import '../core/customization/mascot_art.dart';
+import 'mascot/launcher_mascot.dart';
 import '../core/state/chat_state.dart';
 import '../models/user.dart';
 import '../providers/conferbot_provider.dart';
@@ -982,6 +983,11 @@ class _ConferBotFABState extends State<ConferBotFAB>
   /// The greeting card by the closed launcher (greeting_controller.dart).
   GreetingController? _greeting;
 
+  /// The card stays drawn while it leaves (its collapse or fade, the figure's hand-off or bow).
+  GreetingCardData? _lastCard;
+  (GreetingCardData, String)? _leavingCard;
+  bool _closingCard = false;
+
   // ── Motion (core/customization/launcher_motion.dart) ──────────────────────
   Ticker? _ticker;
   (String, int)? _moment;
@@ -1276,6 +1282,8 @@ class _ConferBotFABState extends State<ConferBotFAB>
     final showLabel = hasLook && look.style == 'label';
     final avatar = hasLook && look.style == 'avatar' ? look.avatar : null;
     final imageUrl = hasLook ? look.imageUrl : null;
+    // The owner's mascot on a soft light button (launcherStyle.ts "mascot"); an uploaded image wins.
+    final mascotStyle = hasLook && imageUrl == null && look.style == 'mascot';
 
     final isLeft = position == FabPosition.left;
 
@@ -1292,10 +1300,21 @@ class _ConferBotFABState extends State<ConferBotFAB>
       );
     });
     final card = greeting.card;
+    final shownCard = card != null && !_isOpen ? card : null;
+    if (shownCard != null) {
+      _lastCard = shownCard;
+      _closingCard = false;
+      _leavingCard = null;
+    } else if (_lastCard != null) {
+      _leavingCard = (_lastCard!, _closingCard ? 'close' : 'open');
+      _lastCard = null;
+      _closingCard = false;
+    }
+    final drawnCard = shownCard ?? _leavingCard?.$1;
 
     // The icon's idle and new-message moments and the ripple; nothing with
     // the phone's animations off, or for an image or avatar launcher.
-    final still = !hasLook || MediaQuery.disableAnimationsOf(context) || imageUrl != null || avatar != null;
+    final still = !hasLook || MediaQuery.disableAnimationsOf(context) || imageUrl != null || avatar != null || mascotStyle;
 
     // The entrance, the attention loop and the idle call: all off unless the
     // owner chose one; nothing with the phone's animations off.
@@ -1351,11 +1370,11 @@ class _ConferBotFABState extends State<ConferBotFAB>
     final attention = _attention.running ? attentionFrameAt(_attention.mode, _attention.elapsed, wide: showLabel) : null;
     final perf = _idle.perf;
     if (perf != null) {
-      final mc = mascotColor(_sc(provider), accent);
-      final key = '$mc ${perf.mascot.arm} $accent';
+      // The owner's mascot (shape, eyes, accessory, colour), the launcher's colour where it has none.
+      final key = '${look.mascot.look.hashCode} ${perf.mascot.arm} $accent';
       if (key != _mascotKey) {
         _mascotKey = key;
-        _mascot = mascotLayers(mc, perf.mascot.arm, accent);
+        _mascot = mascotLayers(accent, perf.mascot.arm, look.mascot.look);
       }
     }
     final idleT = _idle.elapsed;
@@ -1421,6 +1440,15 @@ class _ConferBotFABState extends State<ConferBotFAB>
     Widget content;
     if (_isOpen) {
       content = CustomPaint(key: const ValueKey('close'), size: Size(size * 0.6, size * 0.6), painter: _CloseIconPainter(ink));
+    } else if (mascotStyle) {
+      content = LauncherMascot(
+        look: look.mascot.look,
+        accent: look.mascot.accent,
+        scale: look.mascot.scale,
+        box: Size(width, size),
+        unread: unreadCount,
+        chatOpen: _isOpen,
+      );
     } else if (imageUrl != null) {
       content = ClipOval(child: Image.network(imageUrl, width: iconSize, height: iconSize, fit: BoxFit.cover));
     } else if (avatar != null) {
@@ -1456,22 +1484,33 @@ class _ConferBotFABState extends State<ConferBotFAB>
         widget.child,
 
         // ── Greeting card: 12 above the launcher, its edge in line with it ──
-        if (card != null && !_isOpen)
+        if (drawnCard != null)
           Positioned(
             bottom: offsetBottom + size + 12,
             left: isLeft ? math.max(8.0, offsetX) : null,
             right: isLeft ? null : math.max(8.0, offsetX),
             child: fxGreeting(
               GreetingCard(
-                key: ValueKey(card),
-                data: card,
+                key: ValueKey(drawnCard),
+                data: drawnCard,
                 alignLeft: isLeft,
-                onPress: () => _onGreetingPress(context, provider, card),
+                launcher: buttonSize,
+                leaving: shownCard == null ? _leavingCard?.$2 : null,
+                onGone: () {
+                  if (mounted) setState(() => _leavingCard = null);
+                },
+                onPress: () {
+                  if (shownCard == null) return;
+                  _onGreetingPress(context, provider, shownCard);
+                },
                 onClose: () {
+                  if (shownCard == null) return;
+                  _closingCard = true;
                   greeting.dismiss();
                   _idle.greetingClosed();
                 },
                 onStarter: (text) {
+                  if (shownCard == null) return;
                   greeting.closeForNow();
                   // Past the home screen: the question is asked in the conversation.
                   provider.home.showChat(text);
@@ -1480,7 +1519,7 @@ class _ConferBotFABState extends State<ConferBotFAB>
               ),
               look: entranceLook,
               attention: attention,
-              handOnCard: !card.text.contains(wavingHand),
+              handOnCard: shownCard != null && !shownCard.text.contains(wavingHand),
             ),
           ),
 
@@ -1524,6 +1563,7 @@ class _ConferBotFABState extends State<ConferBotFAB>
                 attention: _isOpen ? null : attention,
                 perf: _isOpen ? null : perf,
                 layers: _mascot,
+                mascotLook: look.mascot.look,
                 idleT: idleT,
                 button: Stack(
                   key: _buttonKey,
@@ -1541,12 +1581,18 @@ class _ConferBotFABState extends State<ConferBotFAB>
                         // A soft glow in the header colour (0 0 4px), as the web draws it.
                         boxShadow: [BoxShadow(color: glow, blurRadius: 4)],
                       ),
-                      child: Center(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: content,
-                        ),
-                      ),
+                      child: mascotStyle
+                          ? Stack(clipBehavior: Clip.none, children: [
+                              // The mascot's soft light button while closed; open, the brand colour with its cross.
+                              if (!_isOpen) Positioned.fill(child: ClipRRect(borderRadius: radius, child: MascotButtonLight(light: look.mascot.light))),
+                              Center(child: AnimatedSwitcher(duration: const Duration(milliseconds: 200), child: content)),
+                            ])
+                          : Center(
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                child: content,
+                              ),
+                            ),
                     ),
 
                     // The avatar's online dot.
