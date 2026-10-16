@@ -10,7 +10,7 @@ import 'strings_fr.dart';
 import 'strings_de.dart';
 import 'strings_es.dart';
 
-/// Every key, the web's first (824), then the SDK's own (sdk.*, 578).
+/// Every key, the web's first (828), then the SDK's own (sdk.*, 578).
 const List<String> i18nKeys = <String>[
   "helpful.groupLabel",
   "helpful.ask",
@@ -836,6 +836,10 @@ const List<String> i18nKeys = <String>[
   "games.reaction.ms",
   "launcher.openThe",
   "screenshare.canSee",
+  "redirect.countdown",
+  "redirect.cancel",
+  "redirect.going",
+  "redirect.continue",
   "sdk.action.confirmed",
   "sdk.action.notThroughAsk",
   "sdk.address.save",
