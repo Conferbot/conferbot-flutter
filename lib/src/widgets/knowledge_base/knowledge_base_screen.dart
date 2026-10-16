@@ -16,6 +16,9 @@ class KnowledgeBaseScreen extends StatefulWidget {
   final String? searchPlaceholder;
   final VoidCallback? onClose;
   final ValueChanged<KnowledgeBaseArticle>? onArticleInsertToChat;
+
+  /// "Chat with us" after an article's thumbs down (null: not offered).
+  final VoidCallback? onChatWithUs;
   final bool showCategories;
   final bool showSearch;
   final ConferBotTheme? theme;
@@ -26,6 +29,7 @@ class KnowledgeBaseScreen extends StatefulWidget {
     this.searchPlaceholder,
     this.onClose,
     this.onArticleInsertToChat,
+    this.onChatWithUs,
     this.showCategories = true,
     this.showSearch = true,
     this.theme,
@@ -58,12 +62,12 @@ class _KnowledgeBaseScreenState extends State<KnowledgeBaseScreen> {
         article: provider.selectedArticle!,
         onBack: () => provider.clearSelectedArticle(),
         onRelatedArticleTap: (article) => provider.fetchArticle(article.id),
-        onRate: (rating, {String? feedback}) =>
-            provider.rateArticle(provider.selectedArticle!.id, rating, feedback: feedback),
-        userRating: provider.getArticleRating(provider.selectedArticle!.id),
-        isRating: provider.isRating,
-        ratingError: provider.ratingError,
-        ratingSuccess: provider.ratingSuccess,
+        // Helpful / not helpful (rate-article) and the reading depth
+        // (track-article-engagement), as the web sends them.
+        onHelpful: (helpful) => provider.rateHelpful(provider.selectedArticle!.id, helpful),
+        helpful: provider.articleHelpful(provider.selectedArticle!.id),
+        onChatWithUs: widget.onChatWithUs,
+        onScrollDepth: provider.articleScrolled,
         isLoadingContent: provider.isLoadingArticle,
         contentError: provider.articleError,
         onInsertToChat: widget.onArticleInsertToChat != null
