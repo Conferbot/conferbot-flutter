@@ -78,6 +78,10 @@ class MessageList extends StatefulWidget {
   /// shown while waiting for a person, core/waiting). Never in the record.
   final Map<String, List<Widget>> inlineAfter;
 
+  /// Drawn over a message's bubble, by its id (the bot's tapback and the
+  /// confetti on an answer).
+  final Map<String, Widget> bubbleOverlays;
+
   const MessageList({
     super.key,
     required this.messages,
@@ -95,6 +99,7 @@ class MessageList extends StatefulWidget {
     this.paginationConfig = const MessageListPaginationConfig(),
     this.trailingWidget,
     this.inlineAfter = const {},
+    this.bubbleOverlays = const {},
   });
 
   @override
@@ -392,6 +397,7 @@ class _MessageListState extends State<MessageList> {
               ? () => widget.onRetryMessage?.call(message.id)
               : null,
           theme: theme,
+          overlay: widget.bubbleOverlays[message.id],
         ),
         theme: theme,
       );
