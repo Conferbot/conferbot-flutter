@@ -100,9 +100,9 @@ void main() {
           ),
         );
 
-        // Should find SizedBox.shrink
-        final sizedBox = tester.widget<SizedBox>(find.byType(SizedBox));
-        expect(sizedBox.width, isNull);
+        // SizedBox.shrink: no chips, nothing drawn (0 x 0).
+        expect(find.byType(ChoiceChip), findsNothing);
+        expect(tester.getSize(find.byType(CategoryChips)), Size.zero);
       });
     });
 
