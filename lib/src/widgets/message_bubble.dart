@@ -649,19 +649,26 @@ class MessageBubble extends StatelessWidget {
     final shouldRenderMarkdown = enableMarkdown &&
         (!autoDetectMarkdown || MarkdownDetector.containsMarkdown(text));
 
-    if (shouldRenderMarkdown) {
-      return _buildMarkdownContent(context, theme, text);
-    }
+    // The server answering because the AI failed: the same bubble, italic
+    // at 85% (web _markAgentFallbackBubble).
+    final fallback = _isFallback;
+    final Widget content = shouldRenderMarkdown
+        ? _buildMarkdownContent(context, theme, text)
+        : Text(
+            text,
+            style: TextStyle(
+              fontSize: theme.typography.messageSize,
+              color: _getTextColor(theme),
+              height: theme.typography.lineHeightNormal,
+              fontStyle: fallback ? FontStyle.italic : null,
+            ),
+          );
+    return fallback ? Opacity(opacity: 0.85, child: content) : content;
+  }
 
-    // Plain text rendering
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: theme.typography.messageSize,
-        color: _getTextColor(theme),
-        height: theme.typography.lineHeightNormal,
-      ),
-    );
+  bool get _isFallback {
+    final m = message;
+    return m is AgentMessageRecord && m.extras?.isFallback == true;
   }
 
   Widget _buildMarkdownContent(
@@ -670,7 +677,13 @@ class MessageBubble extends StatelessWidget {
     String text,
   ) {
     // Get appropriate markdown theme based on message type
-    final markdownTheme = _getMarkdownTheme(theme);
+    final themed = _getMarkdownTheme(theme);
+    final markdownTheme = _isFallback
+        ? themed.copyWith(
+            baseTextStyle: (themed.baseTextStyle ?? TextStyle(fontSize: theme.typography.fontSizeMd, color: themed.textColor, height: theme.typography.lineHeightNormal))
+                .copyWith(fontStyle: FontStyle.italic),
+          )
+        : themed;
 
     // Create effective link handler
     final effectiveLinkHandler = linkHandler ?? MarkdownLinkHandler(
