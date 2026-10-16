@@ -58,7 +58,7 @@ void main() {
         'initialPageCardTagline': 'Later Today',
         'initialPageDescription': 'Welcome to the Conferbot\nWe help your business to connect with your customer',
       };
-      expect(homeCopy(c, 'Acme Support'), const HomeCopy(cardTitle: 'Acme Support', cardTagline: 'Online now', description: HomeText.description, online: true));
+      expect(homeCopy(c, 'Acme Support'), HomeCopy(cardTitle: 'Acme Support', cardTagline: 'Online now', description: HomeText.description, online: true));
       expect(homeCopy({}, '').cardTitle, 'Support');
     });
 
