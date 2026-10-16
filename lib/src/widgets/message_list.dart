@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/i18n/i18n.dart';
 import '../core/state/chat_state.dart';
 import '../models/message.dart';
 import '../models/queued_message.dart';
@@ -446,7 +447,7 @@ class _MessageListState extends State<MessageList> {
                   ),
                   SizedBox(width: theme.spacing.sm),
                   Text(
-                    'Loading more messages...',
+                    t('sdk.chat.loadingMore'),
                     style: TextStyle(
                       fontSize: theme.typography.fontSizeSm,
                       color: theme.colors.textSecondary,
@@ -484,7 +485,7 @@ class _MessageListState extends State<MessageList> {
                           ),
                           SizedBox(width: theme.spacing.xs),
                           Text(
-                            'Load older messages',
+                            t('sdk.chat.loadOlder'),
                             style: TextStyle(
                               fontSize: theme.typography.fontSizeSm,
                               color: theme.colors.textSecondary,
@@ -523,7 +524,7 @@ class _MessageListState extends State<MessageList> {
             ConferBotAvatar(
               size: look?.avatarSize ?? 32,
               imageUrl: look?.avatar,
-              name: 'Bot',
+              name: t('sdk.message.botName'),
               shape: switch (look?.avatarShape) {
                 'square' => AvatarShape.square,
                 'rounded' => AvatarShape.rounded,
@@ -716,7 +717,7 @@ class _SimpleMessageListState extends State<SimpleMessageList> {
                   ),
                   SizedBox(width: effectiveTheme.spacing.sm),
                   Text(
-                    'Agent is typing...',
+                    '${t('typing.named', {'name': t('agent.agent')})}...',
                     style: TextStyle(
                       fontSize: effectiveTheme.typography.fontSizeSm,
                       color: effectiveTheme.colors.textSecondary,
