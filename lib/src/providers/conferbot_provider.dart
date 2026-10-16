@@ -38,6 +38,7 @@ import '../core/requests/requests.dart';
 import '../core/requests/requests_extras.dart';
 import '../core/live_chat/reply_time.dart';
 import '../core/customization/customizations.dart';
+import '../core/i18n/i18n.dart' show I18n;
 import '../core/customization/widget_theme.dart';
 import '../core/customization/personalize.dart';
 import '../core/home/home.dart' hide homeModel, homePalette;
@@ -71,6 +72,13 @@ class ConferBotConfig {
   /// After this timeout, a new session will be started but visitor ID is preserved
   final Duration sessionTimeout;
 
+  /// The language the widget draws its own words in: "en", "nl", "fr", "de",
+  /// "es" or "auto" (the phone's languages); an unknown code is "auto".
+  /// When set it overrides the owner's `widgetLanguage` (as the web's
+  /// host-page `customizations.widgetLanguage` does); null leaves the
+  /// owner's choice.
+  final String? widgetLanguage;
+
   const ConferBotConfig({
     this.enableNotifications = true,
     this.enableOfflineMode = true,
@@ -83,6 +91,7 @@ class ConferBotConfig {
     this.analyticsFlushInterval = const Duration(seconds: 30),
     this.enablePersistence = true,
     this.sessionTimeout = const Duration(minutes: 30),
+    this.widgetLanguage,
   });
 }
 
@@ -186,6 +195,18 @@ class ConferBotProvider with ChangeNotifier {
   List<Map<String, dynamic>> _edges = [];
   Map<String, dynamic>? _serverCustomizations;
 
+  /// The widget's language (core/i18n): the app's `config.widgetLanguage`
+  /// when set (RN's `config.widgetLanguage ?? customizations.widgetLanguage`),
+  /// else the owner's `customizations.widgetLanguage`; "auto", unset or
+  /// unknown the phone's languages, else English. Set before the chat is
+  /// drawn; widgets listening to [I18n.languageListenable] redraw.
+  String applyWidgetLanguageFor(Map<String, dynamic>? customizations) =>
+      I18n.setWidgetLanguage(config.widgetLanguage ?? customizations?['widgetLanguage']);
+
+  void _applyWidgetLanguage() => applyWidgetLanguageFor(_rawCustomizations);
+
+  void _onLanguage() => notifyListeners();
+
   /// Scoped logger for this provider
   static final _logger = ConferBotLogger.scoped('ConferBotProvider');
 
@@ -199,6 +220,10 @@ class ConferBotProvider with ChangeNotifier {
     this.socketUrl,
   }) : _user = user {
     ChatState.instance.visitorContext = user?.toVisitorContext();
+    // The app's language (else the phone's) until the bot's settings arrive;
+    // a change redraws everything that reads this provider.
+    _applyWidgetLanguage();
+    I18n.languageListenable.addListener(_onLanguage);
     _apiClient = ApiClient(
       apiKey: apiKey,
       botId: botId,
@@ -1599,6 +1624,7 @@ class ConferBotProvider with ChangeNotifier {
       // Parse server customizations (theme colors, bot name, etc.)
       _rawCustomizations = chatbotData['customizations'] as Map<String, dynamic>?;
       _personalize();
+      _applyWidgetLanguage();
       if (_serverCustomizations != null) {
         _logger.debug('Server customizations: ${_serverCustomizations!.keys.toList()}');
         _logger.debug('headerBgColor: ${_serverCustomizations!['headerBgColor']}');
@@ -2418,6 +2444,7 @@ class ConferBotProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    I18n.languageListenable.removeListener(_onLanguage);
     // Persist state before disposing
     if (config.enablePersistence) {
       ChatState.instance.persistNow();
