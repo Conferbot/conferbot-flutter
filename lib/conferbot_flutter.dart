@@ -19,6 +19,11 @@ export 'src/core/errors/error_handler.dart' hide ErrorResult;
 export 'src/core/state/chat_state.dart';
 // The handover's widget signals (ConferBotProvider.onWidgetSignal).
 export 'src/core/live_chat/handover_waiting.dart' show WidgetSignals;
+// While waiting for a person: the help card and the games card (ConferBotProvider.waitHelpCard, gamesCard).
+export 'src/core/waiting/wait_articles.dart' show HelpItem, HelpCardState;
+export 'src/core/waiting/games_card.dart' show GamesCard, GamesCardState;
+export 'src/widgets/waiting/wait_help_card.dart' show WaitHelpCard;
+export 'src/widgets/waiting/games_card_view.dart' show GamesCardView;
 export 'src/core/node_flow_engine.dart';
 export 'src/core/nodes/node_types.dart';
 export 'src/core/nodes/node_result.dart';
