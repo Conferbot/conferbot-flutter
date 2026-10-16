@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/agent/agent_bot.dart';
 import '../core/agent/answer_feedback.dart';
+import '../core/i18n/i18n.dart';
 import '../models/message.dart';
 import '../providers/conferbot_provider.dart';
 import '../theme/conferbot_theme.dart';
@@ -207,7 +208,7 @@ class AgentReplyExtras extends StatelessWidget {
                         ),
                         if (provider != null && provider.canOpenArticle(source.articleId)) ...[
                           const SizedBox(width: 6),
-                          Text('Help article',
+                          Text(t('kb.helpArticle'),
                               style: TextStyle(fontSize: theme.typography.fontSizeXs, color: theme.colors.textSecondary)),
                           Icon(Icons.chevron_right, size: 14, color: theme.colors.textSecondary),
                         ] else if (source.url != null) ...[
@@ -230,7 +231,7 @@ class AgentReplyExtras extends StatelessWidget {
                   ..._rows(extras.card!.rows, theme),
                   if (extras.card!.note != null)
                     Text(extras.card!.note!, style: TextStyle(fontSize: theme.typography.fontSizeXs, color: theme.colors.textSecondary)),
-                  if (extras.card!.url != null) _link('Learn more', extras.card!.url!, theme),
+                  if (extras.card!.url != null) _link(t('sdk.card.learnMore'), extras.card!.url!, theme),
                 ]),
               ),
             if (extras?.resultCard != null) Padding(padding: const EdgeInsets.only(bottom: 6), child: _resultCard(extras!.resultCard!)),
@@ -293,7 +294,7 @@ class AgentReplyExtras extends StatelessWidget {
         ],
       ),
       ..._rows(card.rows, theme),
-      if (card.linkUrl != null) _link(card.linkLabel ?? 'Open', card.linkUrl!, theme),
+      if (card.linkUrl != null) _link(card.linkLabel ?? t('result.open'), card.linkUrl!, theme),
     ]);
   }
 }
@@ -336,14 +337,14 @@ class _ActionCardState extends State<_ActionCard> {
                   onPressed: _state == 'ask' ? () => _answer(true) : null,
                   child: _state == 'busy'
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Confirm'),
+                      : Text(t('action.confirm')),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton(
                   onPressed: _state == 'ask' ? () => _answer(false) : null,
-                  child: Text('Not now', style: TextStyle(color: theme.colors.text)),
+                  child: Text(t('common.notNow'), style: TextStyle(color: theme.colors.text)),
                 ),
               ),
             ],
@@ -353,7 +354,11 @@ class _ActionCardState extends State<_ActionCard> {
         Padding(
           padding: const EdgeInsets.only(top: 8),
           child: Text(
-            _state == 'done' ? 'Confirmed' : _state == 'declined' ? 'Not now' : 'That did not go through. Please ask again.',
+            _state == 'done'
+                ? t('sdk.action.confirmed')
+                : _state == 'declined'
+                    ? t('common.notNow')
+                    : t('sdk.action.notThroughAsk'),
             style: TextStyle(fontSize: theme.typography.fontSizeSm, color: theme.colors.textSecondary),
           ),
         ),
@@ -625,16 +630,16 @@ class RichAgentMessage extends StatelessWidget {
           ],
         ),
       RichArticle r => _CardSurface(theme: theme, children: [
-          Text('Help article', style: TextStyle(fontSize: theme.typography.fontSizeXs, color: theme.colors.textSecondary)),
+          Text(t('kb.helpArticle'), style: TextStyle(fontSize: theme.typography.fontSizeXs, color: theme.colors.textSecondary)),
           _title(r.title, theme),
           if (r.snippet.isNotEmpty)
             Text(r.snippet, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: theme.typography.fontSizeSm, color: theme.colors.textSecondary)),
           // In the help centre by id (web agentRich.ts openArticle), else
           // the public help centre page when there is one.
           if (provider != null && provider.canOpenArticle(r.articleId))
-            _articleLink('Read article', () => provider.openArticle(r.articleId), theme)
+            _articleLink(t('sdk.kb.readArticle'), () => provider.openArticle(r.articleId), theme)
           else if (r.url != null)
-            _link('Read article', r.url!, theme),
+            _link(t('sdk.kb.readArticle'), r.url!, theme),
         ]),
       RichCard r => _CardSurface(theme: theme, children: [
           if (r.imageUrl != null)
