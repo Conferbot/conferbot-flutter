@@ -380,7 +380,7 @@ These dashboard settings apply on their own; nothing needs to be added to the ap
 - **Auto-open** (`botAutoOpen`, `botAutoOpenDelay` seconds): the floating bubble opens the chat on its own once per app launch, only before the visitor has a conversation and not within 2 minutes of them closing it.
 - **Typing preview** (`visitorDraftPreview`, on unless turned off): while a person is chatting with the visitor, the agent sees what is being typed (`visitor-draft`, at most every 300ms, never for a secret field).
 - **Calendar**: slots already booked (the bot's bookings) show greyed out and cannot be picked; a day with every slot taken is not offered.
-- **Waiting for a person**: the wait card says the live estimate in the visitor's language, else the team's usual wait ("Typical wait: a few minutes"), unless the owner chose a fixed text or hid the reply time. Under it the handover step's max wait counts down once a second ("Max wait 1:05"), stopping at 0:00; after a restart it counts from the time the server says is left.
+- **Waiting for a person**: the wait card says the live estimate in the visitor's language, else the team's usual wait ("Typical wait: a few minutes"), unless the owner chose a fixed text or hid the reply time. Under it the handover step's max wait counts down once a second ("Max wait 1:05"), stopping at 0:00; after a restart it counts from the time the server says is left. The header's small queue indicator shows the same time, from the same deadline (`liveChat.waitEndsAt`), and no time when there is none.
 - **Post-chat rating**: when the owner has post-chat feedback on, the rating is offered 1.5 s after the flow reaches its end, as well as when an agent ends the chat; once per conversation, and not again after a restart.
 
 ## Advanced
@@ -437,12 +437,44 @@ Each step says its own lines: the question, a greeting, an answer, a picture, a 
 | Consent | `{'agreed': true}` |
 | Ranking | `{'order': [ids]}` |
 | Matrix | `{'cells': {rowId: colId}}` (a list of column ids for a multiple-choice matrix) |
-| Address | `{'action': 'search', 'q': text}`, `{'action': 'pick', 'index': i}`, or `{'action': 'manual', 'line1': ..., 'city': ..., 'region': ..., 'postal': ..., 'country': ...}` |
+| Address | `{'action': 'search', 'q': text}`, `{'action': 'locate', 'lat': lat, 'lng': lng}` (then confirmed as a pick), `{'action': 'pick', 'index': i}`, or `{'action': 'manual', 'line1': ..., 'city': ..., 'region': ..., 'postal': ..., 'country': ...}` |
 | Payment | `{'action': 'open'}` (Pay now), `{'action': 'check'}`, `{'action': 'cancel'}` |
 | Navigate | `{'buttonId': 'link-<i>'}` to open a link, `{'action': 'done'}` |
 | OTP | an email or a code as text, or `{'action': 'skip'}` |
 
 `NodeRenderer` sends all of these for you, with a card for each step as the web draws it: the signature pad (or the name typed), the OTP e-mail and six digit boxes with Resend and Change email, the address search with suggestions and a map to confirm, consent with its links, the date and time pickers, the calendar's month and free times, the payment card, carousels, slider, ranking, matrix and image choice. The cards use the bot's option colours, option corner radius and font size. Pass `stepKey: provider.stepVisit` and `error: provider.stepError` so a card keeps what was entered and shows why an answer was refused, as `ChatWidget` does.
+
+#### "Use my location" on the address step
+
+The SDK reads no position itself and adds no location plugin, so "Use my location" is optional: give `ConferBotConfig` a `locationProvider` and the address card draws the button (while the owner's step allows it, `allowMyLocation`). Without one there is no button; search, the map and typing the address by hand work as before. The provider returns the device's position, `null` when it cannot be found, or throws `ConferBotLocationDenied` when access is refused (the card then says location access is turned off). The SDK asks the bot's server for the address there (`geo/reverse`) and the visitor confirms it on the map, as a picked suggestion.
+
+With [`geolocator`](https://pub.dev/packages/geolocator) in your app (add it to your `pubspec.yaml` and the platform's location permission: `NSLocationWhenInUseUsageDescription` in iOS `Info.plist`, `ACCESS_COARSE_LOCATION` / `ACCESS_FINE_LOCATION` in the Android manifest):
+
+```dart
+import 'package:conferbot_flutter/conferbot_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+
+Future<ConferBotLatLng?> deviceLocation() async {
+  if (!await Geolocator.isLocationServiceEnabled()) return null;
+  var permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+  if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+    throw const ConferBotLocationDenied();
+  }
+  final p = await Geolocator.getCurrentPosition(
+    locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium, timeLimit: Duration(seconds: 10)),
+  );
+  return ConferBotLatLng(p.latitude, p.longitude);
+}
+
+ConferBotProvider(
+  apiKey: 'YOUR_API_KEY',
+  botId: 'YOUR_BOT_ID',
+  config: ConferBotConfig(locationProvider: deviceLocation),
+);
+```
+
+A headless `NodeRenderer` takes `locationProvider:` too (else it uses the chat's `ConferBotConfig`). The SDK gives up after 10 seconds without an answer.
 
 A drawn signature is sent as `{'action': 'sign', 'method': 'drawn', 'dataUrl': 'data:image/png;base64,...', 'width': w, 'height': h}` (add `'fullName'` when the step asks for it); a typed one as `{'action': 'sign', 'method': 'typed', 'name': name}`. OTP also takes `{'action': 'send', 'email': e}`, `{'action': 'verify', 'code': c}` and `{'action': 'resend'}`.
 
@@ -641,6 +673,8 @@ The help centre follows the owner's dashboard settings, as on the web widget:
 - Article bodies are HTML and are drawn as such. The list comes with the bot's settings on connect (titles and descriptions only); an article's body is fetched when it is opened.
 - When an AI answer cites a help centre article (a source with an `articleId`), it says "Help article ›" and opens that article in the help centre, while the help centre is on (the owner's switch, or `showKnowledgeBase`). Otherwise a source with a public link shows its site and opens the link; one without is drawn but not tappable.
 - An AI article card opens its public page when it has one, else the article in the help centre while it is on.
+- Search matches titles and descriptions at once, and inside article bodies through the chat's socket (`search-kb-articles`), with the matching passage under the title; over REST (`/knowledge-base/search`) when the socket is not connected or does not answer.
+- An article ends with "Was this helpful?" and thumbs up / down, as on the web (`rate-article`, once per article per session; 5 for helpful, 1 for not; over REST without a socket). A thumbs down offers "Chat with us". How long the article was read and how far it was scrolled go to the dashboard's article analytics when the visitor leaves it (`track-article-engagement`, from 2 seconds; read to the end at 90%).
 
 `ChatWidget(showKnowledgeBase:)` overrides the owner's switch. The app's value wins:
 
@@ -665,6 +699,8 @@ ChangeNotifierProvider(
   ),
 )
 ```
+
+Embedded on its own like this there is no chat socket, so search, ratings and views use REST. Pass `link: provider.helpCentreLink` (a `ConferBotProvider`'s) to use the chat's socket, as `ChatWidget` does.
 
 `KnowledgeBaseService` exposes the REST calls under `/mobile/knowledge-base`: `fetchHelpCentre` (categories with their articles, and the recent articles), `fetchCategories`, `fetchArticles`, `fetchArticle`, `searchArticles` (sends `query`), ratings and view tracking. `KnowledgeBaseProvider.openArticle(id)` opens an article by id. Articles can be inserted into the chat via `ChatWidget.onArticleInsert`.
 
@@ -704,7 +740,7 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 | Class / member | Signature | Description |
 |---|---|---|
 | `ConferBotProvider` | `ConferBotProvider({required String apiKey, required String botId, ConferBotConfig config = const ConferBotConfig(), ConferBotCustomization? customization, ConferBotUser? user, String? baseUrl, String? socketUrl})` | Core state manager; connects socket and REST, runs the node flow engine |
-| `ConferBotConfig` | `const ConferBotConfig({bool enableNotifications = true, bool enableOfflineMode = true, bool autoConnect = true, int? reconnectionAttempts, int? reconnectionDelay, bool enablePagination = true, PaginationConfig? paginationConfig, bool enableAnalytics = true, Duration analyticsFlushInterval = const Duration(seconds: 30), bool enablePersistence = true, Duration sessionTimeout = const Duration(minutes: 30), String? widgetLanguage, bool Function(String url)? onPostChatRedirect, bool disablePostChatRedirect = false})` | SDK behavior switches |
+| `ConferBotConfig` | `const ConferBotConfig({bool enableNotifications = true, bool enableOfflineMode = true, bool autoConnect = true, int? reconnectionAttempts, int? reconnectionDelay, bool enablePagination = true, PaginationConfig? paginationConfig, bool enableAnalytics = true, Duration analyticsFlushInterval = const Duration(seconds: 30), bool enablePersistence = true, Duration sessionTimeout = const Duration(minutes: 30), String? widgetLanguage, bool Function(String url)? onPostChatRedirect, bool disablePostChatRedirect = false, ConferBotLocationProvider? locationProvider})` | SDK behavior switches |
 | `ChatWidget` | `const ChatWidget({String? title, String? placeholder, bool showTimestamps = false, bool enableAttachments = false, ConferBotTheme? theme, bool enablePagination = true, MessageListPaginationConfig? paginationConfig, bool? showKnowledgeBase, ValueChanged<KnowledgeBaseArticle>? onArticleInsert, bool showOfflineIndicator = true, bool showDeliveryStatus = true, bool showHandoverPreChatForm = true, bool showHandoverPostChatSurvey = true, int handoverMaxWaitMinutes = 5, ValueChanged<SurveyResult>? onHandoverSurveySubmit})` | Drop-in full chat UI |
 | `ConferBotFAB` | `const ConferBotFAB({required Widget child, ConferBotFABConfig config = const ConferBotFABConfig(), ConferBotTheme? theme})` | Floating chat bubble overlaying your app |
 | `ConferBotFABConfig` | `const ConferBotFABConfig({double size = 50.0, FabPosition position = FabPosition.right, double offsetX = 10.0, double offsetBottom = 10.0})` | FAB fallbacks (server values win) |
