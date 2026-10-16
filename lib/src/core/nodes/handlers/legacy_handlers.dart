@@ -6,6 +6,7 @@
 /// Legacy steps never register an answer variable.
 library;
 
+import '../../flow/i18n_en.dart';
 import '../../flow/inputs.dart';
 import '../../flow/js.dart';
 import '../../flow/text.dart' show nameGreetingHtml;
@@ -177,10 +178,10 @@ class UserInputNodeHandler extends BaseNodeHandler {
       if (!jsTruthy(url) && response is Map && response['file'] is Map) {
         final file = response['file'] as Map;
         if (jsNumber(file['size']) > 5000000) {
-          return NodeResult.invalid('Please upload a file smaller than 5MB', uiState: _ui(node, state));
+          return NodeResult.invalid(t('upload.tooBig', {'mb': 5}), uiState: _ui(node, state));
         }
         final up = await ctx.upload(UploadFile.fromMap(file));
-        if (!up.ok) return NodeResult.invalid("Couldn't upload this file. Please try again.", uiState: _ui(node, state));
+        if (!up.ok) return NodeResult.invalid(t('upload.failed'), uiState: _ui(node, state));
         url = up.url;
       }
       if (!jsTruthy(url)) return NodeResult.displayUI(_ui(node, state));
@@ -196,10 +197,10 @@ class UserInputNodeHandler extends BaseNodeHandler {
           uiState: _ui(node, state));
     }
     if (type == 'number' && (value.trim().isEmpty || jsNumber(value.trim()).isNaN)) {
-      return NodeResult.invalid(ownerTextOr(data['incorrectNumberResponse'], 'Please enter a valid number'), uiState: _ui(node, state));
+      return NodeResult.invalid(ownerTextOr(data['incorrectNumberResponse'], en.numberInvalid), uiState: _ui(node, state));
     }
     if (type == 'url' && !_legacyUrlRe.hasMatch(value.toLowerCase())) {
-      return NodeResult.invalid(ownerTextOr(data['incorrectUrlResponse'], 'Please enter a valid url'), uiState: _ui(node, state));
+      return NodeResult.invalid(ownerTextOr(data['incorrectUrlResponse'], en.urlInvalid), uiState: _ui(node, state));
     }
     if (type == 'name') state.setUserName(value);
     if (type == 'email') state.setUserEmail(value);
