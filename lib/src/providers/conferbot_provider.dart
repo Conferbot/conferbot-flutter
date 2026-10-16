@@ -30,6 +30,9 @@ import '../core/live_chat/live_chat_extras.dart';
 import '../core/live_chat/live_events.dart';
 import '../core/live_chat/email_transcript.dart';
 import '../core/live_chat/handover_lifecycle.dart';
+import '../core/waiting/games_card.dart';
+import '../core/waiting/wait_articles.dart';
+import '../core/waiting/waiting_extras.dart';
 import '../core/live_chat/handover_state.dart';
 import '../core/live_chat/reply_time.dart';
 import '../core/customization/customizations.dart';
@@ -104,6 +107,12 @@ class ConferBotProvider with ChangeNotifier {
   /// waiting signal, leaving the queue, and a live chat picked back up after
   /// a restart (core/live_chat/handover_lifecycle.dart).
   late final HandoverLifecycle handover;
+
+  /// While the visitor waits for a person: the help card (articles 6s in,
+  /// or the server's queue-help pick with "That solved it"), the games offer
+  /// 2.5s after the waiting signal, "play" typed while waiting
+  /// (core/waiting/waiting_extras.dart). Its cards are never saved.
+  late final WaitingExtras waiting;
 
   // The session whose flow has been started (or picked back up): bot data
   // comes again on every reconnect and must not run the flow again.
@@ -199,6 +208,8 @@ class ConferBotProvider with ChangeNotifier {
       continueFlow: () => _flowEngine.continueAfterHandover(),
       // "Email me this chat" (core/live_chat/email_transcript.dart).
       postTranscriptEmail: (sessionId, email) => _apiClient.sendTranscriptEmail(sessionId, email),
+      // A queue-status's help is what to offer while waiting (core/waiting).
+      onQueueStatus: (data) => waiting.onQueueStatus(data),
     );
     liveChat.addListener(notifyListeners);
 
@@ -228,7 +239,28 @@ class ConferBotProvider with ChangeNotifier {
         _agentTyping = false;
         notifyListeners();
       },
+      // Where a wait for a person begins and ends: the help card's timer.
+      waitStart: () => waiting.startWait(),
+      waitEnd: () => waiting.endWait(),
     );
+
+    waiting = WaitingExtras(
+      socket: () => _socketClient,
+      sessionId: () => _chatSessionId,
+      record: () => ChatState.instance.getRecordForServer(),
+      customizations: () => _serverCustomizations,
+      personJoined: () => handover.personInChat,
+      leftQueueHelped: () {
+        handover.leftQueueHelped();
+        notifyListeners();
+      },
+      lastShownId: () {
+        final shown = paginatedMessages.isNotEmpty ? paginatedMessages : _record;
+        return shown.isEmpty ? null : shown.last.id;
+      },
+    );
+    waiting.bind(handover.onSignal);
+    waiting.addListener(notifyListeners);
 
     if (config.autoConnect) {
       // Done even when start-up fails, so openChat never waits forever.
@@ -357,6 +389,38 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Put the cursor in the composer ("Ask another way" under an answer).
   void focusComposer() => _composerFocuser?.call();
+
+  // ---- While you wait (core/waiting) ----
+
+  void Function(String articleId)? _waitArticleOpener;
+
+  /// The help card while waiting for a person, or null.
+  HelpCardState? get waitHelpCard => waiting.helpCard;
+
+  /// The message the help card follows (null: at the end).
+  String? get waitHelpAfter => waiting.helpAfter;
+
+  /// The games card on screen, or null.
+  GamesCard? get gamesCard => waiting.gamesCard;
+
+  /// The message the games card follows (null: at the end).
+  String? get gamesAfter => waiting.gamesAfter;
+
+  /// The chat on screen registers how it opens an article from the help
+  /// card: from the help centre data, else fetched from the server by id
+  /// (the server picks articles the help centre may not list).
+  set waitArticleOpener(void Function(String articleId)? opener) => _waitArticleOpener = opener;
+
+  /// A row of the help card: an article opens in the app (a page is the
+  /// view's to open in the browser).
+  void openWaitHelpItem(HelpItem item) {
+    waiting.opened(item);
+    if (!item.isPage) _waitArticleOpener?.call(item.id);
+  }
+
+  /// "That solved it": queue-self-resolve with the article; true when the
+  /// visitor left the queue ("You left the queue. Glad that helped.").
+  Future<bool> solveWait() => waiting.solveWait();
 
   /// "Email me this chat" (core/live_chat/email_transcript.dart): the card
   /// from the chat menu, and where the transcript went once sent.
@@ -653,6 +717,7 @@ class ConferBotProvider with ChangeNotifier {
     _setupAgentBotListeners();
     liveChat.setupListeners();
     handover.setupListeners();
+    waiting.setupListeners();
     // Connection events
     _socketClient.on(SocketEvents.connect, (_) {
       _isConnected = true;
@@ -1386,6 +1451,8 @@ class ConferBotProvider with ChangeNotifier {
     final chatbotData = data['chatbotData'] as Map<String, dynamic>?;
     final kb = data['knowledgeBaseData'];
     _helpCentreData = kb is Map ? KnowledgeBaseData.fromJson(Map<String, dynamic>.from(kb)) : KnowledgeBaseData.empty;
+    // As sent, for the articles offered while waiting and the quiz.
+    waiting.setKnowledgeBase(kb);
     if (chatbotData != null) {
       liveChat.setChatbotData(chatbotData);
       // Server sends: { elements: [{ nodes: [...], edges: [...] }], customizations: {...}, ... }
@@ -1839,8 +1906,22 @@ class ConferBotProvider with ChangeNotifier {
       return;
     }
 
+    // "play" while waiting for a person opens the games instead of being sent.
+    if (waiting.interceptPlay(text)) {
+      notifyListeners();
+      return;
+    }
+
     // Live chat mode: send as visitor message to agent
     if (_isLiveChatMode) {
+      await _sendLiveChatMessage(text);
+      return;
+    }
+
+    // Waiting for a person at the handover step: a live message, for
+    // whoever joins (web special.ts, the handover queue; #76).
+    final ui = _flowEngine.currentUIState;
+    if (ui is HumanHandoverUIState && ui.state == HandoverState.waitingForAgent) {
       await _sendLiveChatMessage(text);
       return;
     }
@@ -2133,6 +2214,7 @@ class ConferBotProvider with ChangeNotifier {
     _flowEngine.reset();
     liveChat.reset();
     handover.reset();
+    waiting.reset();
     _flowStartedFor = null;
     _talkToPersonRetired = false;
     _record.clear();
@@ -2187,6 +2269,8 @@ class ConferBotProvider with ChangeNotifier {
     liveChat.removeListener(notifyListeners);
     liveChat.dispose();
     handover.dispose();
+    waiting.removeListener(notifyListeners);
+    waiting.dispose();
     _paginationController?.removeListener(_onPaginationChange);
     _analyticsProvider?.removeListener(_onAnalyticsChange);
 
