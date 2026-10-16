@@ -119,6 +119,9 @@ class RequestsExtras extends ChangeNotifier {
   RequestMemory _memory = const RequestMemory();
   String? _loadedFor;
   Future<void>? _loading;
+
+  // Bumped on each sign-in or sign-out, so a list read for the last user is dropped.
+  int _who = 0;
   int _lastLoad = 0;
   bool _listing = false;
   bool _disposed = false;
@@ -205,15 +208,19 @@ class RequestsExtras extends ChangeNotifier {
     if (!_connected()) return;
     _listing = true;
     _lastLoad = _now();
+    final who = _who;
     try {
       final list = await _client.list();
-      if (list != null && !_disposed) {
+      // A list asked for the user before a sign-in or sign-out is not shown.
+      if (list != null && !_disposed && who == _who) {
         _list = ordered(list, _memory.seen);
         _changed();
       }
     } finally {
       _listing = false;
     }
+    // Someone else now: ask again for them.
+    if (who != _who && !_disposed) await refresh(force: true);
   }
 
   /// A response record went out: a chat the visitor wrote in may become a
@@ -226,6 +233,16 @@ class RequestsExtras extends ChangeNotifier {
 
   /// Connected with something to ask about (every connect).
   Future<void> onConnected() => refresh(force: true);
+
+  /// Someone signed in or out (the provider's identify): the list read for
+  /// the last user is dropped, and read again for this one.
+  Future<void> onUserChanged() {
+    _who++;
+    _list = null;
+    _lastLoad = 0;
+    _changed();
+    return refresh(force: true);
+  }
 
   /// The chat opening or closing is the app's "home comes back into view"
   /// (web card.ts): read again, at most every 15s.
