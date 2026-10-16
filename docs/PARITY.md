@@ -23,6 +23,14 @@ Layout:
 | #22 | Greeting card: rules, frequency, per-bot state, 11 styles; replaces the old CTA tooltip. Checked with widget-test images, not yet on a device | `core/customization/greeting.dart`, `widgets/greeting_controller.dart`, `widgets/greeting_card.dart`, `widgets/conferbot_fab.dart` |
 | #23, #29-#34, #48, #55, #66-#70 | Flow nodes: the engine and every node handler run the shared flow-node spec. **156 of 156 fixtures pass** (`test/parity/flows_test.dart`); none pending. See "Flow nodes" below | `core/node_flow_engine.dart`, `core/flow/*` (text, logic, flow_control, rich, inputs, calendar, zones, flow_context), `core/privacy/redact.dart`, `core/nodes/handlers/*`, `core/state/chat_state.dart`, `ui/widgets/node_widgets.dart`, `ui/widgets/rich_node_widgets.dart`, `widgets/message_bubble.dart` |
 | #24-#28, #37, #61-#63, #65 | Handover lifecycle, ported from RN: the Connecting line and its four outcomes, an AI's idle pause ignored, the 20s waiting signal and `onWidgetSignal`, the header keeping the bot with Online and the reply time, "Talk to a person" only when allowed, Leave queue (`queue-self-resolve`, `queue-left`), a live chat or a wait picked back up after a restart without a second ticket, the flow started once per session, `openChat` waiting for start-up, the step's email / sound / assignment settings on `initiate-handover`, End chat and the survey as the server handles them. Checked on the iPhone 16e simulator against a local embed-server | `core/live_chat/handover_state.dart`, `handover_waiting.dart`, `reply_time.dart`, `handover_lifecycle.dart`, `core/agent/agent_handover.dart`, `core/node_flow_engine.dart` (`waitAt`), `providers/conferbot_provider.dart`, `widgets/message_bubble.dart` (`LiveChatLine`), `widgets/live_chat_cards.dart`, `widgets/chat_widget.dart` |
+| #47 | Device language: every response record carries `visitorInsights: {v: 1, language: {browser}}` (the phone's preferred language from `PlatformDispatcher.locales`, BCP 47, cut to 16; Flutter's "und" counts as unknown), so the AI answers short messages in it. Ported from RN #51 | `core/device_language.dart`, `core/state/chat_state.dart` `buildResponseData` |
+| #46 | "Helpful?": a No is sent at once; reasons, an optional comment, "Talk to a person" (only while nobody is coming or here), "Ask another way" (the composer's focus); the rated line's thumbs change the vote; the vote is kept on the answer's record entry (`ChatState.setAnswerFeedback`); only the newest unrated answer asks. Ported from RN #50 | `core/agent/answer_feedback.dart`, `core/agent/agent_bot.dart` (`AnswerFeedback` with its comment), `widgets/agent_reply.dart` `HelpfulRow`, `providers/conferbot_provider.dart` (`sendAnswerFeedback`, `newestRateableAnswerId`, `focusComposer`), `widgets/chat_bottom_bar.dart` (`focusNode`) |
+| #44 | Back in the queue (`live-chat-requeued`): "Connecting you to another agent..." / "Connecting you to <team>...", nobody in the chat, and a flow at its handover step waits again. `live-chat-transferred` is kept in the record, not drawn (as the web). `isRepeatJoin` / `afterAI` on `agent-accepted` were already in the handover port. Ported from RN #48 | `core/live_chat/live_events.dart`, `core/live_chat/handover_lifecycle.dart` |
+| #43 | Blocked visitor (`visitor-blocked`, or a handshake refused with `visitor_blocked`, which now carries the visitor id in `query` and `auth`): "This conversation has been closed.", no card, no input, no new chat, no reconnecting. The same `chat-ended` again draws nothing and opens no second survey; each end has its own record id. Once a chat has ended with nothing going on: composer off and "Start a new chat". Ported from RN #47 | `core/live_chat/live_events.dart`; `services/socket_client.dart` (`handshake`, `visitorId`), `core/live_chat/live_chat_extras.dart`, `core/live_chat/handover_lifecycle.dart`, `providers/conferbot_provider.dart` (`closedState`, `startNewChat`), `widgets/live_chat_cards.dart` `ClosedChatCard`, `widgets/chat_widget.dart` |
+| #52 | Markdown as the web's `utils/agentHtml.ts`: tables (a sideways scroll, drawn by `ChatTable`; the rest by flutter_markdown), h3-h6 (# and ## drawn as 4), and from a person's HTML blockquote, pre and `<s>`/`<del>`; the "That took too long..." notice when the 45s AI wait runs out (on screen only); `isFallback` replies italic at 85%. Ported from RN #56 | `utils/chat_markdown.dart`, `widgets/markdown/markdown_message.dart`, `widgets/markdown/markdown_theme.dart`, `widgets/message_bubble.dart`, `core/agent/agent_bot.dart` (`awaitReply`, `replyTimeoutNotice`) |
+| #42 | "Email me this chat" in the chat menu: one card (email filled in when known), the server's reason when it does not go, "Sent! Check your inbox at ...", the address kept as the visitor's. Server: `POST /api/v1/mobile/chat/transcript-email` (embed-server #193), never retried. Ported from RN #46 | `core/live_chat/email_transcript.dart`; `services/api_client.dart` `sendTranscriptEmail`, `core/live_chat/live_chat_extras.dart`, `widgets/live_chat_cards.dart` `EmailTranscriptCard`, `widgets/chat_widget.dart` (the header's menu) |
+| #74 | Post-chat survey questions: asked when the handover step's `enablePostChatSurveyQuestions` is on (the key the builder saves and the web reads); the older `enablePostChatSurvey` still counts, as in Android | `core/nodes/handlers/special_handlers.dart` `onChatEnded` |
+| #75 | `SocketClient.dispose()` no longer throws when the socket is not already disconnected (it reported the state on a closed stream) | `services/socket_client.dart` |
 | #73 | Launcher entrance (12 effects), attention (8 modes) and idle call (5), ported from RN #57. `keyframes.dart` evaluates the web's Web Animations tracks and passes RN's Chrome golden (447 cases, 19,275 samples; largest error 0.0007px, 0.005deg, 0.00005 scale and opacity, 0.03px `left`, 0.42px on the plane's path). The tracks are rebuilt from the same code and match the golden's. The rules are in the three controllers. Checked with widget-test images, not yet on a device | `core/customization/keyframes.dart`, `launcher_entrance.dart`, `launcher_attention.dart`, `launcher_idle_call.dart`, `mascot_art.dart`, `fx_paint.dart`; `widgets/launcher_fx_controllers.dart`, `launcher_fx_views.dart`, `fx_svg.dart`, `conferbot_fab.dart`; `test/fixtures/launcherfx_golden.json` |
 
 ## Left in this SDK
@@ -37,17 +45,21 @@ Layout:
 3. **Launcher effects follow-ups (#73):**
    - Check them on a device (iOS and Android). They are covered by unit tests on a fake clock, a launcher widget test and widget-test images only.
    - As in RN, web filters (brightness, glows, blur, the mascot's bevel) are not drawn, and the waving hand is the system emoji.
-4. The rest of the list below.
-5. **Test debt:**
+4. **Live chat extras follow-ups (#42-#44, #46, #47, #52):**
+   - Check them on a device (iOS and Android). They are covered by unit tests, fake-socket tests and widget tests only; the transcript call only against a stubbed HTTP client.
+   - As on the web, a transfer is not drawn, and the reply-timeout notice is not kept in the record.
+   - The cards (Email me this chat, the closed chat) sit at the end of the paginated message list, as the other live chat cards do; `ChatWidget(enablePagination: false)` does not draw them.
+5. The rest of the list below.
+6. **Test debt:**
    - #16: `media_service_test` fails because MockController is not an AudioPlayer.
    - #58: the older help centre widget tests (`article_list_test`, `article_detail_test`, `category_chips_test`) and `message_bubble_test` don't compile or fail. The help centre is covered by `test/core/help_centre/`, `test/providers/knowledge_base_provider_test.dart` and `test/widgets/knowledge_base/help_centre_test.dart`.
-6. **Flow node follow-ups:**
+7. **Flow node follow-ups:**
    - Check the step cards on a device (iOS and Android). They are covered by widget tests and images only (no emulator or simulator run).
    - Address: no "Use my location" (it would need a location plugin); search, the map and typing by hand work.
    - Hidden fields read the page the chat runs on. An app has none: the provider passes no `NodeFlowEngineConfig.page`.
    - The visitor's time zone is the device's offset as a fixed `Etc/GMT` zone, because Dart does not expose the IANA name. The provider does not pass `NodeFlowEngineConfig.visitorTimeZone` yet.
-7. There's no `identify()` after construction; the user comes only from the provider's `user`.
-8. **Help centre follow-ups:**
+8. There's no `identify()` after construction; the user comes only from the provider's `user`.
+9. **Help centre follow-ups:**
    - Ratings still use the SDK's 1-5 stars over REST; the web sends helpful / not helpful (`rate-article`). Reading time and scroll depth (`track-article-engagement`) are not sent.
    - Search uses REST (`/knowledge-base/search?query=`) plus local title matches; the socket's `search-kb-articles` (with snippets) is not used.
    - No home screen yet, so Recent articles sit at the top of the help centre list rather than on a welcome screen.
@@ -60,7 +72,8 @@ Layout:
 - **Handover on a device:** a temporary bot in local Mongo (`conferbotStaging`) with welcome -> human-handover-node (`enableHandoverEmail: false`) -> message, linked in `workspaces.chatbots` and `admins.chatbots` (the server finds a bot's workspace through `admins`). A node socket.io-client script plays the agent with a dashboard JWT signed with the server's `JWT_ACCESS_SECRET` (`auth: {userId, workspaceId, token}`): `accept-handover`, `leave-chat` with `agentDetails.isAIAgent: true` (the visitor sees an AI escalating), `end-chat`. Hot restart (`R`) checks the restore: count `initiate-handover` in the app log and the session's tickets. Delete the bot and everything for its sessions afterwards.
 - **Help centre:** `flutter test test/core/help_centre test/providers/knowledge_base_provider_test.dart test/services/knowledge_base_service_test.dart test/widgets/knowledge_base/help_centre_test.dart`. The payloads in `test/fixtures/kb_payloads.json` were captured from a local embed-server (socket `fetched-chatbot-data`, `get-kb-article`, `search-kb-articles`; REST `/mobile/chatbot/:id/kb` and `/mobile/knowledge-base/*`). To refresh them, run a small socket.io-client script against `:8001` with a bot that has published articles.
 - **Launcher entrance, attention, idle call:** `flutter test test/parity/launcherfx_test.dart` checks the evaluator against RN's Chrome golden and rebuilds every track the golden was sampled from; `tool/sync_launcherfx_golden.sh` copies the golden from the React Native repo (`RN_SDK` if it is not next door) and writes its RN revision to `test/fixtures/launcherfx_golden.REVISION`. `flutter test test/core/customization/launcher_fx_test.dart test/widgets/launcher_fx_controllers_test.dart test/widgets/launcher_fx_fab_test.dart` covers the settings, the rules on a fake clock and the launcher. `LAUNCHERFX_IMAGES_DIR=/abs/dir flutter test --update-goldens test/widgets/launcher_fx_images_test.dart` writes six frames of every effect (a 390 x 844 screen, a 50px launcher) to that directory, outside the repo.
-- **Full suite (2026-10-16):** 1180 pass, 60 skipped, 65 fail. The 65 are #16 (`media_service_test`) and #71 (provider, socket client, storage and validation tests); none in the launcher, flow or handover tests.
+- **Live chat extras (#42-#44, #46, #47, #52, #74):** `flutter test test/core/device_language_test.dart test/core/agent test/core/live_chat test/utils/chat_markdown_test.dart test/services/socket_handshake_test.dart test/services/api_client_test.dart test/core/handlers/handlers_test.dart test/widgets/helpful_row_test.dart test/widgets/live_chat test/widgets/markdown_message_test.dart`. The transcript email is only ever called against `MockClient` (no email is sent); a real send needs a local embed-server and a session of a bot you own.
+- **Full suite (2026-10-16):** 1239 pass, 60 skipped, 65 fail. The 65 are the same as before this batch: #16 (`media_service_test`), #71 (provider, socket client, storage and validation tests) and the older widget tests (#58 and the like, including `markdown_message_test`'s mailto case); none in the launcher, flow, handover or live chat extras tests.
 - **Greeting card images:** `GREETING_GOLDEN_DIR=/abs/dir flutter test --update-goldens test/widgets/greeting_card_test.dart` writes one PNG per style to that directory, outside the repo. It loads Roboto from the Flutter SDK and macOS fonts in place of casual / serif / monospace. Without the variable the image group is skipped.
 - **Example app:**
   - To point it at a local server, add `ConferBotEndpoints.configure(apiBaseUrl: 'http://10.0.2.2:8001/api/v1/mobile', socketUrl: 'http://10.0.2.2:8001')` in `example/lib/main.dart` (`localhost` on the iOS simulator).
@@ -72,7 +85,7 @@ Layout:
 
 Every web widget feature works the same in the 4 mobile SDKs: customization, launcher, greeting and the live chat / agent features. The web widget (`conferbot-widget/src`) is the reference. Each feature is built and checked against the web in React Native first, then ported to Android, iOS and Flutter. The web source file it came from is named in a comment.
 
-## Status across the SDKs (2026-10-15)
+## Status across the SDKs (2026-10-16)
 
 | Feature | RN | Android | iOS | Flutter |
 |---|---|---|---|---|
@@ -93,6 +106,12 @@ Every web widget feature works the same in the 4 mobile SDKs: customization, lau
 | Reply-time wording (header line) | done | todo | todo | done |
 | Handover lifecycle (Connecting line, outcomes, signals, leave queue, restore) | done | todo | todo | done |
 | Flow nodes: shared spec, 156 fixtures (RN `scripts/parity/flows/`) | 156/156 | todo | todo | 156/156 |
+| Device language on every response record | done | done | todo | done |
+| "Helpful?": a No sent at once, reasons, comment, Talk to a person, Ask another way, vote changes | done | done | todo | done |
+| Requeued / transfer lines, the same end once, blocked visitor, closed chat with a new chat | done | done | todo | done |
+| Markdown tables, h3-h6, quote, pre, strikethrough; reply timeout notice; muted fallback | done | done | todo | done |
+| Email me this chat (server embed-server #193) | done | done | todo | done |
+| Post-chat survey questions read `enablePostChatSurveyQuestions` | todo (no survey questions) | done | todo | done |
 
 Live chat / agent features (handover, queue card, receipts, rating, files, prefill, max-wait timeout, agent bot replies, suggestion chips) are done in all 4.
 
