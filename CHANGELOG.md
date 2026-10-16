@@ -7,9 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-<!-- Proposed next version: 2.0.0 (major). The node handler API changed
-     incompatibly (see "Breaking changes & migration"), and several defaults
-     changed. pubspec.yaml stays at 1.0.0 until the owner releases. -->
+## [2.0.0] - 2026-10-16
 
 Everything since 1.0.0: the SDK now does what the web widget does, from the
 flow builder's 82 step types to the launcher, the home screen, live chat, the
@@ -170,7 +168,7 @@ help centre and push. The status per feature is in
 - A restored session resumes at its step instead of running the flow again.
 - Question bubbles show plain text, not the builder's HTML.
 - A `mailto:` link's subject and body are percent-encoded.
-- The full test suite is green (2261 pass, 72 skipped).
+- The full test suite is green (2265 pass, 72 skipped).
 - The example's widget test pumps the example with no connection instead of the
   stock counter test, and `flutter analyze` in `example/` is clean (#92).
 - `SocketClient.onReconnect` fires on each reconnect. socket_io_client tells
