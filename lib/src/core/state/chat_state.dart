@@ -12,6 +12,7 @@ import 'message_storage_service.dart';
 import '../flow/js.dart' show jsIsoString;
 import '../flow/text.dart' show fillVariables;
 import '../privacy/redact.dart' show maskValue, maskRecordEntry;
+import '../device_language.dart';
 
 /// Answer variable stored during conversation flow
 /// Mirrors the web widget's answerVariables structure
@@ -1267,6 +1268,21 @@ class ChatState extends ChangeNotifier {
     _schedulePersist();
   }
 
+  /// The visitor's vote kept on the answer's agent-message entry, as the web
+  /// keeps it (`entry.feedback = {...feedback, at}`), so the conversation's
+  /// record says how it was rated. False when no entry has that id.
+  bool setAnswerFeedback(String agentMessageId, Map<String, dynamic> feedback, {String? at}) {
+    final i = _record.indexWhere((e) => e.id == agentMessageId && (e.shape == 'agent-message' || e.type == 'agent-message'));
+    if (i < 0) return false;
+    _record[i] = RecordEntry.raw({
+      ..._record[i].toJson(),
+      'feedback': {...feedback, 'at': at ?? jsIsoString(DateTime.now())},
+    });
+    notifyListeners();
+    _schedulePersist();
+    return true;
+  }
+
   /// The record as the server gets it.
   List<Map<String, dynamic>> getRecord() => getRecordForServer();
 
@@ -1293,7 +1309,11 @@ class ChatState extends ChangeNotifier {
     // The app's signed-in user travels with every record, as the web widget's
     // visitorContext; the server checks its hash and drops it.
     final ctx = visitorContext;
+    // The device's language, as the web's visitorInsights.language.browser:
+    // the AI answers a short message in it (core/device_language.dart).
+    final insights = DeviceLanguage.visitorInsightsOf(DeviceLanguage.current);
     return {
+      if (insights != null) 'visitorInsights': insights,
       if (ctx != null) ...{
         'visitorContext': ctx,
         if (ctx['name'] is String) 'visitorName': ctx['name'],
