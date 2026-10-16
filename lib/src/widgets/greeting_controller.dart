@@ -97,6 +97,7 @@ class GreetingController extends ChangeNotifier {
   Map<String, dynamic>? _customizations;
   bool _chatOpen = false;
   AgentBot? _agentBot;
+  bool _signedIn = false;
   Timer? _timer;
   int _run = 0;
   bool _disposed = false;
@@ -123,6 +124,12 @@ class GreetingController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The app identified the visitor: the user has an id or an email.
+  static bool signedInFrom(Map<String, dynamic>? ctx) {
+    bool has(String k) => ctx?[k] != null && '${ctx![k]}'.isNotEmpty;
+    return has('id') || has('email');
+  }
+
   /// Feed the bot's settings and the chat's state; re-decides only when they change.
   /// [visitorContext] is the signed-in user (ChatState.visitorContext); [enabled] false keeps the card away.
   void update({
@@ -134,11 +141,14 @@ class GreetingController extends ChangeNotifier {
     bool enabled = true,
   }) {
     final c = enabled ? customizations : null;
-    if (identical(c, _customizations) && chatOpen == _chatOpen && agentBot == _agentBot) return;
+    // A sign-in or sign-out (the provider's identify) decides again.
+    final signedIn = signedInFrom(visitorContext);
+    if (identical(c, _customizations) && chatOpen == _chatOpen && agentBot == _agentBot && signedIn == _signedIn) return;
     final opened = chatOpen && !_chatOpen;
     _customizations = c;
     _chatOpen = chatOpen;
     _agentBot = agentBot;
+    _signedIn = signedIn;
     if (opened) _markChatted(_card != null);
     _timer?.cancel();
     final run = ++_run;
@@ -167,12 +177,11 @@ class GreetingController extends ChangeNotifier {
       _write(st);
     }
     _seen = st;
-    bool has(String k) => ctx?[k] != null && '${ctx![k]}'.isNotEmpty;
     final g = Greeting.decide(
       c,
       GreetingFacts(
         returning: st.visits > 1,
-        signedIn: has('id') || has('email'),
+        signedIn: signedInFrom(ctx),
         visits: st.visits == 0 ? 1 : st.visits,
         chatted: st.chatted,
         shows: st.shows,
