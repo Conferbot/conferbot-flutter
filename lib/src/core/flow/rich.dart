@@ -491,11 +491,11 @@ final RegExp _dateRe = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$');
 final RegExp _timeRe = RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$');
 const List<String> weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-/// A weekday's name (0 = Sunday); English only here.
-String weekdayName(int wd) => weekdays[wd];
+/// A weekday's name in the visitor's language (0 = Sunday).
+String weekdayName(int wd) => I18n.weekdayNames('long', weekdays)[wd];
 
-/// "Saturdays" in English.
-String _weekdaysName(int wd) => '${weekdays[wd]}s';
+/// "Saturdays" in English; the plain day name elsewhere ("zaterdag").
+String _weekdaysName(int wd) => I18n.language == I18n.en ? '${weekdays[wd]}s' : weekdayName(wd);
 
 bool validYmd(dynamic s) {
   final m = _dateRe.firstMatch(_s(s));
