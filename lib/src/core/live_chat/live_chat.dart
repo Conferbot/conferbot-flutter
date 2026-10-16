@@ -9,6 +9,8 @@ library;
 
 import 'package:intl/intl.dart';
 
+import '../i18n/i18n.dart';
+
 class QueueStatus {
   final String status;
   final int? position;
@@ -111,7 +113,8 @@ class LiveEntry {
 class LiveChat {
   LiveChat._();
 
-  static const talkToPersonAsk = "I'd like to talk to a person, please.";
+  /// What "Talk to a person" sends, in the active language (web chat.talkToPersonAsk).
+  static String get talkToPersonAsk => t('chat.talkToPersonAsk');
   static const queuePoll = Duration(seconds: 20);
 
   static int? _int(dynamic v) => v is int ? v : (v is num && v.isFinite ? v.toInt() : null);
@@ -156,13 +159,14 @@ class LiveChat {
   /// "You're next in line", "You're 3rd in line", "Connecting you to the team".
   static String queueLine(QueueStatus? q) {
     final p = q?.position;
-    if (p == 1) return "You're next in line";
-    if (p != null && p > 1) return "You're ${ordinal(p)} in line";
-    return 'Connecting you to the team';
+    // In the active language (web queueCard.ts positionText: queue.*; {ord} is English's "3rd").
+    if (p == 1) return t('queue.next');
+    if (p != null && p > 1) return t('queue.position', {'n': p, 'ord': ordinal(p)});
+    return t('queue.connecting');
   }
 
   /// The server's label is already a phrase ("Under a minute", "About 2 min").
-  static String queueSubline(QueueStatus? q) => q?.estimateLabel ?? 'Our team will be with you soon';
+  static String queueSubline(QueueStatus? q) => q?.estimateLabel ?? t('queue.soon');
 
   /// handover-waiting: nobody could take the chat (the AI took it back).
   static HandoverWaiting? handoverWaitingOf(dynamic raw) {
@@ -179,8 +183,10 @@ class LiveChat {
   /// The line on that card.
   static String handoverWaitingLine(HandoverWaiting w, {DateTime? now}) {
     final back = backAtLabel(w.backAt, now: now);
-    final first = w.offline ? 'The team is offline right now${back != null ? ', back around $back' : ''}.' : "Everyone's busy right now.";
-    final second = w.email != null ? "They'll reply to ${w.email}." : 'Leave your email and they will reply.';
+    final first = w.offline
+        ? (back != null ? t('sdk.waiting.offlineBack', {'when': back}) : t('sdk.waiting.offline'))
+        : t('sdk.waiting.busy');
+    final second = w.email != null ? t('sdk.waiting.replyTo', {'email': w.email}) : t('sdk.waiting.leaveEmail');
     return '$first $second';
   }
 
@@ -222,9 +228,9 @@ class LiveChat {
   }
 
   static String receiptLabel(ReceiptState s) => switch (s) {
-        ReceiptState.seen => 'Seen',
-        ReceiptState.delivered => 'Delivered',
-        ReceiptState.sent => 'Sent',
+        ReceiptState.seen => t('receipt.seen'),
+        ReceiptState.delivered => t('receipt.delivered'),
+        ReceiptState.sent => t('receipt.sent'),
       };
 
   /// The newest agent message id: what the visitor reports delivered / seen.
@@ -244,9 +250,10 @@ class LiveChat {
     final d = DateTime.tryParse(iso)?.toLocal();
     if (d == null) return null;
     final n = (now ?? DateTime.now()).toLocal();
-    final time = DateFormat.jm().format(d);
+    final locale = I18n.intlLocale;
+    final time = DateFormat.jm(locale).format(d);
     final sameDay = d.year == n.year && d.month == n.month && d.day == n.day;
-    return sameDay ? time : '${DateFormat.EEEE().format(d)} $time';
+    return sameDay ? time : '${DateFormat.EEEE(locale).format(d)} $time';
   }
 
   /// Visitor uploads in a live chat: on unless the owner turned them off.
@@ -256,14 +263,19 @@ class LiveChat {
     if (raw is! Map || raw['enabled'] != true) return null;
     const types = {'stars', 'thumbs', 'emoji', 'nps'};
     final type = types.contains(raw['ratingType']) ? raw['ratingType'] as String : 'stars';
-    String s(String key, String d) => _str(raw[key]) ?? d;
+    // The owner's words, else the web's (postChatRating.ts csat.*) in the visitor's language.
+    String s(String field, String key, [List<String> stock = const []]) {
+      final v = raw[field];
+      return I18n.ownerTextOr(v is String ? v.trim() : v, key, stock);
+    }
+
     return CsatConfig(
       ratingType: type,
-      titleText: s('titleText', 'How was your experience?'),
-      subtitleText: s('subtitleText', 'Your feedback helps us improve'),
-      thankYouText: s('thankYouText', 'Thank you for your feedback!'),
+      titleText: s('titleText', 'csat.title'),
+      subtitleText: s('subtitleText', 'csat.subtitle'),
+      thankYouText: s('thankYouText', 'csat.thanks'),
       showFeedbackInput: raw['showFeedbackInput'] != false,
-      feedbackPlaceholder: s('feedbackPlaceholder', 'Tell us more...'),
+      feedbackPlaceholder: s('feedbackPlaceholder', 'csat.placeholder', const ['Tell us more...']),
     );
   }
 
