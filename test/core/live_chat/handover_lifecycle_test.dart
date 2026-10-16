@@ -2,7 +2,8 @@
 // handover_lifecycle.dart): the cases of the RN SDK's
 // __tests__/context/useHandoverLifecycle.test.ts - the Connecting line and
 // its outcomes (#24, #27), the 20s signal, leaving the queue (#37) and a
-// restart (#25).
+// restart (#25); back in the queue, a transfer and a blocked visitor (#44,
+// #43).
 import 'package:conferbot_flutter/src/core/live_chat/handover_lifecycle.dart';
 import 'package:conferbot_flutter/src/core/live_chat/handover_state.dart';
 import 'package:conferbot_flutter/src/core/live_chat/handover_waiting.dart';
@@ -48,6 +49,12 @@ class _Flow implements HandoverFlow {
 
   @override
   void resumeFrom(String nodeId) => calls.add('resumeFrom:$nodeId');
+
+  @override
+  void stop() {
+    calls.add('stop');
+    here = false;
+  }
 }
 
 class _Clock {
@@ -82,6 +89,7 @@ void main() {
   late List<String> signals;
   bool? live;
   RestoredAgent? agent;
+  int agentCleared = 0;
   const sid = 'sess-1';
 
   final state = ChatState.instance;
@@ -96,6 +104,7 @@ void main() {
     signals = [];
     live = null;
     agent = null;
+    agentCleared = 0;
     h = HandoverLifecycle(
       socket: () => socket,
       sessionId: () => sid,
@@ -110,6 +119,7 @@ void main() {
       flow: flow,
       setLive: (on) => live = on,
       setAgent: (a) => agent = a,
+      clearAgent: () => agentCleared++,
       setTimer: clock.set,
       clearTimer: clock.clear,
     );
@@ -290,5 +300,60 @@ void main() {
     state.setCurrentNodeId('n1');
     expect(await h.resumeRestored(steps: steps, agentBot: false), RestoreStep.start);
     expect(socket.asked, isEmpty);
+  });
+
+  group('back in the queue, a transfer, a block (#44, #43)', () {
+    test('requeued: the line, nobody here, and a flow at its handover step waits again', () {
+      flow.here = true;
+      state.setCurrentNodeId('h1');
+      socket.simulateEvent('live-chat-requeued', {'chatSessionId': sid, 'teamName': 'Sales'});
+      expect(lines().single.text, 'Connecting you to Sales...');
+      expect(lines().single.kind, 'live-chat-requeued');
+      final entry = state.getRecordForServer().last;
+      expect(entry['type'], 'live-chat-requeued');
+      expect(entry['text'], 'Connecting you to Sales...');
+      expect(entry['id'], lines().single.id);
+      expect(agentCleared, 1);
+      expect(live, isFalse);
+      expect(flow.calls, ['waitAt:h1:card']);
+      // The 20s signal runs again.
+      expect(h.connecting.pending, isTrue);
+      clock.tick(20000);
+      expect(signals, contains('cb:waiting-for-human busy'));
+    });
+
+    test('requeued with no flow step: the line, and the chat stays live for the AI', () {
+      socket.simulateEvent('live-chat-requeued', {'chatSessionId': sid});
+      expect(lines().single.text, 'Connecting you to another agent...');
+      expect(live, isNull);
+      expect(flow.calls, isEmpty);
+      // Not another session's.
+      socket.simulateEvent('live-chat-requeued', {'chatSessionId': 'someone-else'});
+      expect(lines(), hasLength(1));
+    });
+
+    test('transferred: kept in the record, not drawn', () {
+      socket.simulateEvent('live-chat-transferred', {
+        'chatSessionId': sid,
+        'entry': {'id': 'transfer-1', 'text': 'Transferred from Maya to Sales', 'time': 't', 'kind': 'team'},
+      });
+      expect(screen, isEmpty);
+      final entry = state.getRecordForServer().last;
+      expect(entry['type'], 'live-chat-transfer');
+      expect(entry['text'], 'Transferred from Maya to Sales');
+      socket.simulateEvent('live-chat-transferred', {'chatSessionId': sid, 'entry': {'id': 3}});
+      expect(state.getRecordForServer().where((e) => e['type'] == 'live-chat-transfer'), hasLength(1));
+    });
+
+    test('blocked: the Connecting line stops, the wait and the flow are over', () {
+      h.onAgentLeft({'reason': 'escalated', 'agentDetails': {'name': 'Ava', 'isAIAgent': true}});
+      socket.simulateEvent('visitor-blocked', {'chatSessionId': sid, 'message': 'This conversation has been closed.'});
+      expect(lines().single.handoverPending, isFalse);
+      expect(h.connecting.pending, isFalse);
+      expect(flow.calls, ['stop']);
+      expect(live, isFalse);
+      clock.tick(30000);
+      expect(signals.where((x) => x.startsWith('cb:waiting-for-human')), isEmpty);
+    });
   });
 }
