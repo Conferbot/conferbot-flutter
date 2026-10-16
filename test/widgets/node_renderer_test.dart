@@ -101,7 +101,7 @@ void main() {
       tester,
       const RankingUIState(items: [ChoiceOption(id: 'a', text: 'A'), ChoiceOption(id: 'b', text: 'B')], nodeId: 'rk'),
     );
-    await tester.tap(find.byTooltip('Move down').first);
+    await tester.tap(find.byTooltip('Move A down'));
     await tester.pump();
     await tester.tap(find.text('Send'));
     expect((answers.single as Map)['order'], ['b', 'a']);
@@ -127,9 +127,9 @@ void main() {
     await pump(tester, const AddressUIState(nodeId: 'ad'));
     await tester.tap(find.text('Enter it manually'));
     await tester.pump();
-    await tester.enterText(find.widgetWithText(TextField, 'Street address'), '1 Main St');
-    await tester.enterText(find.widgetWithText(TextField, 'City'), 'Austin');
-    await tester.tap(find.text('Send'));
+    await tester.enterText(find.byKey(const ValueKey('ad-m-line1')), '1 Main St');
+    await tester.enterText(find.byKey(const ValueKey('ad-m-city')), 'Austin');
+    await tester.tap(find.text('Confirm'));
     final a = answers.single as Map;
     expect([a['action'], a['line1'], a['city']], ['manual', '1 Main St', 'Austin']);
   });
@@ -157,13 +157,64 @@ void main() {
   testWidgets('a calendar day and slot; a date step sends one value', (tester) async {
     await pump(
       tester,
-      const CalendarUIState(mode: 'datetime', showTimeSelection: true, availableSlots: {}, nodeId: 'cal'),
+      const CalendarUIState(
+        mode: 'datetime',
+        showTimeSelection: true,
+        availableSlots: {'2026-10-21': ['09:30']},
+        nodeId: 'cal',
+        extra: {'minDate': '2026-10-15'},
+      ),
     );
-    expect(find.text('Choose date'), findsOneWidget);
+    expect(find.text('October 2026'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('cal-day-2026-10-20')));
+    expect(answers, isEmpty, reason: 'a day without free times');
+    await tester.tap(find.byKey(const ValueKey('cal-day-2026-10-21')));
+    await tester.pump();
+    await tester.tap(find.text('09:30'));
+    expect((answers.single as Map)['date'], '2026-10-21');
+    expect((answers.single as Map)['slot'], '09:30');
 
     await pump(tester, const CalendarUIState(mode: 'time', showTimeSelection: true, nodeId: 'dt', extra: {'datetime': true}));
-    expect(find.text('Choose date'), findsNothing);
-    expect(find.text('Choose time'), findsOneWidget);
+    expect(find.text('Choose a date'), findsNothing);
+    expect(find.text('Choose a time'), findsOneWidget);
+  });
+
+  testWidgets('consent: the box, then Continue (#48)', (tester) async {
+    await pump(
+      tester,
+      const SingleChoiceUIState(choices: [], nodeId: 'cs', extra: {'step': 'consent', 'markdown': 'I agree to the [Terms](https://x.io/t).'}),
+    );
+    expect(find.textContaining('Terms', findRichText: true), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('consent-box')));
+    await tester.pump();
+    await tester.tap(find.text('Continue'));
+    expect((answers.single as Map)['agreed'], true);
+  });
+
+  testWidgets('signature: strokes on the pad go out as a PNG (#48)', (tester) async {
+    await pump(tester, const TextInputUIState(questionText: '', nodeId: 'sg', inputType: TextInputType.text, extra: {'step': 'signature', 'submitLabel': 'Sign'}));
+    final pad = tester.getRect(find.byKey(const ValueKey('sig-pad')));
+    await tester.dragFrom(pad.center - const Offset(60, 0), const Offset(120, 20));
+    await tester.pump();
+    await tester.tap(find.text('Sign'));
+    await tester.runAsync(() async {
+      for (var i = 0; i < 50 && answers.isEmpty; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    });
+    final a = answers.single as Map;
+    expect([a['action'], a['method']], ['sign', 'drawn']);
+    expect('${a['dataUrl']}', startsWith('data:image/png;base64,'));
+    expect(a['width'], greaterThan(0));
+  });
+
+  testWidgets('otp: six digits send the code; Resend waits for its countdown (#48)', (tester) async {
+    await pump(tester, const TextInputUIState(questionText: '', nodeId: 'o', inputType: TextInputType.number, extra: {'step': 'otp', 'stage': 'code', 'resendIn': 2}));
+    expect(find.text('Resend in 0:02'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('otp-code')), '12 34 56');
+    expect(answers.single, {'action': 'verify', 'code': '123456', 'label': '123456'});
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text('Resend code'), findsOneWidget);
   });
 
   testWidgets('a text step leaves its answer to the composer, with Skip when allowed', (tester) async {
