@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/agent/agent_bot.dart';
+import '../core/i18n/i18n.dart';
 import '../core/live_chat/live_chat.dart';
 import '../core/live_chat/email_transcript.dart';
 import '../core/live_chat/live_chat_extras.dart';
@@ -171,9 +172,9 @@ class _EmailFormState extends State<_EmailForm> {
   }
 
   Future<void> _submit() async {
-    if (!LiveChat.isEmail(_email.text)) return setState(() => _error = 'Please enter a valid email.');
+    if (!LiveChat.isEmail(_email.text)) return setState(() => _error = t('sdk.form.invalidEmail'));
     if (widget.messagePlaceholder != null && _message.text.trim().isEmpty) {
-      return setState(() => _error = 'Please write a short message.');
+      return setState(() => _error = t('leave.writeMessage'));
     }
     setState(() {
       _error = null;
@@ -183,7 +184,7 @@ class _EmailFormState extends State<_EmailForm> {
     if (!mounted) return;
     setState(() {
       _busy = false;
-      if (!ok) _error = 'That did not go through. Please try again.';
+      if (!ok) _error = t('sdk.form.notThrough');
     });
   }
 
@@ -253,7 +254,7 @@ class QuickActionsStrip extends StatelessWidget {
                   if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
                 },
               ),
-            if (human) _Pill(key: const ValueKey('cb-talk-to-person'), theme: theme, label: 'Talk to a person', onTap: provider.talkToPerson),
+            if (human) _Pill(key: const ValueKey('cb-talk-to-person'), theme: theme, label: t('chat.talkToPerson'), onTap: provider.talkToPerson),
           ],
         ),
       ),
@@ -333,7 +334,7 @@ class HandoverWaitCard extends StatelessWidget {
                   minimumSize: const Size(0, 32),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text('Leave queue', style: TextStyle(fontSize: 13)),
+                child: Text(t('sdk.queue.leave'), style: const TextStyle(fontSize: 13)),
               ),
             ),
         ],
@@ -387,7 +388,7 @@ class _CsatCardState extends State<_CsatCard> {
             for (final o in options)
               if (c.ratingType == 'stars')
                 Semantics(
-                  label: '$o out of 5',
+                  label: t('rating.outOf', {'n': o, 'max': 5}),
                   button: true,
                   child: GestureDetector(
                     onTap: () => setState(() => _value = o),
@@ -414,13 +415,13 @@ class _CsatCardState extends State<_CsatCard> {
             Expanded(
               child: _PrimaryButton(
                 theme: theme,
-                label: 'Send',
+                label: t('common.send'),
                 enabled: _value != null,
                 onTap: () => widget.liveChat.submitRating(_value!, _feedback.text),
               ),
             ),
             const SizedBox(width: 8),
-            _OutlineButton(theme: theme, label: 'Not now', onTap: widget.liveChat.dismissCsat),
+            _OutlineButton(theme: theme, label: t('common.notNow'), onTap: widget.liveChat.dismissCsat),
           ],
         ),
       ],
@@ -430,7 +431,7 @@ class _CsatCardState extends State<_CsatCard> {
   Widget _choice(ConferBotTheme theme, Object o, String type) {
     final chosen = o == _value;
     final label = switch (type) {
-      'thumbs' => o == true ? 'Yes' : 'No',
+      'thumbs' => o == true ? t('sdk.csat.yes') : t('sdk.csat.no'),
       'emoji' => _faces[(o as int) - 1],
       _ => o.toString(),
     };
@@ -498,33 +499,33 @@ class LiveChatFooter extends StatelessWidget {
           children: [
             _body(theme, LiveChat.handoverWaitingLine(live.handoverWaiting!)),
             if (live.handoverWaiting!.email == null && live.handoverWaiting!.askEmail)
-              _EmailForm(theme: theme, button: 'Send', onSubmit: (email, _) => live.shareEmailForReply(email)),
+              _EmailForm(theme: theme, button: t('common.send'), onSubmit: (email, _) => live.shareEmailForReply(email)),
           ],
         ),
       if (leaveOn && live.leftMessageTo != null)
         _LiveCard(theme: theme, children: [
-          _title(theme, "Message sent. We'll reply to you at ${live.leftMessageTo}."),
-          _sub(theme, 'Replies will reach your inbox, and show here if you come back.'),
+          _title(theme, t('leave.sent', {'email': live.leftMessageTo})),
+          _sub(theme, t('leave.sentSub')),
         ])
       else if (leaveOn && live.noAgentsAvailable)
         _LeaveMessageCard(liveChat: live, theme: theme),
       if (live.fileRequestedBy != null)
         _LiveCard(theme: theme, children: [
-          _body(theme, '${live.fileRequestedBy} asked you to send a file'),
+          _body(theme, t('file.requested', {'name': live.fileRequestedBy})),
           if (onUpload != null) ...[
             const SizedBox(height: 10),
-            _PrimaryButton(theme: theme, label: 'Choose a file', onTap: onUpload!),
+            _PrimaryButton(theme: theme, label: t('sdk.file.choose'), onTap: onUpload!),
           ],
         ]),
       if (live.leadEmail != null)
-        _LiveCard(theme: theme, children: [_body(theme, "Thanks! We'll follow up at ${live.leadEmail}")])
+        _LiveCard(theme: theme, children: [_body(theme, t('lead.done', {'email': live.leadEmail}))])
       else if (live.leadCardOpen)
         _LiveCard(theme: theme, children: [
-          _title(theme, 'Want us to follow up?'),
-          _sub(theme, 'Leave your email and the team will get back to you.'),
+          _title(theme, t('lead.title')),
+          _sub(theme, t('lead.sub')),
           _EmailForm(
             theme: theme,
-            button: 'Send',
+            button: t('common.send'),
             onSubmit: (email, _) async {
               live.captureLeadEmail(email);
               return true;
@@ -664,7 +665,7 @@ class ClosedChatCard extends StatelessWidget {
         if (closed.kind == ClosedKind.blocked) LiveSystemLine(theme: theme, text: closed.text),
         if (closed.newChat && onNewChat != null)
           Center(
-            child: _PrimaryButton(key: const ValueKey('cb-new-chat'), theme: theme, label: LiveEvents.newChatText, onTap: onNewChat!),
+            child: _PrimaryButton(key: const ValueKey('cb-new-chat'), theme: theme, label: LiveEvents.newChatLabel, onTap: onNewChat!),
           ),
       ],
     );
@@ -684,12 +685,12 @@ class _LeaveMessageCard extends StatelessWidget {
     return _LiveCard(
       theme: theme,
       children: [
-        _title(theme, 'Leave a message'),
-        _sub(theme, "No one is available right now. We'll reply by email."),
+        _title(theme, t('leave.title')),
+        _sub(theme, t('leave.sub')),
         _EmailForm(
           theme: theme,
-          button: 'Send',
-          messagePlaceholder: 'How can we help?',
+          button: t('common.send'),
+          messagePlaceholder: t('leave.messagePlaceholder'),
           initialEmail: prefill.email,
           initialMessage: prefill.message,
           onSubmit: liveChat.leaveMessage,
@@ -698,7 +699,7 @@ class _LeaveMessageCard extends StatelessWidget {
           padding: const EdgeInsets.only(top: 8),
           child: GestureDetector(
             onTap: liveChat.skipLeaveMessage,
-            child: Text('Not now', style: TextStyle(color: theme.colors.textSecondary, fontSize: 13)),
+            child: Text(t('common.notNow'), style: TextStyle(color: theme.colors.textSecondary, fontSize: 13)),
           ),
         ),
       ],
@@ -719,9 +720,9 @@ class LiveChatComposerTop extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (live.lockedBy != null) LiveSystemLine(theme: theme, text: 'This conversation has been locked'),
+        if (live.lockedBy != null) LiveSystemLine(theme: theme, text: t('system.locked')),
         if (live.agentConnectionLost != null)
-          LiveSystemLine(theme: theme, text: "${live.agentConnectionLost}'s connection dropped. Hang on, they should be right back."),
+          LiveSystemLine(theme: theme, text: t('agent.connectionLost', {'name': live.agentConnectionLost})),
         QuickActionsStrip(provider: provider, theme: theme),
       ],
     );
