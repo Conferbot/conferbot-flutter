@@ -4,6 +4,8 @@
 /// what each one turns into on screen. Pure: the widgets read the result.
 library;
 
+import 'mascot_art.dart';
+import 'mascot_motion.dart' show normalizeMascotMotion;
 import 'widget_theme.dart';
 
 class BubbleCorners {
@@ -78,8 +80,23 @@ class ResolvedCustomizations {
   final String optionBubbleColor;
   final String optionTextColor;
 
-  /// dots, wave, shimmer, pencil or mascot (pencil and mascot draw dots until mascots land).
+  /// dots, wave, shimmer, pencil or mascot.
   final String typingStyle;
+
+  /// The owner's mascot (art3d mascotLookOf): the idle call, the mascot typing and launcher styles, the greeting card.
+  final MascotLook mascot;
+
+  /// The colour it is drawn in when the owner chose none: the launcher's (widgetIconBgColor, else the header's).
+  final String mascotAccent;
+
+  /// The mascot greets on the greeting card, by its name, in place of the avatar.
+  final bool mascotInGreeting;
+
+  /// How the greeting card's figure moves: lively (absent), subtle or off.
+  final String mascotMotion;
+
+  /// The mascot's size in the launcher, % of the button (70-150, default 112).
+  final int mascotLauncherScale;
 
   /// Send button: the theme palette's accent when it supplied the colours, else the header colour.
   final String accent;
@@ -119,6 +136,11 @@ class ResolvedCustomizations {
     this.optionBubbleColor = '#0b4eb8',
     this.optionTextColor = '#ffffff',
     this.typingStyle = 'dots',
+    this.mascot = const MascotLook(),
+    this.mascotAccent = '#4f46e5',
+    this.mascotInGreeting = false,
+    this.mascotMotion = 'lively',
+    this.mascotLauncherScale = mascotScaleDefault,
     this.accent = '#0b4eb8',
     this.accentInk,
     this.theme = const ResolvedWidgetTheme(),
@@ -208,6 +230,11 @@ class Customizations {
       optionBubbleColor: first([_str(c['optionBubbleMsgColor']), bot], '#e7e4e4'),
       optionTextColor: first([_str(c['optionBubbleTextColor']), botText], '#000000'),
       typingStyle: _typingStyles.contains(c['typingStyle']) ? c['typingStyle'] as String : 'dots',
+      mascot: mascotLookOf(c),
+      mascotAccent: first([_str(c['widgetIconBgColor']), _str(c['headerBgColor'])], '#4f46e5'),
+      mascotInGreeting: c['mascotInGreeting'] == true,
+      mascotMotion: normalizeMascotMotion(c['mascotMotion']),
+      mascotLauncherScale: mascotScaleOf(c),
       accent: first([_str(c['themeAccent']), _str(c['headerBgColor'])], '#0b4eb8'),
       accentInk: _str(c['themeOnAccent']).isEmpty ? null : _str(c['themeOnAccent']),
       theme: theme ?? const ResolvedWidgetTheme(),
