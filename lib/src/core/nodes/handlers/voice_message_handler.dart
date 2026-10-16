@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../../flow/i18n_en.dart';
 import '../node_types.dart';
 import '../node_result.dart';
 import '../node_ui_state.dart';
@@ -59,7 +60,7 @@ class VoiceMessageHandler {
 
   /// Process the voice input node and return UI state
   Future<NodeResult> process(Map<String, dynamic> nodeData, String nodeId) async {
-    final questionText = _getString(nodeData, 'questionText', 'Please record a voice message');
+    final questionText = _getString(nodeData, 'questionText', t('sdk.voice.recordPrompt'));
     final answerKey = _getString(nodeData, 'answerVariable', 'voice_message');
     final maxDuration = _getInt(nodeData, 'maxDurationSeconds', 120);
     final allowTextFallback = _getBoolean(nodeData, 'allowTextFallback', true);
@@ -114,7 +115,7 @@ class VoiceMessageHandler {
     final trimmedText = text.trim();
 
     if (trimmedText.isEmpty) {
-      return NodeResult.invalid('Please record a voice message or type your response');
+      return NodeResult.invalid(t('sdk.voice.recordOrType'));
     }
 
     state.setAnswerVariable(nodeId, trimmedText);
@@ -159,12 +160,12 @@ class VoiceMessageHandler {
         );
       } catch (e) {
         voiceLogger.error('Upload failed: $e');
-        return NodeResult.invalid('Failed to upload voice message: $e');
+        return NodeResult.invalid(t('voice.messageFailed'));
       }
     }
 
     if (audioUrl == null) {
-      return NodeResult.invalid('Failed to upload voice message');
+      return NodeResult.invalid(t('voice.messageFailed'));
     }
 
     // Store the audio URL as the answer
