@@ -75,6 +75,7 @@ void main() {
           agentDetails: AgentDetails(
             id: 'agent-id-1',
             name: 'John Agent',
+            email: 'john@example.com',
           ),
         );
 
@@ -234,7 +235,8 @@ void main() {
           ),
         );
 
-        await tester.tap(find.byType(GestureDetector).first);
+        // The bubble, not the middle of the row: the row's gap takes no taps.
+        await tester.tap(find.text('Bot message'));
         await tester.pump();
 
         expect(tapped, isTrue);
@@ -262,7 +264,8 @@ void main() {
           ),
         );
 
-        await tester.longPress(find.byType(GestureDetector).first);
+        // The bubble, not the middle of the row: the row's gap takes no taps.
+        await tester.longPress(find.text('Bot message'));
         await tester.pump();
 
         expect(longPressed, isTrue);
@@ -671,9 +674,11 @@ void main() {
         ),
       );
 
-      final sizedBox = tester.widget<SizedBox>(find.byType(SizedBox));
-      expect(sizedBox.width, isNull);
-      expect(sizedBox.height, isNull);
+      // SizedBox.shrink: zero by zero.
+      final sizedBox = tester.widget<SizedBox>(
+          find.descendant(of: find.byType(RichTextMessage), matching: find.byType(SizedBox)));
+      expect(sizedBox.width, 0.0);
+      expect(sizedBox.height, 0.0);
     });
 
     testWidgets('uses selectable text when selectable is true',
