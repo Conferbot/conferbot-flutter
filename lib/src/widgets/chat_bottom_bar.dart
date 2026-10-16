@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../core/i18n/i18n.dart';
 import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
 import '../config/constants.dart';
@@ -169,7 +170,7 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                               onChanged: (_) => setState(() {}),
                               decoration: InputDecoration(
                                 hintText:
-                                    widget.placeholder ?? 'Type a message...',
+                                    widget.placeholder ?? t('chat.composer.placeholder'),
                                 hintStyle: TextStyle(
                                   color: theme.colors.textSecondary,
                                   fontSize: 16,
@@ -192,7 +193,7 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                           if (widget.enableAttachments && widget.onAttachmentPress != null && !widget.disabled)
                             IconButton(
                               onPressed: widget.onAttachmentPress,
-                              tooltip: 'Attach a file',
+                              tooltip: t('chat.composer.attach'),
                               visualDensity: VisualDensity.compact,
                               icon: const Icon(Icons.attach_file, size: 20, color: Color(0xFF687882)),
                             ),
@@ -273,7 +274,7 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Powered by ',
+              '${t('chat.poweredBy')} ',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
