@@ -39,6 +39,7 @@ import 'home/home_screen_view.dart';
 import 'home/view_switch.dart';
 import '../core/home/home.dart' show HomeMascot, HomeView;
 import 'package:file_picker/file_picker.dart';
+import 'delight/delight_views.dart';
 
 /// Complete drop-in chat widget with node rendering support
 /// Now includes:
@@ -131,9 +132,15 @@ class _ChatWidgetState extends State<ChatWidget> {
   // The composer's focus: "Ask another way" under an AI answer puts the cursor there.
   final FocusNode _composerFocus = FocusNode();
 
+  // The app in front or not: the waiting nudge waits while it is not.
+  AppLifecycleListener? _lifecycle;
+
   @override
   void initState() {
     super.initState();
+    _lifecycle = AppLifecycleListener(onStateChange: (state) {
+      if (mounted) context.read<ConferBotProvider>().delight.appActive = state == AppLifecycleState.resumed;
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupListeners();
       context.read<ConferBotProvider>().openChat();
@@ -418,6 +425,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     _chatProvider?.waitArticleOpener = null;
     _chatProvider?.composerFocuser = null;
     _composerFocus.dispose();
+    _lifecycle?.dispose();
     _kbProvider?.dispose();
     super.dispose();
   }
@@ -425,6 +433,8 @@ class _ChatWidgetState extends State<ChatWidget> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ConferBotProvider>();
+    // No confetti for visitors who ask for less motion.
+    provider.delight.reducedMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     // A theme set to "auto" follows the phone's light / dark setting.
     final systemDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -599,9 +609,14 @@ class _ChatWidgetState extends State<ChatWidget> {
             ),
           ),
         // Message history list with interactive node rendered inline at bottom
-        widget.enablePagination
-            ? _buildPaginatedMessageList(provider, theme)
-            : _buildSimpleMessageList(provider, theme),
+        // Any touch in the chat: the visitor is busy here (the waiting nudge waits).
+        Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) => provider.noteChatActivity(),
+          child: widget.enablePagination
+              ? _buildPaginatedMessageList(provider, theme)
+              : _buildSimpleMessageList(provider, theme),
+        ),
 
         // Error message overlay
         if (provider.errorMessage != null)
@@ -660,6 +675,35 @@ class _ChatWidgetState extends State<ChatWidget> {
     // While waiting for a person: the help card and the games, each after
     // the message that was last when it was drawn (core/waiting).
     final waiting = _waitingCards(provider, messages, theme);
+    // The human touches: the tapback and the burst on an answer, "Edit"
+    // under the latest one, the nudge under a question that has waited.
+    final touches = _touchOverlays(provider, theme);
+    final change = provider.delight.changeRowId;
+    if (change != null && messages.any((m) => m.id == change)) {
+      waiting.inline.putIfAbsent(change, () => []).add(
+            ChangeAnswerLink(
+              key: ValueKey('cb-edit-$change'),
+              onPressed: () => provider.changeAnswer(),
+              muted: theme.colors.textSecondary,
+            ),
+          );
+    }
+    final hint = provider.delight.stallHint;
+    if (hint != null && interactiveNode != null && provider.visitorBlocked == null) {
+      interactiveNode = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          StallHint(
+            text: hint,
+            accent: theme.colors.primary,
+            muted: theme.colors.textSecondary,
+            indent: theme.spacing.chatContentPadding,
+          ),
+          interactiveNode,
+        ],
+      );
+    }
 
     // Handle handover overlay separately (still positioned)
     if (uiState is HumanHandoverUIState && uiState.state != HandoverState.waitingForAgent) {
@@ -677,6 +721,7 @@ class _ChatWidgetState extends State<ChatWidget> {
             paginationConfig:
                 widget.paginationConfig ?? const MessageListPaginationConfig(),
             inlineAfter: waiting.inline,
+            bubbleOverlays: touches,
           ),
           Positioned(
             left: 0, right: 0, bottom: 0,
@@ -699,8 +744,23 @@ class _ChatWidgetState extends State<ChatWidget> {
           widget.paginationConfig ?? const MessageListPaginationConfig(),
       trailingWidget: _trailing(interactiveNode ?? _agentTrailing(provider, theme), provider, theme, waiting.atEnd),
       inlineAfter: waiting.inline,
+      bubbleOverlays: touches,
     );
   }
+
+  /// The bot's tapback and the confetti over each answer that got one.
+  Map<String, Widget> _touchOverlays(ConferBotProvider provider, ConferBotTheme theme) => {
+        for (final e in provider.delight.touches.entries)
+          e.key: AnswerTouchOverlay(
+            key: ValueKey('cb-touch-${e.key}'),
+            reaction: e.value.reaction,
+            celebrate: e.value.celebrate,
+            accent: theme.colors.primary,
+            card: theme.colors.surface,
+            ring: theme.colors.background,
+            onBurstDone: () => provider.delight.clearBurst(e.key),
+          ),
+      };
 
   /// The help card and the games card: after the message each follows, or
   /// at the end when that message is not on screen.
@@ -950,6 +1010,8 @@ class _ChatWidgetState extends State<ChatWidget> {
       onSend: (text) async {
         await provider.sendMessage(text);
       },
+      // The nudge waits while something is typed; the person in the chat sees the draft.
+      onDraftChanged: provider.composerChanged,
       placeholder: closed?.inputOff == true
           ? closed!.text
           : repliesOff
