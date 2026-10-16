@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/i18n/i18n.dart';
+
 /// Handler for various link types in markdown content
 /// Supports URLs, email, phone, and custom deep links
 class MarkdownLinkHandler {
@@ -101,7 +103,7 @@ class MarkdownLinkHandler {
       await launchUrl(uri);
     } else {
       if (context.mounted) {
-        _showErrorSnackBar(context, 'Could not open email app');
+        _showErrorSnackBar(context, t('sdk.link.noEmailApp'));
       }
     }
   }
@@ -114,7 +116,7 @@ class MarkdownLinkHandler {
       await launchUrl(uri);
     } else {
       if (context.mounted) {
-        _showErrorSnackBar(context, 'Could not open phone app');
+        _showErrorSnackBar(context, t('sdk.link.noPhoneApp'));
       }
     }
   }
@@ -127,7 +129,7 @@ class MarkdownLinkHandler {
       await launchUrl(uri);
     } else {
       if (context.mounted) {
-        _showErrorSnackBar(context, 'Could not open messaging app');
+        _showErrorSnackBar(context, t('sdk.link.noSmsApp'));
       }
     }
   }
@@ -145,7 +147,7 @@ class MarkdownLinkHandler {
       try {
         Navigator.of(context).pushNamed(path);
       } catch (e) {
-        _showErrorSnackBar(context, 'Could not navigate to $path');
+        _showErrorSnackBar(context, t('sdk.link.cannotNavigate', {'path': path}));
       }
     }
   }
@@ -173,7 +175,7 @@ class MarkdownLinkHandler {
       );
     } else {
       if (context.mounted) {
-        _showErrorSnackBar(context, 'Could not open link');
+        _showErrorSnackBar(context, t('sdk.link.cannotOpen'));
       }
     }
   }
@@ -186,16 +188,16 @@ class MarkdownLinkHandler {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Open External Link'),
-        content: Text('Do you want to open $host in your browser?'),
+        title: Text(t('sdk.link.externalTitle')),
+        content: Text(t('sdk.link.externalAsk', {'host': host})),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(t('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Open'),
+            child: Text(t('result.open')),
           ),
         ],
       ),
