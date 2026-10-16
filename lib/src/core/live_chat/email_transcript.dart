@@ -12,6 +12,8 @@
 /// Pure: the request's path and body, and how its answer reads.
 library;
 
+import '../i18n/i18n.dart';
+
 class TranscriptEmailResult {
   final bool ok;
   final String? message;
@@ -42,18 +44,22 @@ class EmailTranscript {
 
   static Map<String, dynamic> body(String chatSessionId, String email) => {'chatSessionId': chatSessionId, 'email': email.trim()};
 
-  /// The web's English strings (i18n en: chat.menu.emailChat, mailchat.*, form.*).
+  /// The menu item's English words; [menuLabel] draws them in the active language.
   static const menu = 'Email me this chat';
-  static const title = 'Email me this chat';
-  static const sub = "We'll send the whole conversation to your inbox.";
-  static const placeholder = 'you@company.com';
-  static const label = 'Your email';
-  static const send = 'Send';
-  static const sending = 'Sending…';
-  static const cancel = 'Cancel';
-  static const checkEmail = 'Please check the email address.';
-  static const sendFailed = "We couldn't send it just now. Please try again.";
-  static String sent(String email) => 'Sent! Check your inbox at $email';
+
+  /// The web's strings (ts/chat/emailTranscript.ts: chat.menu.emailChat,
+  /// mailchat.*, form.*, common.*), in the active language.
+  static String get menuLabel => t('chat.menu.emailChat');
+  static String get title => t('chat.menu.emailChat');
+  static String get sub => t('mailchat.sub');
+  static String get placeholder => t('form.emailPlaceholder');
+  static String get label => t('form.yourEmail');
+  static String get send => t('common.send');
+  static String get sending => t('common.sendingEllipsis');
+  static String get cancel => t('common.cancel');
+  static String get checkEmail => t('form.checkEmail');
+  static String get sendFailed => t('form.sendFailed');
+  static String sent(String email) => t('mailchat.sent', {'email': email});
 
   /// The server's answer read as the web reads it: sent only on a 2xx with
   /// `success: true`; otherwise its message, if it gave one (an invalid
@@ -67,7 +73,9 @@ class EmailTranscript {
     return TranscriptEmailResult(false, m.isEmpty ? null : m);
   }
 
-  /// What the card says when it did not go: the server's words (it words
-  /// them in English, as the SDK is), else ours.
-  static String errorOf(TranscriptEmailResult? r) => (r != null && !r.ok ? r.message : null) ?? sendFailed;
+  /// What the card says when it did not go: the server's words in English
+  /// (it words them in English only), else ours in the active language (web
+  /// transcriptEmailError).
+  static String errorOf(TranscriptEmailResult? r) =>
+      (I18n.language == I18n.en && r != null && !r.ok ? r.message : null) ?? sendFailed;
 }
