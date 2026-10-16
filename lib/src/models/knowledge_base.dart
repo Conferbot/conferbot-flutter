@@ -1,5 +1,8 @@
 /// Knowledge Base models for Conferbot Flutter SDK
 /// Provides article, category, and rating data structures
+library;
+
+import '../core/i18n/i18n.dart';
 
 /// Knowledge Base Article model
 /// Represents a single help article with content and metadata
@@ -144,14 +147,13 @@ class KnowledgeBaseArticle {
   /// Get formatted read time string
   String get formattedReadTime {
     if (readTimeMinutes == null) return '';
-    if (readTimeMinutes! < 1) return 'Less than 1 min read';
-    if (readTimeMinutes == 1) return '1 min read';
-    return '$readTimeMinutes min read';
+    if (readTimeMinutes! < 1) return t('sdk.kb.lessThanMinRead');
+    return t('kb.minRead', {'n': readTimeMinutes});
   }
 
   /// Get formatted rating string
   String get formattedRating {
-    if (averageRating == null) return 'No ratings';
+    if (averageRating == null) return t('sdk.kb.noRatings');
     return '${averageRating!.toStringAsFixed(1)} ($ratingCount)';
   }
 }
