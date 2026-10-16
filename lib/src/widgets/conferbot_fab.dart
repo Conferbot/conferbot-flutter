@@ -9,7 +9,10 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/customization/launcher.dart';
 import '../core/customization/launcher_icons.dart';
+import '../core/customization/launcher_attention.dart' show wavingHand;
+import '../core/customization/launcher_entrance.dart';
 import '../core/customization/launcher_motion.dart';
+import '../core/customization/mascot_art.dart';
 import '../core/state/chat_state.dart';
 import '../models/user.dart';
 import '../providers/conferbot_provider.dart';
@@ -17,6 +20,8 @@ import '../theme/conferbot_theme.dart';
 import 'chat_widget.dart';
 import 'greeting_card.dart';
 import 'greeting_controller.dart';
+import 'launcher_fx_controllers.dart';
+import 'launcher_fx_views.dart';
 import 'launcher_icon_painter.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -971,15 +976,13 @@ class ConferBotFAB extends StatefulWidget {
 }
 
 class _ConferBotFABState extends State<ConferBotFAB>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   bool _isOpen = false;
 
   /// The greeting card by the closed launcher (greeting_controller.dart).
   GreetingController? _greeting;
 
   // ── Motion (core/customization/launcher_motion.dart) ──────────────────────
-  /// When the chat was last opened in this app session: idle moments rest a while after.
-  static int _openedAt = 0;
   Ticker? _ticker;
   (String, int)? _moment;
   (int, double, int)? _ripple;
@@ -994,8 +997,11 @@ class _ConferBotFABState extends State<ConferBotFAB>
   /// idle moments: the first ~2s in, then the plan's pace.
   void _startMotion(String mode) {
     _motionStarted = true;
-    _ripple = (DateTime.now().millisecondsSinceEpoch, LauncherMotion.rippleDelay, LauncherMotion.rippleIter);
-    _run();
+    // A launcher attention loop takes the place of the three ripples.
+    if (!_attention.onLauncher) {
+      _ripple = (DateTime.now().millisecondsSinceEpoch, LauncherMotion.rippleDelay, LauncherMotion.rippleIter);
+      _run();
+    }
     _scheduleIdle(mode);
   }
 
@@ -1006,10 +1012,13 @@ class _ConferBotFABState extends State<ConferBotFAB>
     if (wait == null) return;
     _idleTimer = Timer(Duration(milliseconds: wait), () {
       if (!mounted || _isOpen) return;
-      if (_openedAt != 0 && DateTime.now().millisecondsSinceEpoch - _openedAt < LauncherMotion.openedRestMs) return;
+      if (LauncherFxSession.openedRecently(LauncherFxSession.scheduler.now())) return;
       _played += 1;
-      _moment = ('idle', DateTime.now().millisecondsSinceEpoch);
-      _run();
+      // A launcher attention is moving the button: this moment holds off (it still counts).
+      if (!_attention.onLauncher) {
+        _moment = ('idle', DateTime.now().millisecondsSinceEpoch);
+        _run();
+      }
       _scheduleIdle(mode);
     });
   }
@@ -1046,6 +1055,37 @@ class _ConferBotFABState extends State<ConferBotFAB>
     if (!_ticker!.isActive) _ticker!.start();
   }
 
+  // ── Entrance, attention, idle call (launcher_fx_controllers.dart) ────────
+  final LauncherEntranceController _entrance = LauncherEntranceController();
+  final LauncherAttentionController _attention = LauncherAttentionController();
+  final LauncherIdleCallController _idle = LauncherIdleCallController();
+  final GlobalKey _buttonKey = GlobalKey();
+  Size? _buttonSize;
+  Ticker? _fxTicker;
+  MascotLayers? _mascot;
+  String _mascotKey = '';
+
+  void _onFx() {
+    if (!mounted) return;
+    _syncFxTicker();
+    setState(() {});
+  }
+
+  /// One clock for the three effects: it redraws while any of them plays.
+  void _syncFxTicker() {
+    final live = _entrance.active || _attention.running || _idle.perf != null;
+    _fxTicker ??= createTicker((_) {
+      if (mounted) setState(() {});
+    });
+    if (live && !_fxTicker!.isActive) _fxTicker!.start();
+    if (!live && _fxTicker!.isActive) _fxTicker!.stop();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _idle.appActive = state == AppLifecycleState.resumed;
+  }
+
   // FAB press animation
   late final AnimationController _pressCtrl;
   late final Animation<double> _pressScale;
@@ -1061,12 +1101,21 @@ class _ConferBotFABState extends State<ConferBotFAB>
       value: 1.0,
     );
     _pressScale = _pressCtrl;
+    WidgetsBinding.instance.addObserver(this);
+    _entrance.addListener(_onFx);
+    _attention.addListener(_onFx);
+    _idle.addListener(_onFx);
   }
 
   @override
   void dispose() {
     _idleTimer?.cancel();
     _ticker?.dispose();
+    _fxTicker?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _entrance.dispose();
+    _attention.dispose();
+    _idle.dispose();
     _greeting?.dispose();
     _pressCtrl.dispose();
     super.dispose();
@@ -1145,8 +1194,12 @@ class _ConferBotFABState extends State<ConferBotFAB>
   // ── Open chat sheet ───────────────────────────────────────────────────────
 
   Future<void> _openChat(BuildContext context, ConferBotProvider provider) async {
-    _openedAt = DateTime.now().millisecondsSinceEpoch;
+    LauncherFxSession.openedAt = LauncherFxSession.scheduler.now();
     _idleTimer?.cancel();
+    // The entrance ends at once, and no call comes for a few days.
+    _entrance.chatOpened();
+    _idle.chatOpened();
+    _idle.stop();
     setState(() => _isOpen = true);
 
     await showModalBottomSheet<void>(
@@ -1242,6 +1295,103 @@ class _ConferBotFABState extends State<ConferBotFAB>
     // The icon's idle and new-message moments and the ripple; nothing with
     // the phone's animations off, or for an image or avatar launcher.
     final still = !hasLook || MediaQuery.disableAnimationsOf(context) || imageUrl != null || avatar != null;
+
+    // The entrance, the attention loop and the idle call: all off unless the
+    // owner chose one; nothing with the phone's animations off.
+    final reduced = MediaQuery.disableAnimationsOf(context);
+    final screen = MediaQuery.sizeOf(context);
+    final buttonSize = _buttonSize ?? Size(width, size);
+    final accent = hasLook ? look.solid : '#${(fabColor.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+    final cardShown = card != null && !_isOpen;
+    _idle
+      ..chatOpen = _isOpen
+      ..keyboard = MediaQuery.viewInsetsOf(context).bottom > 0
+      ..entranceBusy = _entrance.busy
+      ..cardShown = cardShown
+      ..width = _buttonSize?.width
+      ..height = _buttonSize?.height
+      ..position = isLeft ? 'left' : 'right';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !hasLook) return;
+      _attention.update(
+        mode: look.attention,
+        enabled: true,
+        reduced: reduced,
+        chatOpen: _isOpen,
+        cardShown: cardShown,
+        moment: _moment != null,
+        entranceBusy: _entrance.busy,
+        hasSize: _buttonSize != null,
+        wide: showLabel,
+      );
+      final box = _buttonKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize && (_buttonSize == null || (box.size.width - _buttonSize!.width).abs() > 0.5 || (box.size.height - _buttonSize!.height).abs() > 0.5)) {
+        setState(() => _buttonSize = box.size);
+      }
+      _entrance.decide(mode: look.entrance, botId: provider.botId, reduced: reduced, chatOpen: _isOpen);
+      _idle.start(mode: look.idleCall, delay: look.idleCallDelay, botId: provider.botId, reduced: reduced);
+      final b = _buttonSize;
+      if (b != null) {
+        _entrance.laidOut(() => entranceStage(
+              width: b.width,
+              height: b.height,
+              position: isLeft ? 'left' : 'right',
+              screenWidth: screen.width,
+              screenHeight: screen.height,
+              side: offsetX,
+              bottom: offsetBottom,
+              accent: accent,
+            ));
+      }
+      _syncFxTicker();
+    });
+    final entranceT = _entrance.elapsed;
+    final entranceLook = _entrance.lookAt(entranceT);
+    final attention = _attention.running ? attentionFrameAt(_attention.mode, _attention.elapsed, wide: showLabel) : null;
+    final perf = _idle.perf;
+    if (perf != null) {
+      final mc = mascotColor(_sc(provider), accent);
+      final key = '$mc ${perf.mascot.arm} $accent';
+      if (key != _mascotKey) {
+        _mascotKey = key;
+        _mascot = mascotLayers(mc, perf.mascot.arm, accent);
+      }
+    }
+    final idleT = _idle.elapsed;
+    // The idle call's speech bubble, kept on the screen, its tail on the mascot (none while the greeting is up).
+    Widget? bubble;
+    if (perf != null && perf.talks && !_isOpen) {
+      final v = evaluateBubble(perf, idleT);
+      if (v != null) {
+        final line = look.idleCallText;
+        final b = idleBubbleSize(line);
+        final launcherLeft = isLeft ? offsetX : screen.width - offsetX - buttonSize.width;
+        final l = (launcherLeft + perf.sayX - b.width / 2).clamp(8.0, math.max(8.0, screen.width - b.width - 8)).toDouble();
+        final tail = (perf.sayX - (l - launcherLeft)).clamp(14.0, math.max(14.0, b.width - 14)).toDouble();
+        bubble = Positioned(
+          left: l,
+          bottom: offsetBottom + buttonSize.height - (perf.sayY - 10),
+          child: Opacity(
+            opacity: v.$1,
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.identity()
+                ..translateByDouble(0, v.$2, 0, 1)
+                ..scaleByDouble(v.$3, v.$4, 1, 1),
+              child: IdleCallBubble(
+                line: line,
+                tail: tail,
+                onTap: () {
+                  _idle.stop();
+                  if (!_isOpen) _openChat(context, provider);
+                },
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
     if (!still && !_motionStarted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_motionStarted) _startMotion(look.animation);
@@ -1310,17 +1460,25 @@ class _ConferBotFABState extends State<ConferBotFAB>
             bottom: offsetBottom + size + 12,
             left: isLeft ? math.max(8.0, offsetX) : null,
             right: isLeft ? null : math.max(8.0, offsetX),
-            child: GreetingCard(
-              key: ValueKey(card),
-              data: card,
-              alignLeft: isLeft,
-              onPress: () => _onGreetingPress(context, provider, card),
-              onClose: greeting.dismiss,
-              onStarter: (text) {
-                greeting.closeForNow();
-                _openChat(context, provider);
-                Future.delayed(const Duration(milliseconds: 400), () => provider.sendMessage(text).catchError((_) {}));
-              },
+            child: fxGreeting(
+              GreetingCard(
+                key: ValueKey(card),
+                data: card,
+                alignLeft: isLeft,
+                onPress: () => _onGreetingPress(context, provider, card),
+                onClose: () {
+                  greeting.dismiss();
+                  _idle.greetingClosed();
+                },
+                onStarter: (text) {
+                  greeting.closeForNow();
+                  _openChat(context, provider);
+                  Future.delayed(const Duration(milliseconds: 400), () => provider.sendMessage(text).catchError((_) {}));
+                },
+              ),
+              look: entranceLook,
+              attention: attention,
+              handOnCard: !card.text.contains(wavingHand),
             ),
           ),
 
@@ -1338,9 +1496,11 @@ class _ConferBotFABState extends State<ConferBotFAB>
             onTapCancel: () => _pressCtrl.forward(),
             child: ScaleTransition(
               scale: _pressScale,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
+              child: FxLauncherStack(
+                size: buttonSize,
+                radius: radius,
+                color: fabColor,
+                under: [
                   // The ripple: rings of the launcher's colour growing out from behind it.
                   for (final ring in _rings)
                     if (ring != null)
@@ -1355,54 +1515,70 @@ class _ConferBotFABState extends State<ConferBotFAB>
                           ),
                         ),
                       ),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    width: showLabel ? null : width,
-                    height: size,
-                    constraints: showLabel ? BoxConstraints(minWidth: size) : null,
-                    decoration: BoxDecoration(
-                      color: gradient == null ? fabColor : null,
-                      gradient: gradient,
-                      borderRadius: radius,
-                      // A soft glow in the header colour (0 0 4px), as the web draws it.
-                      boxShadow: [BoxShadow(color: glow, blurRadius: 4)],
-                    ),
-                    child: Center(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: content,
+                ],
+                plan: _entrance.phase == 'play' ? _entrance.plan : null,
+                entranceT: entranceT,
+                look: entranceLook,
+                attention: _isOpen ? null : attention,
+                perf: _isOpen ? null : perf,
+                layers: _mascot,
+                idleT: idleT,
+                button: Stack(
+                  key: _buttonKey,
+                  clipBehavior: Clip.none,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      width: showLabel ? null : width,
+                      height: size,
+                      constraints: showLabel ? BoxConstraints(minWidth: size) : null,
+                      decoration: BoxDecoration(
+                        color: gradient == null ? fabColor : null,
+                        gradient: gradient,
+                        borderRadius: radius,
+                        // A soft glow in the header colour (0 0 4px), as the web draws it.
+                        boxShadow: [BoxShadow(color: glow, blurRadius: 4)],
                       ),
-                    ),
-                  ),
-
-                  // The avatar's online dot.
-                  if (avatar != null && !_isOpen)
-                    Positioned(
-                      right: size >= 56 ? 2 : 1,
-                      bottom: size >= 56 ? 2 : 1,
-                      child: Container(
-                        width: math.max(10, size * 0.24),
-                        height: math.max(10, size * 0.24),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF22C55E),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                      child: Center(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: content,
                         ),
                       ),
                     ),
 
-                  // Unread count badge (top-right of FAB)
-                  if (unreadCount > 0 && !_isOpen)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: _UnreadBadge(count: unreadCount),
-                    ),
-                ],
+                    // The avatar's online dot.
+                    if (avatar != null && !_isOpen)
+                      Positioned(
+                        right: size >= 56 ? 2 : 1,
+                        bottom: size >= 56 ? 2 : 1,
+                        child: Container(
+                          width: math.max(10, size * 0.24),
+                          height: math.max(10, size * 0.24),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF22C55E),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                        ),
+                      ),
+
+                    // Unread count badge (top-right of FAB)
+                    if (unreadCount > 0 && !_isOpen)
+                      Positioned(
+                        top: -4,
+                        right: -4,
+                        child: _UnreadBadge(count: unreadCount),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
+
+        // ── The idle call's speech bubble ─────────────────────────────────
+        if (bubble != null) bubble,
       ],
     );
   }
