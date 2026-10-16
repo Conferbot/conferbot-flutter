@@ -5,6 +5,9 @@
 /// (data.timeZone); the visitor sees their own.
 library;
 
+import 'package:intl/intl.dart';
+
+import 'i18n_en.dart';
 import 'js.dart';
 import 'zones.dart';
 
@@ -105,17 +108,27 @@ DateTime noonInZone(String dateString, String timeZone) => wallTimeInZone(dateSt
 /// "HH:MM" of an instant on a zone's clock.
 String hhmmInZone(DateTime date, String timeZone) => partsIn(date, timeZone).hhmm;
 
+/// The owner's day names (weeklyHours.dayName, excludeDays) are English: kept so here.
 const List<String> _dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const List<String> _monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-/// "Tuesday, October 20, 2026" (en-US; other locales are not supported).
+/// "Tuesday, October 20, 2026" (en-US); another [locale] (an intl locale such
+/// as "nl" or "fr_BE") writes it that language's way: "dinsdag 20 oktober 2026".
 String longDate(DateTime date, String timeZone, [String locale = 'en-US']) {
   final p = partsIn(date, timeZone);
+  if (locale != 'en-US') {
+    return DateFormat.yMMMMEEEEd(locale).format(DateTime.utc(p.year, p.month, p.day, 12));
+  }
   return '${_dayNames[p.weekday]}, ${_monthNames[p.month - 1]} ${p.day}, ${p.year}';
 }
+
+/// The locale a visitor's own date is written in: the widget's (web
+/// displayStep.ts formattedVisitorDate uses widgetLocale()), "en-US" for
+/// English. The bot's date stays en-US, as the web keeps it.
+String visitorLocale() => I18n.language == I18n.en ? 'en-US' : I18n.intlLocale;
 
 /// The weekday name of a day on the bot's clock.
 String dayNameInZone(DateTime date, String timeZone) => _dayNames[partsIn(date, timeZone).weekday];
