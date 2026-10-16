@@ -10,7 +10,7 @@ import 'strings_fr.dart';
 import 'strings_de.dart';
 import 'strings_es.dart';
 
-/// Every key, the web's first (824), then the SDK's own (sdk.*, 577).
+/// Every key, the web's first (824), then the SDK's own (sdk.*, 578).
 const List<String> i18nKeys = <String>[
   "helpful.groupLabel",
   "helpful.ask",
@@ -860,6 +860,7 @@ const List<String> i18nKeys = <String>[
   "sdk.bubble.reactHint",
   "sdk.calendar.dayClosed",
   "sdk.calendar.noTimes",
+  "sdk.calendar.slotBooked",
   "sdk.card.learnMore",
   "sdk.chat.complete",
   "sdk.chat.loadOlder",
@@ -1416,7 +1417,7 @@ const List<String> i18nKeys = <String>[
 ];
 
 /// How many of [i18nKeys] are the SDK's own (sdk.*).
-const int i18nSdkKeyCount = 577;
+const int i18nSdkKeyCount = 578;
 
 /// The supported languages, English first.
 const List<String> i18nLanguages = <String>["en", "nl", "fr", "de", "es"];
