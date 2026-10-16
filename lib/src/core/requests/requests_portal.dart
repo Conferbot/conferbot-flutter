@@ -49,9 +49,9 @@ class RequestsPortalState {
     this.banner,
     this.pending = const [],
     this.draft = '',
-    this.placeholder = RequestsText.replyPlaceholder,
+    String? placeholder,
     this.canSend = false,
-  });
+  }) : _placeholder = placeholder;
 
   final RequestsScreen screen;
 
@@ -76,7 +76,8 @@ class RequestsPortalState {
   final StateWords? banner;
   final List<PendingReply> pending;
   final String draft;
-  final String placeholder;
+  final String? _placeholder;
+  String get placeholder => _placeholder ?? RequestsText.replyPlaceholder;
   final bool canSend;
 
   bool get isOpen => screen != RequestsScreen.closed;
@@ -110,7 +111,7 @@ class RequestsPortalState {
         banner: identical(banner, _keep) ? this.banner : banner as StateWords?,
         pending: pending ?? this.pending,
         draft: draft ?? this.draft,
-        placeholder: placeholder ?? this.placeholder,
+        placeholder: placeholder ?? _placeholder,
         canSend: canSend ?? this.canSend,
       );
 }
