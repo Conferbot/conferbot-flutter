@@ -13,6 +13,7 @@
 /// - a refused answer says why and the step keeps waiting.
 library;
 
+import '../../flow/i18n_en.dart';
 import '../../flow/inputs.dart';
 import '../../flow/js.dart' show jsIsoString, jsNumber, jsString;
 import '../../flow/text.dart' show fillVariables, nameGreetingHtml;
@@ -32,7 +33,7 @@ class AskSaved {
 abstract class BaseAskHandler extends BaseNodeHandler {
   TextInputType get inputType;
   String get shape;
-  String get placeholder => 'Type your answer...';
+  String get placeholder => t('composer.answer');
 
   TextInputUIState ui(FlowNode node, ChatState state) => TextInputUIState(
         questionText: shownText(state, node.data['questionText']),
@@ -83,7 +84,7 @@ class AskNameHandler extends BaseAskHandler {
   @override
   String get shape => 'user-ask-name-response';
   @override
-  String get placeholder => 'Your name';
+  String get placeholder => t('composer.name');
 
   @override
   Future<NodeResult> after(String value, FlowNode node, ChatState state) async {
@@ -116,7 +117,7 @@ class AskEmailHandler extends BaseAskHandler {
   @override
   String get shape => 'user-ask-email-response';
   @override
-  String get placeholder => 'name@company.com';
+  String get placeholder => t('composer.email');
 
   @override
   String? problem(String value, FlowNode node, ChatState state) {
@@ -153,7 +154,7 @@ class AskPhoneHandler extends BaseAskHandler {
   @override
   String get shape => 'user-ask-phone-number-response';
   @override
-  String get placeholder => 'Phone number';
+  String get placeholder => t('composer.phone');
 
   @override
   String? problem(String value, FlowNode node, ChatState state) =>
@@ -182,7 +183,7 @@ class AskNumberHandler extends BaseAskHandler {
   @override
   String get shape => 'user-ask-number-response';
   @override
-  String get placeholder => 'Enter a number';
+  String get placeholder => t('composer.number');
 
   @override
   String? problem(String value, FlowNode node, ChatState state) => numberProblem(value, node.data);
@@ -223,7 +224,7 @@ class AskLocationHandler extends BaseAskHandler {
   @override
   String get shape => 'user-ask-location-response';
   @override
-  String get placeholder => 'City or address';
+  String get placeholder => t('composer.location');
 }
 
 /// ask-custom-question-node: any text.
