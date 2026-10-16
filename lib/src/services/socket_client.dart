@@ -203,6 +203,10 @@ class SocketClient with ChangeNotifier {
   /// Last error that occurred
   SocketException? get lastError => _lastError;
 
+  /// The underlying socket (tests only).
+  @visibleForTesting
+  io.Socket? get debugSocket => _socket;
+
   // ========== Connection Management ==========
 
   /// Connect to socket server
@@ -246,6 +250,11 @@ class SocketClient with ChangeNotifier {
       socketUrl,
       io.OptionBuilder()
           .setTransports(['websocket'])
+          // Each client owns its connection (#77): socket_io_client caches a
+          // Manager per host, so without this a second client to the same
+          // server (or this one after disconnect) gets an existing socket
+          // back, with its handshake, and never sees its own connect.
+          .enableForceNew()
           .enableReconnection()
           .setReconnectionAttempts(config.maxReconnectionAttempts)
           .setReconnectionDelay(config.reconnectionDelay)
