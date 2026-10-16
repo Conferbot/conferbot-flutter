@@ -9,6 +9,7 @@
 /// is tidied; values are HTML-escaped.
 library;
 
+import 'i18n_en.dart';
 import 'js.dart';
 
 typedef VariableLookup = dynamic Function(String key);
@@ -121,7 +122,7 @@ bool isBlankHtml(dynamic html) {
 /// "Nice to meet you, X"; one cleared in the builder is "" (no bubble).
 String nameGreetingHtml(dynamic template, dynamic name) {
   final first = escapeHtmlText(firstNameOf(name));
-  if (template == null) return first.isNotEmpty ? 'Nice to meet you, $first' : '';
+  if (template == null) return first.isNotEmpty ? t('node.niceToMeet', {'name': first}) : '';
   if (isBlankHtml(template)) return '';
   return _closeGaps(jsString(template).replaceAll(RegExp(r'\$?\{\{?\s*name\s*\}?\}'), first.isNotEmpty ? first : _gap));
 }
