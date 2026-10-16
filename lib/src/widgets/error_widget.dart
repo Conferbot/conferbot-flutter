@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/errors/conferbot_exceptions.dart';
 import '../core/errors/error_handler.dart';
+import '../core/i18n/i18n.dart';
 import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
 
@@ -112,7 +113,7 @@ class ConferBotErrorWidget extends StatelessWidget {
                   ),
                   if (showErrorCode)
                     Text(
-                      'Code: ${error.code}',
+                      t('sdk.error.code', {'code': error.code}),
                       style: TextStyle(
                         color: color.withOpacity(0.7),
                         fontSize: theme.typography.fontSizeXs,
@@ -123,7 +124,7 @@ class ConferBotErrorWidget extends StatelessWidget {
             ),
             if (error.isRetryable && onRetry != null)
               _buildActionButton(
-                label: 'Retry',
+                label: t('sdk.common.retry'),
                 onPressed: onRetry!,
                 color: color,
                 theme: theme,
@@ -174,7 +175,7 @@ class ConferBotErrorWidget extends StatelessWidget {
                 if (showErrorCode) ...[
                   SizedBox(height: theme.spacing.xs),
                   Text(
-                    'Error code: ${error.code}',
+                    t('sdk.error.errorCode', {'code': error.code}),
                     style: TextStyle(
                       color: color.withOpacity(0.7),
                       fontSize: theme.typography.fontSizeXs,
@@ -320,7 +321,7 @@ class ConferBotErrorWidget extends StatelessWidget {
                       borderRadius: BorderRadius.circular(theme.borderRadius.md),
                     ),
                     child: Text(
-                      'Error Code: ${error.code}',
+                      t('sdk.error.errorCode', {'code': error.code}),
                       style: TextStyle(
                         fontSize: theme.typography.fontSizeSm,
                         color: theme.colors.textSecondary,
@@ -411,13 +412,13 @@ class ConferBotErrorWidget extends StatelessWidget {
   String _getSeverityTitle(ErrorSeverity severity) {
     switch (severity) {
       case ErrorSeverity.info:
-        return 'Notice';
+        return t('sdk.error.notice');
       case ErrorSeverity.warning:
-        return 'Warning';
+        return t('sdk.error.warning');
       case ErrorSeverity.error:
-        return 'Error';
+        return t('sdk.common.error');
       case ErrorSeverity.critical:
-        return 'Critical Error';
+        return t('sdk.error.critical');
     }
   }
 
@@ -475,14 +476,14 @@ class ConferBotErrorWidget extends StatelessWidget {
       children: [
         if (error.isRetryable && onRetry != null)
           _buildActionButton(
-            label: 'Retry',
+            label: t('sdk.common.retry'),
             onPressed: onRetry!,
             color: color,
             theme: theme,
           ),
         if (onContactSupport != null)
           _buildActionButton(
-            label: 'Contact Support',
+            label: t('sdk.error.contactSupport'),
             onPressed: onContactSupport!,
             color: theme.colors.primary,
             theme: theme,
@@ -503,7 +504,7 @@ class ConferBotErrorWidget extends StatelessWidget {
       case ErrorAction.retry:
         if (onRetry != null) {
           actions.add(_buildActionButton(
-            label: 'Try Again',
+            label: t('common.tryAgain'),
             onPressed: onRetry!,
             color: theme.colors.primary,
             theme: theme,
@@ -514,7 +515,7 @@ class ConferBotErrorWidget extends StatelessWidget {
       case ErrorAction.openSettings:
         if (onOpenSettings != null) {
           actions.add(_buildActionButton(
-            label: 'Open Settings',
+            label: t('sdk.permission.openSettings'),
             onPressed: onOpenSettings!,
             color: theme.colors.primary,
             theme: theme,
@@ -525,7 +526,7 @@ class ConferBotErrorWidget extends StatelessWidget {
       case ErrorAction.contactSupport:
         if (onContactSupport != null) {
           actions.add(_buildActionButton(
-            label: 'Contact Support',
+            label: t('sdk.error.contactSupport'),
             onPressed: onContactSupport!,
             color: theme.colors.primary,
             theme: theme,
@@ -536,7 +537,7 @@ class ConferBotErrorWidget extends StatelessWidget {
       default:
         if (error.isRetryable && onRetry != null) {
           actions.add(_buildActionButton(
-            label: 'Try Again',
+            label: t('common.tryAgain'),
             onPressed: onRetry!,
             color: theme.colors.primary,
             theme: theme,
@@ -548,7 +549,7 @@ class ConferBotErrorWidget extends StatelessWidget {
     // Secondary dismiss action
     if (onDismiss != null) {
       actions.add(_buildActionButton(
-        label: 'Dismiss',
+        label: t('common.dismiss'),
         onPressed: onDismiss!,
         color: theme.colors.textSecondary,
         theme: theme,
@@ -588,7 +589,7 @@ class ConferBotErrorWidget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(theme.borderRadius.md),
                 ),
               ),
-              child: const Text('Try Again'),
+              child: Text(t('common.tryAgain')),
             ),
           ),
         if (error.isRetryable && onRetry != null)
@@ -597,7 +598,7 @@ class ConferBotErrorWidget extends StatelessWidget {
           TextButton(
             onPressed: onContactSupport,
             child: Text(
-              'Contact Support',
+              t('sdk.error.contactSupport'),
               style: TextStyle(
                 color: theme.colors.primary,
                 fontWeight: theme.typography.fontWeightMedium,
@@ -615,7 +616,7 @@ class ConferBotErrorWidget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(theme.borderRadius.md),
                 ),
               ),
-              child: const Text('Dismiss'),
+              child: Text(t('common.dismiss')),
             ),
           ),
       ],
@@ -842,8 +843,8 @@ class _ConnectionErrorOverlayState extends State<ConnectionErrorOverlay>
                       children: [
                         Text(
                           widget.isReconnecting
-                              ? 'Reconnecting...'
-                              : widget.error?.userMessage ?? 'Connection lost',
+                              ? t('sdk.status.reconnecting')
+                              : widget.error?.userMessage ?? t('sdk.error.connectionLost'),
                           style: TextStyle(
                             color: widget.isReconnecting
                                 ? effectiveTheme.colors.warning
@@ -856,7 +857,9 @@ class _ConnectionErrorOverlayState extends State<ConnectionErrorOverlay>
                         if (widget.isReconnecting &&
                             widget.reconnectionAttempt != null)
                           Text(
-                            'Attempt ${widget.reconnectionAttempt}${widget.maxReconnectionAttempts != null ? ' of ${widget.maxReconnectionAttempts}' : ''}',
+                            widget.maxReconnectionAttempts != null
+                                ? t('sdk.error.attemptOf', {'n': widget.reconnectionAttempt, 'max': widget.maxReconnectionAttempts})
+                                : t('sdk.error.attempt', {'n': widget.reconnectionAttempt}),
                             style: TextStyle(
                               color: effectiveTheme.colors.warning
                                   .withOpacity(0.8),
@@ -870,7 +873,7 @@ class _ConnectionErrorOverlayState extends State<ConnectionErrorOverlay>
                     TextButton(
                       onPressed: widget.onRetry,
                       child: Text(
-                        'Retry',
+                        t('sdk.common.retry'),
                         style: TextStyle(
                           color: effectiveTheme.colors.primary,
                           fontWeight:
