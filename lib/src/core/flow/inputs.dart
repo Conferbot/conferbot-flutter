@@ -4,35 +4,51 @@
 /// (src/core/flow/inputs.ts). Pure.
 library;
 
+import 'i18n_en.dart';
 import 'js.dart';
 import 'text.dart';
 
-/// English texts the steps say (web i18n en.ts).
+/// The texts the steps say, in the active language (web i18n validation.*,
+/// upload.*, common.*). The name stays from when they were English only.
 class EnTexts {
   const EnTexts();
-  String get emailInvalid => 'Please enter a valid email address';
-  String emailTypo(String email) => 'Did you mean $email? Press Enter to send it, or edit it.';
-  String get phoneInvalid => 'Please enter a valid phone number';
-  String get numberLike => 'Please enter a number, like 42';
-  String numberBetween(dynamic min, dynamic max) => 'Please enter a number between ${jsString(min)} and ${jsString(max)}';
-  String numberMin(dynamic min) => 'Please enter ${jsString(min)} or more';
-  String numberMax(dynamic max) => 'Please enter ${jsString(max)} or less';
-  String get link => 'Please enter a link, like example.com';
-  String uploadOverSize(num mb) => 'That file is over ${jsString(mb)} MB - choose a smaller one.';
-  String uploadNotAllowed(String types) => "That file can't be sent here - choose $types.";
-  String get uploadRetry => "That didn't upload - tap to try again.";
-  String get skipped => 'Skipped';
-  String get done => 'Done';
-  String get somethingWrong => 'Something went wrong. Please try again.';
+  String get emailInvalid => t('validation.email');
+  String emailTypo(String email) => t('validation.emailTypo', {'email': email});
+  String get phoneInvalid => t('validation.phone');
+  String get numberLike => t('validation.numberLike');
+  String numberBetween(dynamic min, dynamic max) =>
+      t('validation.numberBetween', {'min': jsString(min), 'max': jsString(max)});
+  String numberMin(dynamic min) => t('validation.numberMin', {'min': jsString(min)});
+  String numberMax(dynamic max) => t('validation.numberMax', {'max': jsString(max)});
+  String get link => t('validation.link');
+  String get numberInvalid => t('validation.number');
+  String get urlInvalid => t('validation.url');
+  String uploadOverSize(num mb) => t('upload.overSize', {'mb': jsString(mb)});
+  String uploadNotAllowed(String types) => t('upload.notAllowed', {'types': types});
+  String get uploadRetry => t('upload.tapRetry');
+  String get skipped => t('common.skipped');
+  String get done => t('common.done');
+  String get somethingWrong => t('common.somethingWrong');
 }
 
 const EnTexts en = EnTexts();
 
+/// The keys of [EnTexts]' plain texts, so a fallback drawn in another
+/// language still knows its English (stock too).
+const List<String> _enKeys = [
+  'validation.email', 'validation.phone', 'validation.numberLike', 'validation.link',
+  'validation.number', 'validation.url', 'upload.tapRetry', 'common.skipped', 'common.done',
+  'common.somethingWrong',
+];
+
 /// The owner's own error text, or the default when they left it empty or kept
-/// the stock English (web i18n ownerTextOr).
+/// the stock English (web i18n ownerTextOr). [fallback] is drawn in the
+/// active language; its English is stock too.
 String ownerTextOr(dynamic value, String fallback, [List<String> stockEnglish = const []]) {
   final v = value is String ? plainText(value) : '';
-  if (v.isEmpty || [fallback, ...stockEnglish].any((s) => plainText(s) == v)) return fallback;
+  final key = _enKeys.where((k) => t(k) == fallback).firstOrNull;
+  final stock = [fallback, if (key != null) I18n.tFor(I18n.en, key), ...stockEnglish];
+  if (v.isEmpty || stock.any((s) => plainText(s) == v)) return fallback;
   return value as String;
 }
 
@@ -172,22 +188,22 @@ const int defaultMaxFileMb = 5;
 /// The allowed types in words: "PNG or IMAGE/JPEG", "images or PDF".
 String fileTypesWords(dynamic types) {
   final list = (types is List ? types : const [])
-      .map((t) => _str(t).trim().toLowerCase())
+      .map((v) => _str(v).trim().toLowerCase())
       .where((x) => x.isNotEmpty)
       .map((x) => x.endsWith('/')
           ? x == 'image/'
-              ? 'images'
+              ? t('file.images')
               : x == 'video/'
-                  ? 'videos'
+                  ? t('file.videos')
                   : x.replaceFirst('/', '')
           : x.replaceFirst(RegExp(r'^\.'), '').replaceFirst(RegExp(r'^application\/'), '').toUpperCase())
-      .map((t) => t == 'JPEG' ? 'JPG' : t);
+      .map((x) => x == 'JPEG' ? 'JPG' : x);
   final unique = <String>[];
-  for (final t in list) {
-    if (!unique.contains(t)) unique.add(t);
+  for (final x in list) {
+    if (!unique.contains(x)) unique.add(x);
   }
   if (unique.isEmpty) return '';
-  return unique.length == 1 ? unique[0] : '${unique.sublist(0, unique.length - 1).join(', ')} or ${unique.last}';
+  return unique.length == 1 ? unique[0] : '${unique.sublist(0, unique.length - 1).join(', ')} ${t('common.or')} ${unique.last}';
 }
 
 /// Why a picked file can't be sent, or null (web nodeLogic.fileUploadProblem).
