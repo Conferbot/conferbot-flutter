@@ -2,6 +2,7 @@ library conferbot_flutter;
 
 // ========== Core (Headless SDK) ========== //
 export 'src/providers/conferbot_provider.dart';
+export 'src/core/flow/location.dart' show ConferBotLatLng, ConferBotLocationProvider, ConferBotLocationDenied;
 export 'src/models/agent.dart';
 export 'src/models/message.dart';
 export 'src/models/chat_session.dart';
