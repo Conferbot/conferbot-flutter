@@ -564,6 +564,7 @@ class SliderUIState extends NodeUIState {
 
   /// "prefix" or "suffix".
   final String unitPosition;
+  /// Empty: the card's stock "Send" in the visitor's language.
   final String submitLabel;
 
   const SliderUIState({
@@ -574,7 +575,7 @@ class SliderUIState extends NodeUIState {
     required this.defaultValue,
     this.unit = '',
     this.unitPosition = 'suffix',
-    this.submitLabel = 'Send',
+    this.submitLabel = '',
     required super.nodeId,
     super.extra,
   });
@@ -586,12 +587,14 @@ class SliderUIState extends NodeUIState {
 class RankingUIState extends NodeUIState {
   final String? questionText;
   final List<ChoiceOption> items;
+
+  /// Empty: the card's stock "Send" in the visitor's language.
   final String submitLabel;
 
   const RankingUIState({
     this.questionText,
     required this.items,
-    this.submitLabel = 'Send',
+    this.submitLabel = '',
     required super.nodeId,
     super.extra,
   });
@@ -609,6 +612,8 @@ class MatrixUIState extends NodeUIState {
   /// "single" or "multiple".
   final String mode;
   final bool requireAll;
+
+  /// Empty: the card's stock "Submit" in the visitor's language.
   final String submitLabel;
 
   const MatrixUIState({
@@ -617,7 +622,7 @@ class MatrixUIState extends NodeUIState {
     required this.columns,
     this.mode = 'single',
     this.requireAll = true,
-    this.submitLabel = 'Submit',
+    this.submitLabel = '',
     required super.nodeId,
     super.extra,
   });
