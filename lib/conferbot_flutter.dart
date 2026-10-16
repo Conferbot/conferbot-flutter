@@ -52,6 +52,11 @@ export 'src/core/home/view_transition.dart' show viewMotion, ViewMotion, NoMotio
 export 'src/core/customization/personalize.dart' show personalize, personalizeCustomizations, visitorVars;
 export 'src/widgets/home/home_screen_view.dart' show HomeScreenView;
 export 'src/widgets/home/view_switch.dart' show ViewSwitch;
+// Push notifications (embed-server docs/mobile-push.md): recognise a
+// Conferbot notification outside the provider, the Android channel id.
+export 'src/core/push/push.dart'
+    show ConferbotPush, PushTokenType, PushRegisterResult, PushRegisterError, pushTokenTypeOf, pushChannelId, pushSource, pushTypeMessage;
+export 'src/core/push/push_extras.dart' show PushExtras;
 // The owner's mascot (art, moods, the greeting card's motion) and <Mascot>
 // for an app's own screens (the home's mascotBuilder, say).
 export 'src/core/customization/mascot_art.dart'
