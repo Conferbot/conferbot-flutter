@@ -36,6 +36,7 @@ Layout:
 | #40, #64 | While you wait, ported from RN #44, #41: the help card 6s into a wait for a person (up to two help-centre articles for the visitor's last real question, only with the help centre on), replaced by the server's `queue-help` pick (or a waiting `queue-status`'s `help`) with "That solved it" (`queue-self-resolve {chatSessionId, articleId}`, then "You left the queue. Glad that helped.", recorded "Resolved while waiting", once per wait); the games offer 2.5s after `cb:waiting-for-human` with 3 retries 1.5s apart (owner setting `waitingGames`; rock paper scissors, tic-tac-toe, quiz, memory, reflex, emoji riddles, word scramble with the web's rules and scoring); "Not now" / x for the app session; "play" / "games" typed while waiting opens the menu; a person joining removes an unused offer and saves a game under way ("<name>'s here!", "Finish my game"); reduced motion; the cards never saved. #76: the composer stays open while a flow's handover step waits, as on the web (what is typed goes as a live message for whoever joins) | `core/waiting/wait_articles.dart`, `waiting_games.dart`, `games_logic.dart`, `games_card.dart`, `waiting_extras.dart`; `core/live_chat/handover_lifecycle.dart` (`waitStart` / `waitEnd`, `leftQueueHelped`), `live_chat_extras.dart` (`onQueueStatus`), `providers/conferbot_provider.dart` (`waiting`, "play" in `sendMessage`, `openWaitHelpItem`, `solveWait`), `widgets/waiting/wait_help_card.dart`, `games_card_view.dart`, `widgets/message_list.dart` (`inlineAfter`), `widgets/chat_widget.dart` |
 | #73 | Launcher entrance (12 effects), attention (8 modes) and idle call (5), ported from RN #57. `keyframes.dart` evaluates the web's Web Animations tracks and passes RN's Chrome golden (447 cases, 19,275 samples; largest error 0.0007px, 0.005deg, 0.00005 scale and opacity, 0.03px `left`, 0.42px on the plane's path). The tracks are rebuilt from the same code and match the golden's. The rules are in the three controllers. Checked with widget-test images, not yet on a device | `core/customization/keyframes.dart`, `launcher_entrance.dart`, `launcher_attention.dart`, `launcher_idle_call.dart`, `mascot_art.dart`, `fx_paint.dart`; `widgets/launcher_fx_controllers.dart`, `launcher_fx_views.dart`, `fx_svg.dart`, `conferbot_fab.dart`; `test/fixtures/launcherfx_golden.json` |
 | #41 | "Your requests", ported from RN #45: the visitor's conversations with the team (only their own: a conversation id this device started with its visitor id, or a signed-in user with a valid `user.hash`), each one's state in words, "New reply from <name>" and the unread count (`requestsUnread`), one request's banner, conversation and reply box (a reply to a solved one opens it again; Sending..., Not sent / Try again, closed for replies), team replies live while open (`my-request-update`), the open one read again after a reconnect. The device remembers per bot the last 30 chats the visitor wrote in and when each request was last read (shared_preferences). In the chat menu once there is one ("Your requests", "Your requests · New reply"); Back and Android's back (`PopScope`) step back. Checked against the local embed-server with the SDK's own classes (`my-requests`, `my-request-open`, `my-request-reply`, `my-request-close`, `my-request-update`, another visitor's conversation refused) | `core/requests/requests.dart`, `requests_portal.dart`, `requests_extras.dart`; `widgets/requests/requests_portal_view.dart`; `providers/conferbot_provider.dart` (`requests`, `openRequests`, `requestsUnread`); `services/socket_client.dart` (`onResponseRecord`); `widgets/chat_widget.dart` (menu, overlay) |
+| #80, #78 | Home screen, ported from RN #68, #69 (and as Android #78): only when the owner has it on (`enableInitialPage`; else the chat opens on the conversation). The salutation by the phone's clock or "Welcome back, Jamie" (the device remembers per bot, 60 days, in shared_preferences), the brand, the owner's words (early placeholder copy shown honestly); "Ask anything" (`homeAskBox`: ask the AI agent, the articles that answer it with the server's `search-kb-articles` body matches, "Chat with us"); "Pick up where you left off" (agent bots); "Your requests" (two rows, See all (n), above "Talk to us" when a reply is new; the portal over the home); "Talk to us" (`homePeople` reply time, `hideOnlineStatus`, `homeTeamPhotos`, up to 3 agent questions, `homeRating`); the help card (recent articles unless `hideRecentArticles`, topics, See all; its own search with the ask box off); `homeTrustLogos` + `homeTrustLabel`. Home, conversation and help centre in a `ValueNotifier` view switched by `ViewSwitch` (an `AnimatedSwitcher`, the owner's `viewTransition` / `viewTransitionDirection`: fade, slide, the rest slide, classic and none at once, a 200ms fade with animations off); the chat header's ‹ and Android's back (`PopScope`) to the home; the help centre's back to where it was opened; a greeting card's send and starters go past the home. Seen receipts only on the conversation. #78: `{{first_name\|there}}` (and `{{name}}`, `{{company}}`) filled from the signed-in user and a name the chat asked for, on the bot's settings before anything reads them (greeting card, launcher call-to-action, home), again on `identify`. Checked with widget tests and widget-test images, not on a device | `core/home/home.dart`, `view_transition.dart`, `home_extras.dart`, `core/customization/personalize.dart`, `core/live_chat/reply_time.dart` (`homeLine`, `homePeople`); `widgets/home/home_screen_view.dart`, `view_switch.dart`; `providers/conferbot_provider.dart` (`home`, `homeModel`, `homePalette`, `_personalize`), `widgets/chat_widget.dart` (views, `PopScope`, header ‹), `widgets/conferbot_fab.dart` (greeting send) |
 
 ## Left in this SDK
 
@@ -61,21 +62,26 @@ Layout:
 6. **Your requests follow-ups (#41):**
    - Check it on a device (iOS and Android). It is covered by unit tests, fake-socket tests, widget tests and a socket check against a local embed-server only.
    - When the list is read: at connect (every connect), when the chat opens or closes (at most every 15s), when the portal closes, on `my-request-update` while it is closed, and on a sign-in or sign-out (`identify`, #79).
-   - As on the web and RN: no home screen yet, so the entry is the chat menu, shown once the visitor has a request; English only; replies are text only. The app's font is `ConferBotCustomization.fontFamily` (the bot's web font is not loaded).
-   - Moving to the home screen later: mount the web's card (`card.ts`, two rows and "See all (n)"); the extras, portal and view stay as they are.
-7. The rest of the list below.
-8. **Test debt:**
+   - The entries are the home screen's card (#80) and the chat menu, shown once the visitor has a request (for bots without a home screen); English only; replies are text only. The app's font is `ConferBotCustomization.fontFamily` (the bot's web font is not loaded).
+7. **Home screen follow-ups (#80, #78):**
+   - Check it on a device (iOS and Android). It is covered by unit tests, widget tests with the real provider and widget-test images only.
+   - Not in an app, as in RN and Android: the page-aware parts (`pageAware.ts`: "For this page" articles and a page rule's own starters; the agent's own starters are used), the floating panel's three-article cap, the web's `keepsAgentChat`, the logos' grayscale filter (drawn at 55%).
+   - The mascot is a later item: `HomeScreenView(mascotBuilder:)` and `HomeModel.mascot` are where it goes.
+   - The help centre from the home is the SDK's own help centre screen (its topic or article opened), not the web's Articles tab.
+   - English only (the web's i18n `home.*`, `trust.*`).
+8. The rest of the list below.
+9. **Test debt:**
    - #16: `media_service_test` fails because MockController is not an AudioPlayer.
    - #58: the older help centre widget tests (`article_list_test`, `article_detail_test`, `category_chips_test`) and `message_bubble_test` don't compile or fail. The help centre is covered by `test/core/help_centre/`, `test/providers/knowledge_base_provider_test.dart` and `test/widgets/knowledge_base/help_centre_test.dart`.
-9. **Flow node follow-ups:**
+10. **Flow node follow-ups:**
    - Check the step cards on a device (iOS and Android). They are covered by widget tests and images only (no emulator or simulator run).
    - Address: no "Use my location" (it would need a location plugin); search, the map and typing by hand work.
    - Hidden fields read the page the chat runs on. An app has none: the provider passes no `NodeFlowEngineConfig.page`.
    - The visitor's time zone is the device's offset as a fixed `Etc/GMT` zone, because Dart does not expose the IANA name. The provider does not pass `NodeFlowEngineConfig.visitorTimeZone` yet.
-10. **Help centre follow-ups:**
+11. **Help centre follow-ups:**
    - Ratings still use the SDK's 1-5 stars over REST; the web sends helpful / not helpful (`rate-article`). Reading time and scroll depth (`track-article-engagement`) are not sent.
    - Search uses REST (`/knowledge-base/search?query=`) plus local title matches; the socket's `search-kb-articles` (with snippets) is not used.
-   - No home screen yet, so Recent articles sit at the top of the help centre list rather than on a welcome screen.
+   - Recent articles show on the home screen (#80) and still at the top of the help centre list.
 
 ## How to test
 
@@ -89,7 +95,8 @@ Layout:
 - **While you wait (#40, #64):** `flutter test test/core/waiting test/widgets/waiting`. `waiting_extras_test.dart` drives the real handover lifecycle and the cards together on a fake clock and socket (help at 6s, games 2.5s after the signal, That solved it, a requeue, a restore, play typed, a person joining mid-game).
 - **Your requests (#41):** `flutter test test/core/requests test/widgets/requests`. `requests_test.dart` and `requests_portal_test.dart` are RN's tests ported; `requests_extras_test.dart` covers the memory, when the list is read, the unread count and the updates on a fake socket. Against a server: seed `responses` and `tickets` in local Mongo (`conferbotStaging`) for two test visitors on a made-up bot id (team-handled, solved, AI-only; tickets with no `assignedAgents`, so a reply notifies nobody), then a temporary `flutter test` file with `SocketClient`, `SocketClientRequestsSocket`, `SocketRequestsApi` and `RequestsPortal` against `http://127.0.0.1:8001`. Delete everything for the sessions (`responses`, `tickets`, `messages`) afterwards.
 - **Socket, identify (#77, #79):** `flutter test test/services/socket_client_force_new_test.dart test/providers/identify_test.dart`. Two clients (and a reset) against nothing listening, each with its own socket and handshake; `identify` on the provider, the requests on a fake socket (a list held back while the user changes), the greeting controller. Against a server: two `SocketClient`s to `http://127.0.0.1:8001` in a temporary `flutter test` file, each connecting with its own socket id, then a `resetConnection` (nothing is written).
-- **Full suite (2026-10-16):** 1394 pass, 60 skipped, 65 fail (8 more passing: the socket and identify tests). The 65 are the same as before: #16 (`media_service_test`), #71 (provider, socket client, storage and validation tests) and the older widget tests (#58 and the like, including `markdown_message_test`'s mailto case); none in the launcher, flow, handover, live chat extras, while you wait, your requests, socket or identify tests.
+- **Home screen, greet by name (#80, #78):** `flutter test test/core/home test/core/customization/personalize_test.dart test/core/live_chat/reply_time_test.dart test/widgets/home`. `home_test.dart`, `view_transition_test.dart`, `personalize_test.dart` and the `homeLine` / `homePeople` cases are RN's tests ported; `home_extras_test.dart` covers the view, back, a question asked 400ms after the chat is there, the memory and the body search on a fake socket; `home_screen_test.dart` taps every card and checks the view switch; `home_chat_test.dart` runs `ChatWidget` on the real provider (greet by name and `identify`, the header's ‹, Android's back, the help centre and back, a greeting send past the home, no home when it is off). `HOME_IMAGES_DIR=/abs/dir flutter test --update-goldens test/widgets/home/home_screen_images_test.dart` writes three images (a flow bot with the help centre, requests, faces and rating; an agent with welcome back, a new reply and its questions; a dark theme with the ask box off and the status hidden) to that directory, outside the repo.
+- **Full suite (2026-10-16, after #80):** 1473 pass, 63 skipped, 65 fail (79 more passing: the home screen and greet by name tests; 3 more skipped: the home images without `HOME_IMAGES_DIR`). The 65 are the same as before: #16 (`media_service_test`), #71 (provider, socket client, storage and validation tests) and the older widget tests (#58 and the like, including `markdown_message_test`'s mailto case); none in the launcher, flow, handover, live chat extras, while you wait, your requests, socket, identify or home tests.
 - **Greeting card images:** `GREETING_GOLDEN_DIR=/abs/dir flutter test --update-goldens test/widgets/greeting_card_test.dart` writes one PNG per style to that directory, outside the repo. It loads Roboto from the Flutter SDK and macOS fonts in place of casual / serif / monospace. Without the variable the image group is skipped.
 - **Example app:**
   - To point it at a local server, add `ConferBotEndpoints.configure(apiBaseUrl: 'http://10.0.2.2:8001/api/v1/mobile', socketUrl: 'http://10.0.2.2:8001')` in `example/lib/main.dart` (`localhost` on the iOS simulator).
@@ -114,12 +121,13 @@ Every web widget feature works the same in the 4 mobile SDKs: customization, lau
 | Signed-in user as `visitorContext` + identity hash | done | done | done | done |
 | Greeting card (rules, frequency, 11 styles) | done | logic done, UI on a branch | todo | done (device check pending) |
 | Launcher entrance / attention / idle call | done | todo | todo | done (device check pending) |
-| Home screen | todo | todo | todo | todo |
+| Home screen (on/off, ask box, welcome back, requests card, Talk to us, help card, trust, view transitions) | done | done in Compose | todo | done (device check pending) |
+| Greet by name (`{{first_name\|there}}` in the owner's texts) | done | done | todo | done |
 | Mascots (incl. `mascotInGreeting`) | todo | todo | todo | todo |
 | `widgetLanguage` (i18n) | todo | todo | todo | todo |
 | Message sounds | todo | todo | todo | todo |
 | Celebrations / reactions | todo | todo | todo | todo |
-| Reply-time wording (header line) | done | todo | todo | done |
+| Reply-time wording (header line; home card `homePeople`) | done | home card done | todo | done |
 | Handover lifecycle (Connecting line, outcomes, signals, leave queue, restore) | done | todo | todo | done |
 | Flow nodes: shared spec, 156 fixtures (RN `scripts/parity/flows/`) | 156/156 | todo | todo | 156/156 |
 | Device language on every response record | done | done | todo | done |
@@ -128,7 +136,7 @@ Every web widget feature works the same in the 4 mobile SDKs: customization, lau
 | Markdown tables, h3-h6, quote, pre, strikethrough; reply timeout notice; muted fallback | done | done | todo | done |
 | Email me this chat (server embed-server #193) | done | done | todo | done |
 | While you wait: help articles at 6s, `queue-help` + "That solved it", the waiting games at 2.5s | done | done in Compose | todo | done |
-| "Your requests": list, one request, reply, live updates, unread | done (chat menu; home screen later) | done in Compose | todo | done (chat menu) |
+| "Your requests": list, one request, reply, live updates, unread | done (home screen card and chat menu) | done in Compose | todo | done (home screen card and chat menu) |
 | Post-chat survey questions read `enablePostChatSurveyQuestions` | todo (no survey questions) | done | todo | done |
 
 Live chat / agent features (handover, queue card, receipts, rating, files, prefill, max-wait timeout, agent bot replies, suggestion chips) are done in all 4.
@@ -139,7 +147,7 @@ Each SDK repo has its own `docs/PARITY.md`. The React Native one also covers the
 
 All paths are under `conferbot-widget/src/`.
 
-- **Home screen:** `ts/home/` (homeCopy, askBox, trust, pageAware, visitorMemory).
+- **Home screen (done here, #80):** `ts/home/` (firstImpression, homeCopy, homeUtils, askBox, trust, visitorMemory, requests/card; pageAware is not in apps), `ts/chat/replyTime.ts` homeLine / homePeople, `ts/layout/viewTransition.ts`, `ts/layout/ownerLayout.ts` personalize; CSS `css/polish.css` (Home), `polish-home.css`.
 - **Mascots:** `ts/home/mascotMotion.ts`, `ts/launcher/launcherStyle.ts`, `ts/launcher/art3d.ts`, `ts/visibility/greeting.ts`. The `mascot` typing style is accepted but not drawn yet.
 - **i18n:** `ts/i18n.ts` + `ts/i18n/{en,de,es,fr,nl}.ts`.
 - **Sounds:** `ts/chat/messageSound.ts`.
