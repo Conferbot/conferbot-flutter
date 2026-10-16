@@ -13,6 +13,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/agent/agent_bot.dart';
 import '../core/customization/greeting.dart';
+import '../core/customization/mascot_art.dart';
+import '../core/customization/mascot_motion.dart';
+
+/// The owner's mascot on the greeting card, in the launcher's colour.
+class GreetingMascot {
+  final MascotLook look;
+  final String accent;
+  const GreetingMascot(this.look, this.accent);
+}
 
 /// What the card shows, decided when it appears.
 class GreetingCardData {
@@ -33,6 +42,12 @@ class GreetingCardData {
   final String click;
   final String linkUrl;
 
+  /// The owner's mascot in place of the avatar (mascotInGreeting), by its name.
+  final GreetingMascot? mascot;
+
+  /// How the card and its figure move (mascotMotion): lively, subtle or off.
+  final String motion;
+
   const GreetingCardData({
     required this.style,
     required this.text,
@@ -44,22 +59,31 @@ class GreetingCardData {
     required this.firstShow,
     required this.click,
     required this.linkUrl,
+    this.mascot,
+    this.motion = 'lively',
   });
 
   /// The card as the bot's settings dress it.
   factory GreetingCardData.from(Map<String, dynamic> c, ResolvedGreeting g, {AgentBot? agentBot, String botName = '', bool firstShow = true}) {
     final head = Greeting.head(c, botName);
     final agentAvatar = agentBot?.avatar;
+    final head0 = agentBot == null
+        ? head
+        : GreetingHead(
+            avatar: agentAvatar != null && agentAvatar.isNotEmpty ? agentAvatar : head.avatar,
+            name: agentBot.displayName.isNotEmpty ? agentBot.displayName : head.name,
+            online: head.online,
+          );
+    // The owner's mascot greets in place of the avatar, by its name (firstImpression.ts).
+    final look = mascotLookOf(c);
+    final withMascot = c['mascotInGreeting'] == true;
+    String raw(String k) => c[k] is String ? c[k] as String : '';
     return GreetingCardData(
       style: Greeting.normalizeStyle(c['greetingStyle']),
       text: g.text,
-      head: agentBot == null
-          ? head
-          : GreetingHead(
-              avatar: agentAvatar != null && agentAvatar.isNotEmpty ? agentAvatar : head.avatar,
-              name: agentBot.displayName.isNotEmpty ? agentBot.displayName : head.name,
-              online: head.online,
-            ),
+      head: withMascot ? GreetingHead(avatar: null, name: look.name.isNotEmpty ? look.name : head0.name, online: head0.online) : head0,
+      mascot: withMascot ? GreetingMascot(look, raw('widgetIconBgColor').isNotEmpty ? raw('widgetIconBgColor') : (raw('headerBgColor').isNotEmpty ? raw('headerBgColor') : '#4f46e5')) : null,
+      motion: normalizeMascotMotion(c['mascotMotion']),
       starters: (g.starters.isNotEmpty ? g.starters : agentBot?.starters ?? const <String>[]).take(3).toList(),
       bubble: Greeting.bubble(c),
       accent: Greeting.accent(c),
