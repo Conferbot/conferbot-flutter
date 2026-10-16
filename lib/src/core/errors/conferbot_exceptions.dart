@@ -1,6 +1,9 @@
 /// Comprehensive exception types for the Conferbot Flutter SDK.
 /// These exceptions provide typed error handling with error codes,
 /// user-friendly messages, and debugging information.
+library;
+
+import '../i18n/i18n.dart';
 
 // ============================================
 // BASE EXCEPTION
@@ -87,27 +90,27 @@ class NetworkException extends ConferBotException {
     if (statusCode != null) {
       switch (statusCode) {
         case 400:
-          return 'The request was invalid. Please try again.';
+          return t('sdk.error.badRequest');
         case 401:
-          return 'Authentication failed. Please check your credentials.';
+          return t('sdk.error.unauthorized');
         case 403:
-          return 'You do not have permission to access this resource.';
+          return t('sdk.error.forbidden');
         case 404:
-          return 'The requested resource was not found.';
+          return t('sdk.error.notFound');
         case 408:
-          return 'The request timed out. Please check your connection.';
+          return t('sdk.error.requestTimeout');
         case 429:
-          return 'Too many requests. Please wait a moment and try again.';
+          return t('sdk.error.tooManyRequests');
         case 500:
         case 502:
         case 503:
         case 504:
-          return 'Server is temporarily unavailable. Please try again later.';
+          return t('sdk.error.serverUnavailable');
         default:
-          return 'A network error occurred. Please check your connection.';
+          return t('sdk.error.network');
       }
     }
-    return 'Unable to connect. Please check your internet connection.';
+    return t('sdk.error.cannotConnect');
   }
 
   /// Creates a NetworkException from an HTTP status code
@@ -255,17 +258,17 @@ class SocketException extends ConferBotException {
   String get userMessage {
     switch (code) {
       case 'SOCKET_CONNECTION_FAILED':
-        return 'Unable to establish real-time connection. Retrying...';
+        return t('sdk.error.socketFailed');
       case 'SOCKET_DISCONNECTED':
-        return 'Connection lost. Attempting to reconnect...';
+        return t('sdk.error.socketLost');
       case 'SOCKET_RECONNECTION_FAILED':
-        return 'Could not reconnect. Please check your connection.';
+        return t('sdk.error.socketReconnectFailed');
       case 'SOCKET_AUTHENTICATION_FAILED':
-        return 'Connection authentication failed. Please try again.';
+        return t('sdk.error.socketAuth');
       case 'SOCKET_TIMEOUT':
-        return 'Connection timed out. Please try again.';
+        return t('sdk.error.socketTimeout');
       default:
-        return 'Real-time connection error. Please try again.';
+        return t('sdk.error.socket');
     }
   }
 
@@ -409,7 +412,7 @@ class ValidationException extends ConferBotException {
   @override
   String get userMessage {
     if (fieldName != null) {
-      return 'Invalid $fieldName. $message';
+      return t('sdk.error.invalidField', {'field': fieldName, 'message': message});
     }
     return message;
   }
@@ -573,17 +576,17 @@ class NodeProcessingException extends ConferBotException {
   String get userMessage {
     switch (code) {
       case 'NODE_NOT_FOUND':
-        return 'An error occurred in the conversation flow. Skipping to next step.';
+        return t('sdk.error.nodeNotFound');
       case 'NODE_HANDLER_NOT_FOUND':
-        return 'This feature is not supported. Continuing...';
+        return t('sdk.error.nodeUnsupported');
       case 'NODE_INVALID_DATA':
-        return 'Invalid conversation data. Please try again.';
+        return t('sdk.error.nodeInvalid');
       case 'NODE_API_CALL_FAILED':
-        return 'Could not complete the action. Please try again.';
+        return t('sdk.error.nodeApiFailed');
       case 'NODE_TIMEOUT':
-        return 'The operation timed out. Please try again.';
+        return t('sdk.error.nodeTimeout');
       default:
-        return 'An error occurred. Please try again.';
+        return t('sdk.error.generic');
     }
   }
 
@@ -705,15 +708,15 @@ class StorageException extends ConferBotException {
   String get userMessage {
     switch (code) {
       case 'STORAGE_READ_FAILED':
-        return 'Could not load saved data.';
+        return t('sdk.error.storageRead');
       case 'STORAGE_WRITE_FAILED':
-        return 'Could not save data. Please try again.';
+        return t('sdk.error.storageWrite');
       case 'STORAGE_DELETE_FAILED':
-        return 'Could not clear saved data.';
+        return t('sdk.error.storageDelete');
       case 'STORAGE_QUOTA_EXCEEDED':
-        return 'Storage is full. Please free up some space.';
+        return t('sdk.error.storageFull');
       default:
-        return 'A storage error occurred.';
+        return t('sdk.error.storage');
     }
   }
 
@@ -824,19 +827,19 @@ class PermissionException extends ConferBotException {
   String get userMessage {
     switch (permission) {
       case 'camera':
-        return 'Camera access is required for this feature. Please enable it in settings.';
+        return t('sdk.error.permCamera');
       case 'microphone':
-        return 'Microphone access is required for this feature. Please enable it in settings.';
+        return t('sdk.error.permMicrophone');
       case 'location':
-        return 'Location access is required for this feature. Please enable it in settings.';
+        return t('sdk.error.permLocation');
       case 'storage':
-        return 'Storage access is required for this feature. Please enable it in settings.';
+        return t('sdk.error.permStorage');
       case 'photos':
-        return 'Photo library access is required for this feature. Please enable it in settings.';
+        return t('sdk.error.permPhotos');
       case 'notifications':
-        return 'Notification permission is required for this feature. Please enable it in settings.';
+        return t('sdk.error.permNotifications');
       default:
-        return 'Permission is required for this feature. Please enable it in settings.';
+        return t('sdk.error.permission');
     }
   }
 
@@ -918,17 +921,17 @@ class InitializationException extends ConferBotException {
   String get userMessage {
     switch (code) {
       case 'INIT_INVALID_API_KEY':
-        return 'Invalid API key. Please check your configuration.';
+        return t('sdk.error.initApiKey');
       case 'INIT_INVALID_BOT_ID':
-        return 'Invalid bot ID. Please check your configuration.';
+        return t('sdk.error.initBotId');
       case 'INIT_NETWORK_FAILED':
-        return 'Could not connect to server. Please check your connection.';
+        return t('sdk.error.initNetwork');
       case 'INIT_BOT_NOT_FOUND':
-        return 'Chatbot not found. Please check your configuration.';
+        return t('sdk.error.initBotNotFound');
       case 'INIT_BOT_DISABLED':
-        return 'This chatbot is currently disabled.';
+        return t('sdk.error.initBotDisabled');
       default:
-        return 'Failed to initialize chat. Please try again.';
+        return t('sdk.error.init');
     }
   }
 
@@ -1025,15 +1028,15 @@ class SessionException extends ConferBotException {
   String get userMessage {
     switch (code) {
       case 'SESSION_CREATE_FAILED':
-        return 'Could not start a new conversation. Please try again.';
+        return t('sdk.error.sessionCreate');
       case 'SESSION_NOT_FOUND':
-        return 'Conversation not found. Starting a new one.';
+        return t('sdk.error.sessionNotFound');
       case 'SESSION_EXPIRED':
-        return 'Your session has expired. Starting a new conversation.';
+        return t('sdk.error.sessionExpired');
       case 'SESSION_RESTORE_FAILED':
-        return 'Could not restore your conversation. Starting fresh.';
+        return t('sdk.error.sessionRestore');
       default:
-        return 'A session error occurred. Please try again.';
+        return t('sdk.error.session');
     }
   }
 
@@ -1144,17 +1147,17 @@ class FileUploadException extends ConferBotException {
     switch (code) {
       case 'FILE_TOO_LARGE':
         final maxMB = (maxSize ?? 0) / (1024 * 1024);
-        return 'File is too large. Maximum size is ${maxMB.toStringAsFixed(0)}MB.';
+        return t('sdk.error.fileTooLarge', {'mb': maxMB.toStringAsFixed(0)});
       case 'FILE_TYPE_NOT_ALLOWED':
-        return 'This file type is not allowed. Allowed: ${allowedTypes?.join(", ") ?? "unknown"}.';
+        return t('sdk.error.fileType', {'types': allowedTypes?.join(', ') ?? 'unknown'});
       case 'FILE_UPLOAD_FAILED':
-        return 'Failed to upload file. Please try again.';
+        return t('sdk.error.fileUpload');
       case 'FILE_UPLOAD_TIMEOUT':
-        return 'Upload timed out. Please try again with a smaller file.';
+        return t('sdk.error.fileTimeout');
       case 'FILE_NOT_FOUND':
-        return 'File not found. Please select a different file.';
+        return t('sdk.error.fileNotFound');
       default:
-        return 'An error occurred while uploading the file.';
+        return t('sdk.error.file');
     }
   }
 
