@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:conferbot_flutter/src/services/media_service.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:video_player/video_player.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -416,19 +418,25 @@ void main() {
   });
 }
 
-/// Mock implementation of ActiveMediaPlayer for testing
+/// Mock implementation of ActiveMediaPlayer for testing. Its controller is
+/// a real-typed fake (an AudioPlayer or a VideoPlayerController), since
+/// MediaService.disposeAll disposes controllers by their type (#16).
 class MockActiveMediaPlayer extends ActiveMediaPlayer {
   bool mockIsPlaying = false;
   int pauseCallCount = 0;
-  int disposeCallCount = 0;
 
   MockActiveMediaPlayer({
     required super.id,
     required super.type,
     super.onPause,
   }) : super(
-          controller: MockController(),
+          controller: type == MediaPlayerType.audio ? FakeAudioPlayer() : FakeVideoController(),
         );
+
+  /// How often disposeAll disposed its controller.
+  int get disposeCallCount => controller is FakeAudioPlayer
+      ? (controller as FakeAudioPlayer).disposeCallCount
+      : (controller as FakeVideoController).disposeCallCount;
 
   @override
   bool get isPlaying => mockIsPlaying;
@@ -441,16 +449,22 @@ class MockActiveMediaPlayer extends ActiveMediaPlayer {
   }
 }
 
-/// Mock controller for testing
-class MockController {
-  bool playing = false;
+/// An AudioPlayer that only counts dispose (no platform player).
+class FakeAudioPlayer extends Fake implements AudioPlayer {
   int disposeCallCount = 0;
 
-  void pause() {
-    playing = false;
+  @override
+  Future<void> dispose() async {
+    disposeCallCount++;
   }
+}
 
-  void dispose() {
+/// A VideoPlayerController that only counts dispose (no platform player).
+class FakeVideoController extends Fake implements VideoPlayerController {
+  int disposeCallCount = 0;
+
+  @override
+  Future<void> dispose() async {
     disposeCallCount++;
   }
 }
