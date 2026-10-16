@@ -9,6 +9,7 @@ import '../models/queued_message.dart';
 import '../models/socket_events.dart';
 import '../core/errors/conferbot_exceptions.dart';
 import '../core/errors/error_handler.dart';
+import '../core/live_chat/live_events.dart';
 import '../utils/logger.dart';
 import 'connectivity_service.dart';
 import 'message_queue_service.dart';
@@ -133,6 +134,19 @@ class SocketClient with ChangeNotifier {
   /// Error logging callback
   ErrorLogCallback? onErrorLog;
 
+  /// The visitor, sent in the handshake so the server can refuse one the
+  /// workspace blocked (web core/socket.ts). Set before [connect].
+  String? visitorId;
+
+  /// The handshake was refused because the workspace blocked this visitor:
+  /// no reconnecting, and `visitor-blocked` is told to the listeners.
+  bool _blocked = false;
+  bool get isBlocked => _blocked;
+
+  // Listeners of events the client tells itself (visitor-blocked at the
+  // handshake), alongside the socket's own.
+  final Map<String, List<Function(dynamic)>> _localListeners = {};
+
   SocketClient({
     required this.apiKey,
     required this.botId,
@@ -235,9 +249,10 @@ class SocketClient with ChangeNotifier {
           .setReconnectionDelayMax(config.reconnectionDelayMax)
           .setTimeout(config.connectionTimeout)
           // The embed-server handshake requires botId in query or auth,
-          // matching the web widget (headers are not read there).
-          .setQuery({'botId': botId})
-          .setAuth({'botId': botId})
+          // matching the web widget (headers are not read there); the
+          // visitorId lets it refuse a visitor the workspace blocked.
+          .setQuery(handshake(botId, visitorId))
+          .setAuth(handshake(botId, visitorId))
           .setExtraHeaders({
             ConferBotConstants.headerApiKey: apiKey,
             ConferBotConstants.headerBotId: botId,
@@ -284,6 +299,7 @@ class SocketClient with ChangeNotifier {
 
     _socket?.on(SocketEvents.connectError, (error) {
       socketLogger.debug('Connection error: $error');
+      if (_refusedAsBlocked(error)) return;
       _handleConnectionError(error, null);
     });
 
@@ -324,6 +340,8 @@ class SocketClient with ChangeNotifier {
 
     _socket?.on('error', (error) {
       socketLogger.debug('Error event: $error');
+      // A namespace refusal (the server's middleware) arrives here.
+      if (_refusedAsBlocked(error)) return;
       final socketError = SocketException(
         message: error?.toString() ?? 'Unknown socket error',
         code: 'SOCKET_ERROR',
@@ -331,6 +349,37 @@ class SocketClient with ChangeNotifier {
       );
       _setError(socketError);
     });
+  }
+
+  /// The handshake's query and auth: the bot, and the visitor when known.
+  static Map<String, dynamic> handshake(String botId, String? visitorId) => {
+        'botId': botId,
+        if (visitorId != null && visitorId.isNotEmpty) 'visitorId': visitorId,
+      };
+
+  /// Refused at the handshake because the workspace blocked this visitor:
+  /// no retry; the chat shows its closed state (visitor-blocked).
+  bool _refusedAsBlocked(dynamic error) {
+    if (!LiveEvents.isBlockedError(error)) return false;
+    debugBlockedAtHandshake();
+    return true;
+  }
+
+  /// The handshake refused a blocked visitor (also what tests call).
+  @visibleForTesting
+  void debugBlockedAtHandshake() {
+    _cancelConnectionTimeout();
+    _cancelReconnectionTimer();
+    _blocked = true;
+    _socket?.io.reconnection = false;
+    _updateConnectionState(SocketConnectionState.failed);
+    _emitLocal(SocketEvents.visitorBlocked, {'handshake': true});
+  }
+
+  void _emitLocal(String event, dynamic data) {
+    for (final fn in List.of(_localListeners[event] ?? const <Function(dynamic)>[])) {
+      fn(data);
+    }
   }
 
   /// Handle connection errors
@@ -746,6 +795,11 @@ class SocketClient with ChangeNotifier {
 
   /// Listen to event
   void on(String event, Function(dynamic) callback) {
+    if (event == SocketEvents.visitorBlocked) {
+      (_localListeners[event] ??= []).add(callback);
+      // Refused before this listener came: it hears it all the same.
+      if (_blocked) scheduleMicrotask(() => callback({'handshake': true}));
+    }
     _socket?.on(event, callback);
   }
 
@@ -756,6 +810,11 @@ class SocketClient with ChangeNotifier {
 
   /// Remove event listener
   void off(String event, [Function(dynamic)? callback]) {
+    if (callback != null) {
+      _localListeners[event]?.remove(callback);
+    } else {
+      _localListeners.remove(event);
+    }
     if (callback != null) {
       _socket?.off(event, callback);
     } else {
@@ -850,10 +909,11 @@ class SocketClient with ChangeNotifier {
     _connectivitySubscription?.cancel();
     _cancelConnectionTimeout();
     _cancelReconnectionTimer();
+    // Disconnect first: it reports the state on the stream closed below.
+    disconnect();
     _connectionStateController.close();
     _onReconnectController.close();
     _errorController.close();
-    disconnect();
     super.dispose();
   }
 }
