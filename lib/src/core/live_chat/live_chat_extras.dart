@@ -14,10 +14,17 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/message.dart';
 import '../../services/socket_client.dart';
+import '../requests/requests_extras.dart' show RequestsStore;
 import '../state/chat_state.dart';
 import 'email_transcript.dart';
 import 'live_chat.dart';
 import 'live_events.dart';
+
+/// As the web (index.ts): the post-chat rating shows 1.5 s after the flow's end.
+const Duration flowEndRatingDelay = Duration(milliseconds: 1500);
+
+/// A conversation already asked for its post-chat rating ("1"), kept across restarts.
+const String ratingOfferedKeyPrefix = 'conferbot_rating_offered_';
 
 class LiveChatExtras extends ChangeNotifier {
   LiveChatExtras({
@@ -29,7 +36,11 @@ class LiveChatExtras extends ChangeNotifier {
     Future<TranscriptEmailResult> Function(String chatSessionId, String email)? postTranscriptEmail,
     void Function(dynamic data)? onQueueStatus,
     int Function()? now,
+    RequestsStore? Function()? store,
+    Timer Function(Duration after, void Function() fire)? after,
   })  : _socket = socket,
+        _store = store,
+        _after = after ?? ((d, fn) => Timer(d, fn)),
         now = now ?? (() => DateTime.now().millisecondsSinceEpoch),
         _sessionId = sessionId,
         _addMessage = addMessage,
@@ -49,6 +60,10 @@ class LiveChatExtras extends ChangeNotifier {
   /// it (its `help` is what to offer while waiting, core/waiting).
   final void Function(dynamic data) _onQueueStatus;
   ChatState get _state => ChatState.instance;
+
+  /// Where a conversation's rating, once asked, is remembered (null: in memory only).
+  final RequestsStore? Function()? _store;
+  final Timer Function(Duration after, void Function() fire) _after;
 
   /// The clock the max wait and its countdown read (ms since the epoch).
   final int Function() now;
@@ -77,6 +92,16 @@ class LiveChatExtras extends ChangeNotifier {
   String? leftMessageTo;
   String? leadEmail;
   bool csatSent = false;
+
+  /// The flow's end asked for the rating: it shows 1.5 s later (web
+  /// index.ts), and the post-chat redirect already waits for it (#88).
+  bool csatDue = false;
+  Timer? _csatDueTimer;
+  // The conversation already asked for its rating: never twice.
+  String? _ratingAskedFor;
+
+  /// The rating is up (or about to be) and not answered: the redirect waits for it.
+  bool get ratingPending => csatConfig != null && ((csatOpen && !csatSent) || csatDue);
 
   /// The workspace blocked this visitor: the closed line's words (core/live_chat/live_events.dart), else null.
   String? blocked;
@@ -188,6 +213,8 @@ class LiveChatExtras extends ChangeNotifier {
       lockedBy = null;
       fileRequestedBy = null;
       csatOpen = true;
+      // The flow's end that may follow asks no second time (#88).
+      _rememberAsked(_sessionId() ?? '');
       notifyListeners();
     });
     // Blocked by the workspace, mid-chat or at the handshake (web
@@ -219,6 +246,7 @@ class LiveChatExtras extends ChangeNotifier {
     leadCardOpen = false;
     fileRequestedBy = null;
     csatOpen = false;
+    _cancelCsatDue();
     mailOpen = false;
     notifyListeners();
   }
@@ -447,7 +475,63 @@ class LiveChatExtras extends ChangeNotifier {
     if (config == null || id == null) return;
     _socket()?.emit('submit-chat-rating', LiveChat.ratingPayload(id, config.ratingType, value, feedback));
     csatSent = true;
+    _rememberAsked(id);
     notifyListeners();
+  }
+
+  bool get _canAskAfterFlowEnd => csatConfig != null && blocked == null && !csatOpen && !csatSent;
+
+  /// Remembered so a restart does not ask this conversation again.
+  void _rememberAsked(String id) {
+    _ratingAskedFor = id;
+    final s = _store?.call();
+    if (id.isEmpty || s == null) return;
+    unawaited(s.write(ratingOfferedKeyPrefix + id, '1').catchError((_) {}));
+  }
+
+  void _cancelCsatDue() {
+    _csatDueTimer?.cancel();
+    _csatDueTimer = null;
+    csatDue = false;
+  }
+
+  /// The flow reached its end (web index.ts, the end of a path that is not a
+  /// sub-flow's): the post-chat rating [delay] later, as an agent ending the
+  /// chat opens it, when the bot has one on, the visitor is not blocked, none
+  /// is up or sent, and this conversation was not asked before (kept in the
+  /// SDK's storage, so a restart does not ask again) (#88).
+  Future<void> flowEnded({Duration delay = flowEndRatingDelay}) async {
+    final id = _sessionId() ?? '';
+    if (!_canAskAfterFlowEnd || _ratingAskedFor == id) return;
+    _ratingAskedFor = id;
+    _csatDueTimer?.cancel();
+    _csatDueTimer = null;
+    csatDue = true;
+    notifyListeners();
+    String? asked;
+    final s = _store?.call();
+    if (id.isNotEmpty && s != null) {
+      try {
+        asked = await s.read(ratingOfferedKeyPrefix + id);
+      } catch (_) {
+        asked = null;
+      }
+    }
+    // Another conversation by now (a reset), or a block: nothing.
+    if (_ratingAskedFor != id || !csatDue) return;
+    if (asked == '1') {
+      // Asked before a restart.
+      csatDue = false;
+      notifyListeners();
+      return;
+    }
+    _rememberAsked(id);
+    _csatDueTimer = _after(delay, () {
+      _csatDueTimer = null;
+      csatDue = false;
+      if (_canAskAfterFlowEnd && _ratingAskedFor == id) csatOpen = true;
+      notifyListeners();
+    });
   }
 
   void dismissCsat() {
@@ -479,6 +563,8 @@ class LiveChatExtras extends ChangeNotifier {
     receiptMarks = const ReceiptMarks();
     leadCardOpen = false;
     csatOpen = false;
+    _cancelCsatDue();
+    _ratingAskedFor = null;
     leftMessageTo = null;
     leadEmail = null;
     csatSent = false;
@@ -494,6 +580,7 @@ class LiveChatExtras extends ChangeNotifier {
   void dispose() {
     stopQueuePoll();
     stopWaitTimer();
+    _csatDueTimer?.cancel();
     super.dispose();
   }
 }
