@@ -102,7 +102,7 @@ class HomeExtras extends ChangeNotifier {
   String? _loadedFor;
   Future<void>? _loading;
   String _lastName = '';
-  final Map<String, List<({String id, String snippet})>> _searches = {};
+  final Map<String, List<Map<String, dynamic>>> _searches = {};
   final List<Timer> _pending = [];
   bool _disposed = false;
 
@@ -243,26 +243,35 @@ class HomeExtras extends ChangeNotifier {
   /// Matches inside article text from the server (web kbContent.ts
   /// remoteSearch: `search-kb-articles`, cached per query when it
   /// answered): (article id, snippet) pairs, empty on failure.
-  Future<List<({String id, String snippet})>> searchArticleText(String? query) async {
+  Future<List<({String id, String snippet})>> searchArticleText(String? query) async => [
+        for (final a in await searchKbArticles(query) ?? const <Map<String, dynamic>>[])
+          (id: '${a['_id']}', snippet: a['snippet']?.toString() ?? ''),
+      ];
+
+  /// The server's rows for `search-kb-articles` (each with `_id`, title,
+  /// description, category and `snippet`), cached per query when it
+  /// answered; null when the socket is not there or did not answer (the
+  /// help centre then searches over REST). Under two letters: none.
+  Future<List<Map<String, dynamic>>?> searchKbArticles(String? query) async {
     final key = (query ?? '').trim().toLowerCase();
     if (key.length < 2) return const [];
     final cached = _searches[key];
     if (cached != null) return cached;
     final s = _socket();
-    if (s == null || !_connected()) return const [];
+    if (s == null || !_connected()) return null;
     try {
       final reply = await s.emitWithAck(eventSearch, {'chatbotId': _botId() ?? '', 'query': key, 'limit': 10}, searchTimeout);
       final ok = reply is Map && reply['success'] == true;
-      if (!ok) return const [];
-      final list = <({String id, String snippet})>[
+      if (!ok) return null;
+      final list = <Map<String, dynamic>>[
         for (final a in (reply['articles'] is List ? reply['articles'] as List : const []))
-          if (a is Map && a['_id'] != null && '${a['_id']}'.isNotEmpty) (id: '${a['_id']}', snippet: a['snippet']?.toString() ?? ''),
+          if (a is Map && a['_id'] != null && '${a['_id']}'.isNotEmpty) Map<String, dynamic>.from(a),
       ];
       // Failures are not kept, so the next keystroke can try again.
       _searches[key] = list;
       return list;
     } catch (_) {
-      return const [];
+      return null;
     }
   }
 
