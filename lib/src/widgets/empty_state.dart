@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/i18n/i18n.dart';
 import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
 
@@ -41,7 +42,7 @@ class EmptyState extends StatelessWidget {
               SizedBox(height: effectiveTheme.spacing.lg),
             ],
             Text(
-              title ?? 'No messages yet',
+              title ?? t('sdk.empty.title'),
               style: TextStyle(
                 fontSize: effectiveTheme.typography.fontSizeLg,
                 fontWeight: effectiveTheme.typography.fontWeightSemiBold,
