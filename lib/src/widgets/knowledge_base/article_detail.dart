@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/i18n/i18n.dart';
 import '../../models/knowledge_base.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
@@ -95,7 +96,7 @@ class _ArticleDetailState extends State<ArticleDetail> {
               backgroundColor: effectiveTheme.colors.primary,
               foregroundColor: effectiveTheme.colors.surface,
               icon: const Icon(Icons.chat_bubble_outline),
-              label: const Text('Share in Chat'),
+              label: Text(t('sdk.kb.shareInChat')),
             )
           : null,
     );
@@ -117,7 +118,7 @@ class _ArticleDetailState extends State<ArticleDetail> {
         IconButton(
           icon: const Icon(Icons.share_outlined),
           onPressed: _shareArticle,
-          tooltip: 'Share',
+          tooltip: t('sdk.kb.share'),
         ),
       ],
       bottom: PreferredSize(
@@ -196,7 +197,7 @@ class _ArticleDetailState extends State<ArticleDetail> {
           ),
         _MetadataChip(
           icon: Icons.visibility_outlined,
-          text: '${widget.article.viewCount} views',
+          text: t('sdk.kb.views', {'n': widget.article.viewCount}),
           theme: theme,
         ),
       ],
@@ -220,7 +221,7 @@ class _ArticleDetailState extends State<ArticleDetail> {
       }
       if (widget.contentError != null) {
         return Text(
-          'This article could not be loaded.',
+          t('sdk.kb.couldNotLoad'),
           style: TextStyle(fontSize: theme.typography.fontSizeMd, color: theme.colors.textSecondary),
         );
       }
@@ -270,7 +271,7 @@ class _ArticleDetailState extends State<ArticleDetail> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            hasRated ? 'Thank you for your feedback!' : 'Was this article helpful?',
+            hasRated ? t('csat.thanks') : t('sdk.kb.wasArticleHelpful'),
             style: TextStyle(
               fontSize: theme.typography.fontSizeMd,
               fontWeight: theme.typography.fontWeightMedium,
@@ -318,7 +319,7 @@ class _ArticleDetailState extends State<ArticleDetail> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Related Articles',
+          t('kb.related'),
           style: TextStyle(
             fontSize: theme.typography.fontSizeLg,
             fontWeight: theme.typography.fontWeightSemiBold,
@@ -348,9 +349,9 @@ class _ArticleDetailState extends State<ArticleDetail> {
 
   void _shareArticle() async {
     // For now, just copy the title. In a real app, you'd share a link.
-    final text = 'Check out this article: ${widget.article.title}';
+    final text = t('sdk.kb.checkOut', {'title': widget.article.title});
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Share: $text')),
+      SnackBar(content: Text(t('sdk.kb.shareText', {'text': text}))),
     );
   }
 }
@@ -573,15 +574,15 @@ class _ArticleRatingWidgetState extends State<ArticleRatingWidget> {
   String _getRatingLabel(int rating) {
     switch (rating) {
       case 1:
-        return 'Poor';
+        return t('rating.poor');
       case 2:
-        return 'Fair';
+        return t('sdk.kb.rating.fair');
       case 3:
-        return 'Good';
+        return t('rating.good');
       case 4:
-        return 'Very Good';
+        return t('sdk.kb.rating.veryGood');
       case 5:
-        return 'Excellent';
+        return t('rating.excellent');
       default:
         return '';
     }
