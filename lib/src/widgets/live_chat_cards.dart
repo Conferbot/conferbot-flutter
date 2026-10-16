@@ -3,7 +3,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/agent/agent_bot.dart';
 import '../core/live_chat/live_chat.dart';
+import '../core/live_chat/email_transcript.dart';
 import '../core/live_chat/live_chat_extras.dart';
+import '../core/live_chat/live_events.dart';
 import '../models/message.dart';
 import '../providers/conferbot_provider.dart';
 import '../theme/conferbot_theme.dart';
@@ -12,13 +14,14 @@ import '../theme/conferbot_theme.dart';
 /// owner's quick actions and "Talk to a person" above the composer, the AI's
 /// follow-up email card, the queue position, the "nobody could join" email
 /// ask, leave a message, a locked conversation, an agent's dropped
-/// connection, an agent asking for a file, and the post-chat rating.
+/// connection, an agent asking for a file, the post-chat rating, "Email me
+/// this chat" and the closed chat (blocked, or ended with a new chat).
 /// State is on [ConferBotProvider.liveChat] (core/live_chat).
 
 class _LiveCard extends StatelessWidget {
   final ConferBotTheme theme;
   final List<Widget> children;
-  const _LiveCard({required this.theme, required this.children});
+  const _LiveCard({super.key, required this.theme, required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +55,7 @@ class _PrimaryButton extends StatelessWidget {
   final bool enabled;
   final bool busy;
   final VoidCallback onTap;
-  const _PrimaryButton({required this.theme, required this.label, required this.onTap, this.enabled = true, this.busy = false});
+  const _PrimaryButton({super.key, required this.theme, required this.label, required this.onTap, this.enabled = true, this.busy = false});
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +108,7 @@ class _Field extends StatelessWidget {
   final String placeholder;
   final int minLines;
   final bool email;
-  const _Field({required this.theme, required this.controller, required this.placeholder, this.minLines = 1, this.email = false});
+  const _Field({super.key, required this.theme, required this.controller, required this.placeholder, this.minLines = 1, this.email = false});
 
   @override
   Widget build(BuildContext context) {
@@ -487,6 +490,7 @@ class LiveChatFooter extends StatelessWidget {
     final personHere = provider.isLiveChatMode && agent != null && !agent.id.startsWith('ai-agent-');
     final receipt = live.visitorReceipt(personHere: personHere);
     final leaveOn = provider.serverCustomizations?['chatLeaveMessage'] != false;
+    final closed = provider.closedState;
     final cards = <Widget>[
       if (live.handoverWaiting != null)
         _LiveCard(
@@ -528,6 +532,8 @@ class LiveChatFooter extends StatelessWidget {
           ),
         ]),
       if (live.csatConfig != null && live.csatOpen) _CsatCard(liveChat: live, theme: theme),
+      if (live.mailSentTo != null || live.mailOpen) EmailTranscriptCard(liveChat: live, theme: theme),
+      if (closed != null) ClosedChatCard(closed: closed, theme: theme, onNewChat: provider.startNewChat),
     ];
     if (receipt == null && cards.isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -547,6 +553,120 @@ class LiveChatFooter extends StatelessWidget {
           for (var i = 0; i < cards.length; i++) ...[if (i > 0) const SizedBox(height: 8), cards[i]],
         ],
       ),
+    );
+  }
+}
+
+/// "Email me this chat" (web emailTranscript.ts): one card, the visitor's
+/// email filled in when known; Send, Cancel; the server's reason when it did
+/// not go; "Sent! Check your inbox at ..." once it did.
+class EmailTranscriptCard extends StatefulWidget {
+  final LiveChatExtras liveChat;
+  final ConferBotTheme theme;
+  const EmailTranscriptCard({super.key, required this.liveChat, required this.theme});
+
+  @override
+  State<EmailTranscriptCard> createState() => _EmailTranscriptCardState();
+}
+
+class _EmailTranscriptCardState extends State<EmailTranscriptCard> {
+  late final _email = TextEditingController(text: widget.liveChat.knownEmail());
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_busy) return;
+    if (!EmailTranscript.isEmail(_email.text)) return setState(() => _error = EmailTranscript.checkEmail);
+    setState(() {
+      _error = null;
+      _busy = true;
+    });
+    final r = await widget.liveChat.emailTranscript(_email.text.trim());
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      if (!r.ok) _error = EmailTranscript.errorOf(r);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = widget.theme;
+    final sentTo = widget.liveChat.mailSentTo;
+    if (sentTo != null) {
+      return _LiveCard(key: const ValueKey('cb-mailchat'), theme: theme, children: [_title(theme, EmailTranscript.sent(sentTo))]);
+    }
+    return _LiveCard(
+      key: const ValueKey('cb-mailchat'),
+      theme: theme,
+      children: [
+        _title(theme, EmailTranscript.title),
+        _sub(theme, EmailTranscript.sub),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                label: EmailTranscript.label,
+                child: _Field(key: const ValueKey('cb-mailchat-email'), theme: theme, controller: _email, placeholder: EmailTranscript.placeholder, email: true),
+              ),
+            ),
+            const SizedBox(width: 8),
+            _PrimaryButton(
+              key: const ValueKey('cb-mailchat-send'),
+              theme: theme,
+              label: _busy ? EmailTranscript.sending : EmailTranscript.send,
+              enabled: !_busy,
+              onTap: _submit,
+            ),
+          ],
+        ),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Semantics(liveRegion: true, child: Text(_error!, style: TextStyle(color: theme.colors.error, fontSize: 12))),
+          ),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: GestureDetector(
+            key: const ValueKey('cb-mailchat-cancel'),
+            onTap: widget.liveChat.closeEmailTranscript,
+            child: Text(EmailTranscript.cancel, style: TextStyle(color: theme.colors.textSecondary, fontSize: 13)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The closed chat (core/live_chat/live_events.dart): a blocked visitor's
+/// neutral line, or, under an ended chat's own line, a button to start a
+/// new chat.
+class ClosedChatCard extends StatelessWidget {
+  final ClosedState closed;
+  final ConferBotTheme theme;
+  final VoidCallback? onNewChat;
+  const ClosedChatCard({super.key, required this.closed, required this.theme, this.onNewChat});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: ValueKey('cb-closed-${closed.kind.name}'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // An ended chat's "Chat has ended" line is in the record already.
+        if (closed.kind == ClosedKind.blocked) LiveSystemLine(theme: theme, text: closed.text),
+        if (closed.newChat && onNewChat != null)
+          Center(
+            child: _PrimaryButton(key: const ValueKey('cb-new-chat'), theme: theme, label: LiveEvents.newChatText, onTap: onNewChat!),
+          ),
+      ],
     );
   }
 }
