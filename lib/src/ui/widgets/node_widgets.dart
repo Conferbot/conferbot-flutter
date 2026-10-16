@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../../core/flow/i18n_en.dart' show t;
 import '../../core/nodes/node_ui_state.dart' as ui_state;
+import '../../widgets/delight/delight_views.dart' show RatingSparks;
 import '../../core/live_chat/live_chat.dart';
 import '../../core/customization/customizations.dart';
 import '../../widgets/bubble_outline.dart';
@@ -1004,8 +1005,32 @@ class _RatingNodeWidgetState extends State<RatingNodeWidget> {
     widget.onResponse({'value': rating, 'label': '$rating'});
   }
 
+  /// The pick's sparks (web ratingFx.ts burst), round the picked item.
+  Widget _sparked(int value, Widget child) {
+    if (_selectedRating != value) return child;
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        child,
+        Positioned.fill(child: RatingSparks(top: value == widget.state.maxValue, color: widget.primaryColor)),
+      ],
+    );
+  }
+
+  /// The pick in words ("Good"), when the step gives them, else "4 / 5"
+  /// (web ratingFx.ts caption).
+  String? get _caption {
+    final r = _selectedRating;
+    if (r == null) return null;
+    final labels = widget.state.labels ?? const <String>[];
+    return r - 1 < labels.length && labels[r - 1].trim().isNotEmpty ? labels[r - 1] : '$r / ${widget.state.maxValue}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final starsOrFaces = widget.state.ratingType == ui_state.RatingType.star || widget.state.ratingType == ui_state.RatingType.smiley;
+    final caption = starsOrFaces ? _caption : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1014,6 +1039,16 @@ class _RatingNodeWidgetState extends State<RatingNodeWidget> {
           ui_state.RatingType.smiley => _buildSmileyRating(),
           ui_state.RatingType.number || ui_state.RatingType.opinionScale => _buildNumberRating(),
         },
+        if (caption != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              caption,
+              key: const ValueKey('cb-rating-caption'),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: widget.primaryColor),
+            ),
+          ),
       ],
     );
   }
@@ -1024,12 +1059,15 @@ class _RatingNodeWidgetState extends State<RatingNodeWidget> {
       children: List.generate(widget.state.maxValue, (index) {
         final rating = index + 1;
         final isSelected = _selectedRating != null && rating <= _selectedRating!;
-        return IconButton(
-          onPressed: _selectedRating != null ? null : () => _selectRating(rating),
-          icon: Icon(
-            isSelected ? Icons.star : Icons.star_outline,
-            size: 40,
-            color: isSelected ? widget.primaryColor : Colors.grey,
+        return _sparked(
+          rating,
+          IconButton(
+            onPressed: _selectedRating != null ? null : () => _selectRating(rating),
+            icon: Icon(
+              isSelected ? Icons.star : Icons.star_outline,
+              size: 40,
+              color: isSelected ? widget.primaryColor : Colors.grey,
+            ),
           ),
         );
       }),
@@ -1043,7 +1081,7 @@ class _RatingNodeWidgetState extends State<RatingNodeWidget> {
       children: List.generate(smileys.length, (index) {
         final rating = index + 1;
         final isSelected = _selectedRating == rating;
-        return InkWell(
+        return _sparked(rating, InkWell(
           onTap: _selectedRating != null ? null : () => _selectRating(rating),
           borderRadius: BorderRadius.circular(widget.theme.borderRadius.full),
           child: Container(
@@ -1061,7 +1099,7 @@ class _RatingNodeWidgetState extends State<RatingNodeWidget> {
               style: const TextStyle(fontSize: 32),
             ),
           ),
-        );
+        ));
       }),
     );
   }
