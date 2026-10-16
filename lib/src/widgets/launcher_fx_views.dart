@@ -16,6 +16,7 @@ import '../core/customization/launcher_idle_call.dart';
 import '../core/customization/mascot_art.dart';
 import 'fx_svg.dart';
 import 'launcher_fx_controllers.dart';
+import 'mascot/mascot_view.dart';
 
 Color fxColor(String css, [Color fallback = Colors.transparent]) {
   final c = parseCssColor(css);
@@ -93,53 +94,32 @@ class EntranceStagePainter extends CustomPainter {
 }
 
 /// The idle call's mascot on its stage over the launcher (idleCall.ts
-/// perform), each part of the drawing its own layer, and the white rings
-/// where a knock or tap lands.
+/// perform): the owner's mascot (shape, eyes, accessory, colour), each part
+/// of the drawing its own layer turned about its own joints (the lids where
+/// its eyes are), and the white rings where a knock or tap lands.
 class IdleCallPainter extends CustomPainter {
   final IdleCallPerformance perf;
   final MascotLayers layers;
   final double t;
-  IdleCallPainter(this.perf, this.layers, this.t);
+
+  /// The owner's mascot: its joints.
+  final MascotLook? look;
+  IdleCallPainter(this.perf, this.layers, this.t, [this.look]);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final n = perf.mascot.size, k = n / 100;
+    final n = perf.mascot.size;
     final box = evaluate(perf.self, t, perf.mascot.base);
     if (box.o > 0.002) {
       canvas.save();
       canvas.translate(perf.mascot.x, perf.mascot.y);
       _transform(canvas, n / 2, n / 2, box.tx, box.ty, box.r, box.sx, box.sy);
       if (box.o < 0.998) canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, box.o));
-      void layer(String? svg, [String? part, List<double>? origin]) {
-        if (svg == null) return;
-        final tracks = part == null ? null : perf.parts[part];
-        final base = part == null ? null : mascotPartBase[part];
-        final v = tracks != null ? evaluate(tracks, t, base) : FxValues.rest(base);
-        if (v.o <= 0.002 || v.sx == 0 || v.sy == 0) return;
-        canvas.save();
-        final o = origin ?? const [50, 50];
-        _transform(canvas, o[0] * k, o[1] * k, v.tx * k, v.ty * k, v.r, v.sx, v.sy);
-        if (v.o < 0.998) canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, v.o));
-        drawFxSvg(canvas, svg, Size(n, n));
-        if (v.o < 0.998) canvas.restore();
-        canvas.restore();
-      }
-
-      layer(layers.shadow);
-      // The body and everything on it move with the body.
-      final b = perf.parts['body'] != null ? evaluate(perf.parts['body']!, t) : FxValues.rest();
-      canvas.save();
-      _transform(canvas, mascotOrigins['body']![0] * k, mascotOrigins['body']![1] * k, b.tx * k, b.ty * k, b.r, b.sx, b.sy);
-      layer(layers.armBack, 'arm', mascotOrigins['arm']);
-      layer(layers.body);
-      layer(layers.look, 'look', mascotOrigins['look']);
-      layer(layers.lids, 'lid', mascotOrigins['lid']);
-      layer(layers.brows, 'brow', mascotOrigins['brow']);
-      layer(layers.armFront, 'arm', mascotOrigins['arm']);
-      layer(layers.smile, 'smile');
-      layer(layers.o, 'o');
-      layer(layers.grin, 'grin');
-      canvas.restore();
+      final pose = MascotPose({
+        for (final e in perf.parts.entries)
+          if (e.value.isNotEmpty) e.key: MascotPart(evaluate(e.value, t, mascotPartBase[e.key]), transformOrder(e.value.first)),
+      });
+      paintMascot(canvas, layers, n, joints: mascotOrigins(look), pose: pose, shadowY: look?.shape == 'ghost' ? 99 : 95);
       if (box.o < 0.998) canvas.restore();
       canvas.restore();
     }
@@ -163,7 +143,7 @@ class IdleCallPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(IdleCallPainter old) => old.t != t || old.perf != perf || old.layers != layers;
+  bool shouldRepaint(IdleCallPainter old) => old.t != t || old.perf != perf || old.layers != layers || old.look != look;
 }
 
 /// The speech bubble over the mascot (.cb-ic-bubble), its tail on the mascot.
@@ -268,6 +248,9 @@ class FxLauncherStack extends StatelessWidget {
   final AttentionFrame? attention;
   final IdleCallPerformance? perf;
   final MascotLayers? layers;
+
+  /// The owner's mascot (the idle call turns it about its own joints).
+  final MascotLook? mascotLook;
   final double idleT;
 
   const FxLauncherStack({
@@ -283,6 +266,7 @@ class FxLauncherStack extends StatelessWidget {
     this.attention,
     this.perf,
     this.layers,
+    this.mascotLook,
     this.idleT = 0,
   });
 
@@ -295,7 +279,7 @@ class FxLauncherStack extends StatelessWidget {
         ? Positioned(left: 0, top: 0, width: w, height: h, child: IgnorePointer(child: CustomPaint(painter: EntranceStagePainter(plan!, entranceT))))
         : const SizedBox.shrink();
     Widget mascot(bool front) => perf != null && layers != null && perf!.front == front
-        ? Positioned(left: 0, top: 0, width: w, height: h, child: IgnorePointer(child: CustomPaint(painter: IdleCallPainter(perf!, layers!, idleT))))
+        ? Positioned(left: 0, top: 0, width: w, height: h, child: IgnorePointer(child: CustomPaint(painter: IdleCallPainter(perf!, layers!, idleT, mascotLook))))
         : const SizedBox.shrink();
 
     // The button, with the gloss sweeping across it and the spark circling it.
