@@ -670,8 +670,10 @@ class OtpNodeHandler extends _RichHandler {
 // ADDRESS
 // ========================================
 
-/// address-node: search (POST geo/search, results to pick and confirm) or
-/// typed by hand (street required). Answers: {action: "search", q},
+/// address-node: search (POST geo/search, results to pick and confirm),
+/// the device's position (POST geo/reverse, the address to confirm; only
+/// with the app's location provider) or typed by hand (street required).
+/// Answers: {action: "search", q}, {action: "locate", lat, lng},
 /// {action: "pick", index} (confirms), {action: "manual", line1, city,
 /// region, postal, country}, or the location picker's {address} (manual,
 /// the address as the street line). Saves the formatted address and
@@ -681,13 +683,16 @@ class AddressNodeHandler extends _RichHandler {
   @override
   String get nodeType => 'address-node';
 
-  AddressUIState _ui(FlowNode node, ChatState state, [List<AddressValue> results = const []]) => AddressUIState(
+  AddressUIState _ui(FlowNode node, ChatState state, [List<AddressValue> results = const [], bool located = false]) => AddressUIState(
         nodeId: node.id,
         questionText: prompt(node, state),
         results: results.map((a) => a.toJson()).toList(),
         allowManualEntry: node.data['allowManual'] != false,
         extra: {
           'showMap': node.data['showMap'] != false,
+          'allowMyLocation': node.data['allowMyLocation'] != false,
+          // The results are the device's position, to confirm.
+          if (located) 'located': true,
           'placeholder': jsString(node.data['placeholder'] ?? '').trim(),
         },
       );
@@ -702,6 +707,7 @@ class AddressNodeHandler extends _RichHandler {
     final k = _answerKey(node);
     if (k.isNotEmpty) _saveVars(state, node, addressVariables(k, value));
     state.deleteVariable('_addr_${node.id}');
+    state.deleteVariable('_addr_src_${node.id}');
     return NodeResult.port('source');
   }
 
@@ -724,9 +730,33 @@ class AddressNodeHandler extends _RichHandler {
           ? list.map(normalizeAddress).where((a) => a.formatted.isNotEmpty).take(5).toList()
           : <AddressValue>[];
       state.setVariable('_addr_${node.id}', found);
+      state.deleteVariable('_addr_src_${node.id}');
       if (!r.ok) return NodeResult.invalid(addressErrorText(r.code), uiState: _ui(node, state), inCard: true);
       if (found.isEmpty) return NodeResult.invalid(addressErrorText('no_results'), uiState: _ui(node, state), inCard: true);
       return NodeResult.displayUI(_ui(node, state, found), awaitInput: true);
+    }
+    if (action == 'locate') {
+      // Web richNodesView.ts locateBtn: the server's first address for the
+      // point, else the point itself; confirmed on the map like a pick.
+      final lat = jsNumber(response['lat']);
+      final lng = jsNumber(response['lng']);
+      if (node.data['allowMyLocation'] == false || !lat.isFinite || !lng.isFinite || lat.abs() > 90 || lng.abs() > 180) {
+        return NodeResult.invalid(addressErrorText('unavailable'), uiState: _ui(node, state), inCard: true);
+      }
+      final r = await _richPost(node.ctx, 'geo/reverse', {'nodeId': node.id, 'lat': lat, 'lng': lng});
+      final list = _f(r.data, 'results');
+      final first = r.ok && list is List && list.isNotEmpty ? list.first : null;
+      AddressValue? value;
+      if (first is Map) {
+        value = normalizeAddress({...first, 'lat': first['lat'] ?? lat, 'lng': first['lng'] ?? lng});
+        if (value.formatted.isEmpty) value = null;
+      } else if (!r.ok && r.code != 'error') {
+        return NodeResult.invalid(addressErrorText(r.code), uiState: _ui(node, state), inCard: true);
+      }
+      value ??= normalizeAddress({'formatted': '${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}', 'lat': lat, 'lng': lng});
+      state.setVariable('_addr_${node.id}', [value]);
+      state.setVariable('_addr_src_${node.id}', 'location');
+      return NodeResult.displayUI(_ui(node, state, [value], true), awaitInput: true);
     }
     if (action == 'pick') {
       final stored = state.getVariable('_addr_${node.id}');
@@ -734,7 +764,8 @@ class AddressNodeHandler extends _RichHandler {
       final i = jsNumber(response['index']);
       final picked = i.isFinite && i == i.truncateToDouble() && i >= 0 && i < results.length ? results[i.toInt()] : null;
       if (picked == null) return NodeResult.displayUI(_ui(node, state, results), awaitInput: true);
-      return _finish(node, state, picked, 'search');
+      final source = state.getVariable('_addr_src_${node.id}') == 'location' ? 'location' : 'search';
+      return _finish(node, state, picked, source);
     }
     final Map<String, dynamic> fields = action == 'manual'
         ? Map<String, dynamic>.from(response as Map)
