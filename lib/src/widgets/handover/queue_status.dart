@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 
@@ -195,12 +196,12 @@ class _QueueStatusWidgetState extends State<QueueStatusWidget>
 
   String _formatWaitTime(int seconds) {
     if (seconds < 60) {
-      return 'Less than a minute';
+      return t('sdk.wait.underMinute');
     } else if (seconds < 120) {
-      return 'About 1 minute';
+      return tPlural('sdk.wait.aboutMinutes', 1);
     } else {
       final minutes = seconds ~/ 60;
-      return 'About $minutes minutes';
+      return tPlural('sdk.wait.aboutMinutes', minutes);
     }
   }
 
@@ -244,7 +245,7 @@ class _QueueStatusWidgetState extends State<QueueStatusWidget>
                 Text(
                   widget.handoverMessage ??
                       widget.connectingMessage ??
-                      'Connecting you to an agent...',
+                      t('sdk.wait.connecting'),
                   style: TextStyle(
                     fontSize: effectiveTheme.typography.fontSizeLg,
                     fontWeight: effectiveTheme.typography.fontWeightSemiBold,
@@ -387,7 +388,7 @@ class _QueueStatusWidgetState extends State<QueueStatusWidget>
             child: _buildInfoCard(
               theme,
               icon: Icons.people_outline,
-              label: 'Position',
+              label: t('sdk.queue.positionLabel'),
               value: '#${widget.queueInfo!.position}',
               color: widget.primaryColor,
             ),
@@ -405,7 +406,7 @@ class _QueueStatusWidgetState extends State<QueueStatusWidget>
             child: _buildInfoCard(
               theme,
               icon: Icons.access_time,
-              label: 'Est. Wait',
+              label: t('sdk.queue.estWait'),
               value: _formatWaitTime(_remainingSeconds),
               color: _remainingSeconds < 60 ? theme.colors.warning : theme.colors.info,
             ),
@@ -498,9 +499,9 @@ class _QueueStatusWidgetState extends State<QueueStatusWidget>
           Text(
             isAvailable
                 ? (agentCount > 0
-                    ? '$agentCount agent${agentCount > 1 ? 's' : ''} available'
-                    : 'Agents available')
-                : 'All agents busy',
+                    ? tPlural('sdk.queue.agentsAvailable', agentCount)
+                    : t('sdk.queue.agentsAvailableAny'))
+                : t('sdk.queue.allBusy'),
             style: TextStyle(
               fontSize: theme.typography.fontSizeSm,
               color: isAvailable ? theme.colors.success : theme.colors.warning,
@@ -524,7 +525,7 @@ class _QueueStatusWidgetState extends State<QueueStatusWidget>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Time elapsed',
+              t('sdk.queue.timeElapsed'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeXs,
                 color: theme.colors.textSecondary,
@@ -557,7 +558,7 @@ class _QueueStatusWidgetState extends State<QueueStatusWidget>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Max wait: ${widget.maxWaitMinutes} min',
+              t('sdk.queue.maxWaitMin', {'n': widget.maxWaitMinutes}),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeXs,
                 color: theme.colors.textSecondary,
@@ -589,7 +590,7 @@ class _QueueStatusWidgetState extends State<QueueStatusWidget>
       child: OutlinedButton.icon(
         onPressed: widget.onCancel,
         icon: const Icon(Icons.close, size: 18),
-        label: const Text('Leave Queue'),
+        label: Text(t('sdk.queue.leave')),
         style: OutlinedButton.styleFrom(
           foregroundColor: theme.colors.textSecondary,
           side: BorderSide(color: theme.colors.border),
