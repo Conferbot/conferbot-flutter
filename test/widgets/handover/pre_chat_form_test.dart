@@ -134,14 +134,15 @@ void main() {
                 fields: [PreChatFormField.name()],
                 onSubmit: (result) {},
                 primaryColor: Colors.blue,
-                title: 'Start Chat',
+                title: 'Talk to our team',
               ),
             ),
           ),
         ),
       );
 
-      expect(find.text('Start Chat'), findsOneWidget);
+      // Not "Start Chat": that is also the submit button's default label.
+      expect(find.text('Talk to our team'), findsOneWidget);
     });
 
     testWidgets('renders description when provided', (WidgetTester tester) async {
@@ -288,7 +289,7 @@ void main() {
         ),
       );
 
-      await tester.enterText(find.byType(TextFormField).first, 'John Doe');
+      await tester.enterText(find.byType(TextField).first, 'John Doe');
       await tester.pump();
 
       expect(find.text('John Doe'), findsOneWidget);
