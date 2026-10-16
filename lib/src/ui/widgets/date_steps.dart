@@ -10,6 +10,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/flow/i18n_en.dart';
 import '../../core/nodes/node_ui_state.dart' as ui_state;
@@ -28,7 +29,10 @@ DateTime? _parseDay(dynamic s) {
   return DateTime(int.parse(m.group(1)!), int.parse(m.group(2)!), int.parse(m.group(3)!));
 }
 
-String _shownDate(DateTime d) => '${_weekdaysShort[d.weekday % 7]}, ${_months[d.month - 1].substring(0, 3)} ${d.day}, ${d.year}';
+/// "Mon, Oct 19, 2026"; another language writes it its own way ("ma 19 okt. 2026").
+String _shownDate(DateTime d) => I18n.language == I18n.en
+    ? '${_weekdaysShort[d.weekday % 7]}, ${_months[d.month - 1].substring(0, 3)} ${d.day}, ${d.year}'
+    : DateFormat.yMMMEd(I18n.intlLocale).format(d);
 
 // ==================== DATE / TIME ====================
 
@@ -146,7 +150,7 @@ class _DateTimeStepWidgetState extends State<DateTimeStepWidget> {
       style,
       key: const ValueKey('dt-date'),
       icon: Icons.calendar_today_outlined,
-      text: _date == null ? (_mode == 'datetime' ? 'Date' : 'Choose a date') : _shownDate(_date!),
+      text: _date == null ? (_mode == 'datetime' ? t('dates.date') : t('sdk.datetime.chooseDate')) : _shownDate(_date!),
       empty: _date == null,
       onTap: () => _pickDate(style),
     );
@@ -154,7 +158,7 @@ class _DateTimeStepWidgetState extends State<DateTimeStepWidget> {
       style,
       key: const ValueKey('dt-time'),
       icon: Icons.schedule,
-      text: _time == null ? (_mode == 'datetime' ? 'Time' : 'Choose a time') : '${_pad2(_time!.hour)}:${_pad2(_time!.minute)}',
+      text: _time == null ? (_mode == 'datetime' ? t('dates.time') : t('sdk.datetime.chooseTime')) : '${_pad2(_time!.hour)}:${_pad2(_time!.minute)}',
       empty: _time == null,
       onTap: () => _pickTime(style),
     );
@@ -289,7 +293,7 @@ class _CalendarStepWidgetState extends State<CalendarStepWidget> {
         children: [
           nav(Icons.chevron_left, t('calendar.prevMonth'), const ValueKey('cal-prev'), -1),
           Expanded(
-            child: Text('${_months[_month.month - 1]} ${_month.year}',
+            child: Text('${I18n.monthNames('long', _months)[_month.month - 1]} ${_month.year}',
                 key: const ValueKey('cal-title'),
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: fg)),
@@ -310,7 +314,7 @@ class _CalendarStepWidgetState extends State<CalendarStepWidget> {
       child: Column(
         children: [
           Row(children: [
-            for (final w in _weekdaysShort)
+            for (final w in I18n.weekdayNames('short', _weekdaysShort))
               Expanded(child: Center(child: Text(w, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF6B7280))))),
           ]),
           const SizedBox(height: 4),
