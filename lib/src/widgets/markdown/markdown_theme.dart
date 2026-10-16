@@ -136,6 +136,13 @@ class MarkdownThemeConfig {
   /// Convert to MarkdownStyleSheet for flutter_markdown
   MarkdownStyleSheet toStyleSheet(ConferBotTheme theme) {
     final baseFontSize = theme.typography.fontSizeMd;
+    TextStyle heading(double scale) => TextStyle(
+          fontSize: (baseTextStyle?.fontSize ?? baseFontSize) * scale,
+          fontWeight: theme.typography.fontWeightBold,
+          fontStyle: baseTextStyle?.fontStyle,
+          color: textColor,
+          height: theme.typography.lineHeightNormal,
+        );
 
     return MarkdownStyleSheet(
       // Paragraph styling
@@ -147,48 +154,20 @@ class MarkdownThemeConfig {
           ),
       pPadding: EdgeInsets.only(bottom: theme.spacing.xs),
 
-      // Headers
-      h1: TextStyle(
-        fontSize: theme.typography.fontSizeXxl,
-        fontWeight: theme.typography.fontWeightBold,
-        color: textColor,
-        height: theme.typography.lineHeightNormal,
-      ),
-      h1Padding: EdgeInsets.only(bottom: theme.spacing.sm),
-      h2: TextStyle(
-        fontSize: theme.typography.fontSizeXl,
-        fontWeight: theme.typography.fontWeightBold,
-        color: textColor,
-        height: theme.typography.lineHeightNormal,
-      ),
-      h2Padding: EdgeInsets.only(bottom: theme.spacing.sm),
-      h3: TextStyle(
-        fontSize: theme.typography.fontSizeLg,
-        fontWeight: theme.typography.fontWeightSemiBold,
-        color: textColor,
-        height: theme.typography.lineHeightNormal,
-      ),
+      // Headings as the web draws an agent's (utils/agentHtml.ts, RN
+      // ChatText): bold, level 3 at 1.17x, 4-6 at 1.07x; # and ## are drawn
+      // as level 4, as the web folds h1 / h2 into h4.
+      h1: heading(1.07),
+      h1Padding: EdgeInsets.only(bottom: theme.spacing.xs),
+      h2: heading(1.07),
+      h2Padding: EdgeInsets.only(bottom: theme.spacing.xs),
+      h3: heading(1.17),
       h3Padding: EdgeInsets.only(bottom: theme.spacing.xs),
-      h4: TextStyle(
-        fontSize: baseFontSize,
-        fontWeight: theme.typography.fontWeightSemiBold,
-        color: textColor,
-        height: theme.typography.lineHeightNormal,
-      ),
+      h4: heading(1.07),
       h4Padding: EdgeInsets.only(bottom: theme.spacing.xs),
-      h5: TextStyle(
-        fontSize: theme.typography.fontSizeSm,
-        fontWeight: theme.typography.fontWeightSemiBold,
-        color: textColor,
-        height: theme.typography.lineHeightNormal,
-      ),
+      h5: heading(1.07),
       h5Padding: EdgeInsets.only(bottom: theme.spacing.xs),
-      h6: TextStyle(
-        fontSize: theme.typography.fontSizeXs,
-        fontWeight: theme.typography.fontWeightSemiBold,
-        color: textColor.withOpacity(0.8),
-        height: theme.typography.lineHeightNormal,
-      ),
+      h6: heading(1.07),
       h6Padding: EdgeInsets.only(bottom: theme.spacing.xs),
 
       // Emphasis
