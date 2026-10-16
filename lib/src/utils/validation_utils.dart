@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import '../core/i18n/i18n.dart';
+
 /// Comprehensive validation utilities for the Conferbot Flutter SDK.
 /// These validation methods match the validation logic used in the web widget
 /// and Android SDK to ensure consistent behavior across platforms.
@@ -77,10 +79,10 @@ class ValidationUtils {
   /// Returns [ValidationResult] containing validity and error message if invalid
   static ValidationResult validateEmail(String? email) {
     if (email == null || email.trim().isEmpty) {
-      return const ValidationResult(false, 'Email address is required');
+      return ValidationResult(false, t('sdk.validation.emailRequired'));
     }
     if (!_emailPattern.hasMatch(email.trim().toLowerCase())) {
-      return const ValidationResult(false, 'Please enter a valid email address');
+      return ValidationResult(false, t('validation.email'));
     }
     return const ValidationResult(true);
   }
@@ -136,10 +138,10 @@ class ValidationUtils {
   static ValidationResult validatePhoneNumber(String? phoneNumber,
       {bool allowInternational = true}) {
     if (phoneNumber == null || phoneNumber.trim().isEmpty) {
-      return const ValidationResult(false, 'Phone number is required');
+      return ValidationResult(false, t('sdk.validation.phoneRequired'));
     }
     if (!isValidPhoneNumber(phoneNumber, allowInternational: allowInternational)) {
-      return const ValidationResult(false, 'Please enter a valid phone number');
+      return ValidationResult(false, t('validation.phone'));
     }
     return const ValidationResult(true);
   }
@@ -185,10 +187,10 @@ class ValidationUtils {
   /// Returns [ValidationResult] containing validity and error message if invalid
   static ValidationResult validateUrl(String? url) {
     if (url == null || url.trim().isEmpty) {
-      return const ValidationResult(false, 'URL is required');
+      return ValidationResult(false, t('sdk.validation.urlRequired'));
     }
     if (!isValidUrl(url)) {
-      return const ValidationResult(false, 'Please enter a valid URL');
+      return ValidationResult(false, t('validation.url'));
     }
     return const ValidationResult(true);
   }
@@ -255,20 +257,20 @@ class ValidationUtils {
   static ValidationResult validateNumber(String? value,
       {double? min, double? max}) {
     if (value == null || value.trim().isEmpty) {
-      return const ValidationResult(false, 'Number is required');
+      return ValidationResult(false, t('sdk.validation.numberRequired'));
     }
 
     final number = double.tryParse(value.trim());
     if (number == null) {
-      return const ValidationResult(false, 'Please enter a valid number');
+      return ValidationResult(false, t('validation.number'));
     }
 
     if (min != null && number < min) {
-      return ValidationResult(false, 'Number must be at least $min');
+      return ValidationResult(false, t('sdk.validation.numberAtLeast', {'min': '$min'}));
     }
 
     if (max != null && number > max) {
-      return ValidationResult(false, 'Number must be at most $max');
+      return ValidationResult(false, t('sdk.validation.numberAtMost', {'max': '$max'}));
     }
 
     return const ValidationResult(true);
@@ -359,10 +361,10 @@ class ValidationUtils {
   static ValidationResult validateDate(String? dateString,
       {String format = isoDate}) {
     if (dateString == null || dateString.trim().isEmpty) {
-      return const ValidationResult(false, 'Date is required');
+      return ValidationResult(false, t('sdk.validation.dateRequired'));
     }
     if (!isValidDate(dateString, format: format)) {
-      return const ValidationResult(false, 'Please enter a valid date');
+      return ValidationResult(false, t('sdk.validation.validDate'));
     }
     return const ValidationResult(true);
   }
@@ -419,9 +421,9 @@ class ValidationUtils {
   /// [fieldName] The name of the field for the error message
   /// Returns [ValidationResult] containing validity and error message if invalid
   static ValidationResult validateRequired(String? value,
-      {String fieldName = 'This field'}) {
+      {String? fieldName}) {
     if (value == null || value.trim().isEmpty) {
-      return ValidationResult(false, '$fieldName is required');
+      return ValidationResult(false, t('sdk.validation.fieldRequired', {'field': fieldName ?? t('sdk.validation.thisField')}));
     }
     return const ValidationResult(true);
   }
@@ -450,24 +452,25 @@ class ValidationUtils {
     String? value, {
     int minLength = 0,
     int? maxLength,
-    String fieldName = 'This field',
+    String? fieldName,
   }) {
+    final field = fieldName ?? t('sdk.validation.thisField');
     if (value == null) {
       if (minLength == 0) {
         return const ValidationResult(true);
       }
       return ValidationResult(
-          false, '$fieldName must be at least $minLength characters');
+          false, t('sdk.validation.fieldMinLength', {'field': field, 'n': minLength}));
     }
 
     if (value.length < minLength) {
       return ValidationResult(
-          false, '$fieldName must be at least $minLength characters');
+          false, t('sdk.validation.fieldMinLength', {'field': field, 'n': minLength}));
     }
 
     if (maxLength != null && value.length > maxLength) {
       return ValidationResult(
-          false, '$fieldName must be at most $maxLength characters');
+          false, t('sdk.validation.fieldMaxLength', {'field': field, 'n': maxLength}));
     }
 
     return const ValidationResult(true);
@@ -527,7 +530,7 @@ class ValidationUtils {
   }) {
     // Check required first
     if (required && (value == null || value.trim().isEmpty)) {
-      return const ValidationResult(false, 'This field is required');
+      return ValidationResult(false, t('sdk.validation.required'));
     }
 
     // If not required and empty, it's valid
