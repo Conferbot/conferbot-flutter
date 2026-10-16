@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/nodes/node_ui_state.dart';
 import '../../services/voice_recording_service.dart';
+import '../../core/i18n/i18n.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 import 'voice_player.dart';
@@ -110,7 +111,7 @@ class _VoiceInputNodeWidgetState extends State<VoiceInputNodeWidget> {
               ),
               SizedBox(height: theme.spacing.sm),
               Text(
-                'Hold to record',
+                t('sdk.voice.holdToRecord'),
                 style: TextStyle(
                   fontSize: theme.typography.fontSizeMd,
                   fontWeight: theme.typography.fontWeightMedium,
@@ -119,7 +120,7 @@ class _VoiceInputNodeWidgetState extends State<VoiceInputNodeWidget> {
               ),
               SizedBox(height: theme.spacing.xs),
               Text(
-                'Max ${widget.state.maxDurationSeconds ~/ 60} min ${widget.state.maxDurationSeconds % 60} sec',
+                t('sdk.voice.maxDuration', {'min': widget.state.maxDurationSeconds ~/ 60, 'sec': widget.state.maxDurationSeconds % 60}),
                 style: TextStyle(
                   fontSize: theme.typography.fontSizeSm,
                   color: theme.colors.textSecondary,
@@ -167,7 +168,7 @@ class _VoiceInputNodeWidgetState extends State<VoiceInputNodeWidget> {
                       Icon(Icons.mic, color: Colors.white),
                       SizedBox(width: theme.spacing.sm),
                       Text(
-                        'Hold to Record',
+                        t('sdk.voice.holdToRecord'),
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: theme.typography.fontWeightMedium,
@@ -185,7 +186,7 @@ class _VoiceInputNodeWidgetState extends State<VoiceInputNodeWidget> {
               IconButton(
                 onPressed: () => setState(() => _showTextInput = true),
                 icon: Icon(Icons.keyboard),
-                tooltip: 'Type instead',
+                tooltip: t('signature.typeInstead'),
                 style: IconButton.styleFrom(
                   backgroundColor: theme.colors.surface,
                   foregroundColor: theme.colors.text,
@@ -223,7 +224,7 @@ class _VoiceInputNodeWidgetState extends State<VoiceInputNodeWidget> {
           controller: _textController,
           maxLines: 3,
           decoration: InputDecoration(
-            hintText: 'Type your response...',
+            hintText: t('sdk.voice.typeResponse'),
             filled: true,
             fillColor: theme.colors.surface,
             border: OutlineInputBorder(
@@ -250,7 +251,7 @@ class _VoiceInputNodeWidgetState extends State<VoiceInputNodeWidget> {
             IconButton(
               onPressed: () => setState(() => _showTextInput = false),
               icon: Icon(Icons.mic),
-              tooltip: 'Record instead',
+              tooltip: t('sdk.voice.recordInstead'),
               style: IconButton.styleFrom(
                 backgroundColor: theme.colors.surface,
                 foregroundColor: theme.colors.text,
@@ -278,7 +279,7 @@ class _VoiceInputNodeWidgetState extends State<VoiceInputNodeWidget> {
                     borderRadius: BorderRadius.circular(theme.borderRadius.lg),
                   ),
                 ),
-                child: Text('Submit'),
+                child: Text(t('common.submit')),
               ),
             ),
           ],
@@ -303,7 +304,7 @@ class _VoiceInputNodeWidgetState extends State<VoiceInputNodeWidget> {
           ),
           SizedBox(width: theme.spacing.sm),
           Text(
-            'Response submitted',
+            t('sdk.voice.responseSubmitted'),
             style: TextStyle(
               color: theme.colors.success,
               fontWeight: theme.typography.fontWeightMedium,
