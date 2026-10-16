@@ -13,6 +13,7 @@ library;
 import 'dart:convert';
 import 'dart:math' as math;
 
+import '../i18n/i18n.dart';
 import 'widget_theme.dart';
 
 class ResolvedGreeting {
@@ -314,7 +315,9 @@ class Greeting {
   static ResolvedGreeting? decide(Map<String, dynamic>? c, GreetingFacts facts) {
     final raw = c ?? const <String, dynamic>{};
     var on = raw['chatIconCta'] == true;
-    var text = _str(raw['chatIconCtaText']).trim();
+    // The stock "Hi👋, how can I help?" in the visitor's language; the owner's
+    // own words as written (web stockText).
+    var text = I18n.stockText(_str(raw['chatIconCtaText']).trim(), 'greeting.stock', const ['Hi 👋, how can I help?']);
     var delay = _num(raw['greetingDelay'], defaultDelay, 0, 3600);
     var click = raw['greetingClickAction'] == 'send' || raw['greetingClickAction'] == 'link' ? raw['greetingClickAction'] as String : 'open';
     // Smart greetings with the owner's own greeting off: no default message.
