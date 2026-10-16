@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/i18n/i18n.dart';
 import '../providers/conferbot_provider.dart';
 import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
@@ -78,8 +79,8 @@ class ConnectionStatus extends StatelessWidget {
           SizedBox(width: theme.spacing.xs),
           Text(
             isConnected
-                ? (onlineLabel ?? 'Online')
-                : (offlineLabel ?? 'Offline'),
+                ? (onlineLabel ?? t('status.online'))
+                : (offlineLabel ?? t('sdk.status.offline')),
             style: TextStyle(
               fontSize: theme.typography.fontSizeXs,
               color: isConnected ? theme.colors.online : theme.colors.offline,
@@ -93,7 +94,7 @@ class ConnectionStatus extends StatelessWidget {
 
   Widget _buildText(ConferBotTheme theme, bool isConnected) {
     return Text(
-      isConnected ? (onlineLabel ?? 'Online') : (offlineLabel ?? 'Offline'),
+      isConnected ? (onlineLabel ?? t('status.online')) : (offlineLabel ?? t('sdk.status.offline')),
       style: TextStyle(
         fontSize: theme.typography.fontSizeXs,
         color: theme.colors.textSecondary,
