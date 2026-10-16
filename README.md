@@ -292,7 +292,7 @@ context.read<ConferBotProvider>().identify(
 context.read<ConferBotProvider>().identify(null);
 ```
 
-From then on the message records carry the new user (with its `hash`), "Your requests" is read again for them (a signed-out user's list is dropped), and greeting rules that ask whether the visitor is signed in decide again. With no stored visitor ID, the user's id goes with the next socket handshake and session. A conversation already going keeps its session.
+From then on the message records carry the new user (with its `hash`), "Your requests" is read again for them (a signed-out user's list is dropped), greeting rules that ask whether the visitor is signed in decide again, and the owner's "Greet by name" texts are filled again for them ([Greet by name](#greet-by-name)). With no stored visitor ID, the user's id goes with the next socket handshake and session. A conversation already going keeps its session.
 
 ## Theming and Flow-Builder Customizations
 
@@ -497,7 +497,7 @@ Headless: `provider.waitHelpCard` (`HelpCardState`), `provider.openWaitHelpItem(
 
 As the web widget's "Your requests": the visitor's own conversations with your team, where each one stands in plain words ("We replied", "We're on it", "Solved"), and a reply box that reaches the team. A reply to a solved one opens it again.
 
-- **Where:** the chat menu (the header's ⋮) has **Your requests** once the visitor has one, **Your requests · New reply** when a team reply has not been read on this device. It opens over the chat: the list (new replies first, "New reply from Ada · 2 hours ago"), then one request with a banner, the conversation (links tappable) and the reply box (Sending..., Not sent with Try again, or "This conversation is closed for replies."). Back and Android's back go one step back. Team replies show up live while a request is open.
+- **Where:** on the [home screen](#home-screen) (up to two, "See all (n)", above "Talk to us" when a reply is new) and in the chat menu (the header's ⋮): **Your requests** once the visitor has one, **Your requests · New reply** when a team reply has not been read on this device. It opens over the home screen or the chat: the list (new replies first, "New reply from Ada · 2 hours ago"), then one request with a banner, the conversation (links tappable) and the reply box (Sending..., Not sent with Try again, or "This conversation is closed for replies."). Back and Android's back go one step back. Team replies show up live while a request is open.
 - **Whose they are:** only the visitor's own. The device remembers, per bot, the last 30 chats the visitor wrote in and when each request was last read (shared_preferences), and the server lists a conversation only when its id is one of those and its visitor id matches. A signed-in user (`ConferBotUser` with a valid `hash`, see [Identity verification](#identity-verification)) also sees their verified conversations on this bot from any device, read again when they sign in or out with `identify`. Only conversations a person on the team handles are requests; a chat the AI answered alone is not one. Nothing is asked for a first-time visitor.
 - **Look:** the theme's page, card and text colours, one accent (the bot's brand colour, else its header or launcher colour, else indigo), and the app's `ConferBotCustomization.fontFamily`. It slides in once (not with animations turned off).
 
@@ -510,6 +510,32 @@ Badge(
   child: IconButton(icon: const Icon(Icons.inbox_outlined), onPressed: () => provider.openRequests()),
 )
 ```
+
+### Home screen
+
+When the owner turns on the home screen (Customize > Home, `enableInitialPage`), the chat opens on it, as the web widget does; with it off the chat opens straight on the conversation. It follows the owner's settings:
+
+- **Header:** "Good morning" / "Good afternoon" / "Good evening" by the phone's clock, or "Welcome back, Jamie" when the visitor has written before (the device remembers their first name and the first real question of their latest conversation for 60 days, per bot, in shared_preferences). The bot's logo and name (none with `hideLogo`), the owner's title (`initialPageTitle`) and description (`initialPageDescription`; an early bot's placeholder copy becomes "Ask us anything - we're here to help."), on a band in the launcher's colours.
+- **Ask anything** (`homeAskBox`, on unless off; only with an AI agent or a published article): for an AI agent, "Ask “...”" opens the conversation and asks it; the help articles that answer it (the server's search inside article text too); for a flow bot with nothing found, "Chat with us".
+- **Pick up where you left off** (AI agent bots): opens the conversation still on the device, else asks the remembered question again.
+- **Your requests:** two rows and "See all (n)"; above "Talk to us" when a team reply is new. Opens the requests portal over the home.
+- **Talk to us:** the card's face (`initialPageAvatar`, else the bot's avatar or logo), "Online" with a green dot (none with `hideOnlineStatus`) and the reply time ("Usually replies in a few minutes", "Team back tomorrow 9 AM", "Answers instantly, day or night"; `replyTime`), the team's photos (`homeTeamPhotos`, up to 3), the button (`initialPageCardButtonText`, else "Chat with us"), up to 3 of an AI agent's questions, the rating (`homeRating`).
+- **Help card** (`enableKnowledgeBase` with a published article): Recent articles (not with `hideRecentArticles`), the topics, See all; its own search when the ask box is off. Articles and topics open the help centre; its Back returns to the home.
+- **Customer logos** (`homeTrustLogos`, https only, with `homeTrustLabel`), shown once one has loaded.
+- **Moving between views:** the chat header's ‹ and Android's back go from the conversation to the home; the home's cross closes the chat. A greeting card's "send" (and its questions) go past the home to the conversation. The views switch in the owner's `viewTransition` / `viewTransitionDirection`: fade, slide, and every other kind as a slide; classic and none at once; a 200ms fade with the phone's animations off.
+
+Calm and in the bot's look: the widget theme's page, cards and text (light or dark), one accent, the app's `ConferBotCustomization.fontFamily`. Each part rises into place once, never with animations off. Not in apps: the web's page-aware parts ("For this page" articles), which need a web page. The mascot comes later.
+
+Headless: `provider.homeModel` (`HomeModel?`, everything the screen draws, null without a home), `provider.homePalette`, and `provider.home` (`HomeExtras`): `view`, `chosen` (a `ValueNotifier<HomeView?>`), `showHome()`, `showChat([text])`, `showHelp({categoryId})`, `back()`, `memory`, `searchArticleText(query)`. `HomeScreenView` and `ViewSwitch` are exported for your own chat screen.
+
+```dart
+// Open the chat on the conversation and ask a question there.
+provider.home.showChat('Where is my order?');
+```
+
+### Greet by name
+
+The owner's texts may greet the visitor by name: `{{first_name|there}}`, `{{name}}`, `{{company|your team}}` (the part after the bar is the fallback). The SDK fills them from the signed-in user (`ConferBotUser.name`, or `firstName` / `lastName` / `company` in its `metadata`) and a name the chat asked for, before anything reads the settings: the greeting card, the launcher's call-to-action and the home screen's title, description and button all show "Hi Sam", or "Hi there" when the name is not known. `identify` fills them again.
 
 ### Push token registration
 
@@ -619,6 +645,7 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 | `emailTranscript` | `Future<TranscriptEmailResult> emailTranscript(String email)` | Email the transcript to this address; on success the address is kept as the visitor's |
 | `identify` | `void identify(ConferBotUser? user)` | Sign a user in after construction, or out with `null` ([Signing in or out later](#signing-in-or-out-later)) |
 | `openRequests` / `closeRequests` | `Future<void> openRequests([String? requestId])` / `void closeRequests()` | Open "Your requests" (the list, or one request) / leave it |
+| `home.showHome` / `home.showChat` / `home.showHelp` | `void showHome()` / `void showChat([String? text])` / `void showHelp({String? categoryId})` | The open chat's view: the [home screen](#home-screen), the conversation (asking `text` there), the help centre |
 | `startNewChat` | `Future<void> startNewChat()` | A fresh conversation after a chat ended (not for a blocked visitor) |
 | `focusComposer` | `void focusComposer()` | Put the cursor in the chat's composer |
 | `sendTypingStatus` | `void sendTypingStatus(bool isTyping)` | Visitor typing indicator |
@@ -641,7 +668,7 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 
 ### Key getters
 
-`record` (`List<RecordItem>`), `paginatedMessages`, `hasMoreMessages`, `isConnected`, `isInitialized`, `isOpen`, `unreadCount`, `currentAgent` (`Agent?`), `agentTyping`, `isLiveChatMode`, `currentUIState`, `isProcessing`, `isFlowComplete`, `errorMessage`, `serverCustomizations` (`Map<String, dynamic>?`), `serverTheme` (`ConferBotTheme`), `botName`, `botAvatarUrl`, `sessionRestored`, `visitorId`, `chatSessionId` / `chatId`, `sessionAnalytics`, `headerStatus` (the line under the bot name), `personInChat`, `talkToPersonAllowed`, `offerTalkToPerson`, `visitorBlocked` (the closed line when the workspace blocked this visitor, else `null`), `closedState` (`ClosedState?`: blocked, or ended with a new chat), `emailTranscriptOpen`, `emailTranscriptSentTo`, `awaitingReply`, `myRequests` (`List<RequestSummary>?`), `requestsUnread`, `requestsOpen`.
+`record` (`List<RecordItem>`), `paginatedMessages`, `hasMoreMessages`, `isConnected`, `isInitialized`, `isOpen`, `unreadCount`, `currentAgent` (`Agent?`), `agentTyping`, `isLiveChatMode`, `currentUIState`, `isProcessing`, `isFlowComplete`, `errorMessage`, `serverCustomizations` (`Map<String, dynamic>?`), `serverTheme` (`ConferBotTheme`), `botName`, `botAvatarUrl`, `sessionRestored`, `visitorId`, `chatSessionId` / `chatId`, `sessionAnalytics`, `headerStatus` (the line under the bot name), `personInChat`, `talkToPersonAllowed`, `offerTalkToPerson`, `visitorBlocked` (the closed line when the workspace blocked this visitor, else `null`), `closedState` (`ClosedState?`: blocked, or ended with a new chat), `emailTranscriptOpen`, `emailTranscriptSentTo`, `awaitingReply`, `myRequests` (`List<RequestSummary>?`), `requestsUnread`, `requestsOpen`, `homeModel` (`HomeModel?`), `homePalette`, `home` (`HomeExtras`).
 
 ### Theming
 
