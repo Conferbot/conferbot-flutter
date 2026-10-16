@@ -11,8 +11,24 @@ class ArticleDetail extends StatefulWidget {
   final KnowledgeBaseArticle article;
   final VoidCallback? onBack;
   final ValueChanged<KnowledgeBaseArticle>? onRelatedArticleTap;
+
+  /// 1-5 stars over REST, drawn only without [onHelpful].
   final Future<bool> Function(int rating, {String? feedback})? onRate;
   final int? userRating;
+
+  /// "Was this helpful?" answered (web knowledgeBase.ts _kbFeedbackBar):
+  /// true for helpful. With it, the thumbs are drawn instead of stars.
+  final ValueChanged<bool>? onHelpful;
+
+  /// The visitor's answer for this article, if any.
+  final bool? helpful;
+
+  /// "Chat with us" after a thumbs down (null: not offered).
+  final VoidCallback? onChatWithUs;
+
+  /// How far the article is scrolled (0-100, percent of what scrolls), for
+  /// the reading depth the web sends (track-article-engagement).
+  final ValueChanged<double>? onScrollDepth;
   final bool isRating;
   final String? ratingError;
   final String? ratingSuccess;
@@ -32,6 +48,10 @@ class ArticleDetail extends StatefulWidget {
     this.onRelatedArticleTap,
     this.onRate,
     this.userRating,
+    this.onHelpful,
+    this.helpful,
+    this.onChatWithUs,
+    this.onScrollDepth,
     this.isRating = false,
     this.ratingError,
     this.ratingSuccess,
@@ -42,7 +62,8 @@ class ArticleDetail extends StatefulWidget {
   });
 
   /// Article bodies are HTML (as the web widget renders them).
-  static bool isHtml(String content) => RegExp(r'<[a-zA-Z][^>]*>').hasMatch(content);
+  static bool isHtml(String content) =>
+      RegExp(r'<[a-zA-Z][^>]*>').hasMatch(content);
 
   @override
   State<ArticleDetail> createState() => _ArticleDetailState();
@@ -52,7 +73,31 @@ class _ArticleDetailState extends State<ArticleDetail> {
   final ScrollController _scrollController = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  // The web reads scrollTop / (scrollHeight - clientHeight), when it scrolls.
+  void _onScroll() {
+    final report = widget.onScrollDepth;
+    if (report == null || !_scrollController.hasClients) return;
+    final p = _scrollController.position;
+    if (p.maxScrollExtent > 0)
+      report((p.pixels / p.maxScrollExtent * 100).clamp(0, 100).toDouble());
+  }
+
+  @override
+  void didUpdateWidget(ArticleDetail old) {
+    super.didUpdateWidget(old);
+    // Another article in the same view: it is read from the top.
+    if (old.article.id != widget.article.id && _scrollController.hasClients)
+      _scrollController.jumpTo(0);
+  }
+
+  @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
@@ -214,7 +259,8 @@ class _ArticleDetailState extends State<ArticleDetail> {
             child: SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2, color: theme.colors.primary),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: theme.colors.primary),
             ),
           ),
         );
@@ -222,7 +268,9 @@ class _ArticleDetailState extends State<ArticleDetail> {
       if (widget.contentError != null) {
         return Text(
           t('sdk.kb.couldNotLoad'),
-          style: TextStyle(fontSize: theme.typography.fontSizeMd, color: theme.colors.textSecondary),
+          style: TextStyle(
+              fontSize: theme.typography.fontSizeMd,
+              color: theme.colors.textSecondary),
         );
       }
     }
@@ -257,7 +305,70 @@ class _ArticleDetailState extends State<ArticleDetail> {
     );
   }
 
+  // The web's feedback bar: the question with thumbs, then a thank-you, or
+  // after a thumbs down "Sorry about that. Can we help?" with the chat.
+  Widget _buildHelpfulSection(ConferBotTheme theme) {
+    final answer = widget.helpful;
+    final text = TextStyle(
+      fontSize: theme.typography.fontSizeMd,
+      fontWeight: theme.typography.fontWeightMedium,
+      color: theme.colors.text,
+    );
+    return Semantics(
+      container: true,
+      label: t('kb.feedbackLabel'),
+      child: Container(
+        key: const ValueKey('cb-kb-feedback'),
+        padding: EdgeInsets.all(theme.spacing.md),
+        decoration: BoxDecoration(
+          color: theme.colors.surface,
+          borderRadius: BorderRadius.circular(theme.borderRadius.md),
+          border: Border.all(color: theme.colors.border),
+        ),
+        child: answer == null
+            ? Row(
+                children: [
+                  Expanded(child: Text(t('kb.wasHelpful'), style: text)),
+                  ArticleThumbsRating(onRate: widget.onHelpful, theme: theme),
+                ],
+              )
+            : Semantics(
+                liveRegion: true,
+                child: answer
+                    ? Row(
+                        children: [
+                          Icon(Icons.check_circle,
+                              color: theme.colors.success, size: 20),
+                          SizedBox(width: theme.spacing.sm),
+                          Expanded(
+                              child: Text(t('helpful.thanks'), style: text)),
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(t('kb.sorryHelp'), style: text),
+                          if (widget.onChatWithUs != null) ...[
+                            SizedBox(height: theme.spacing.sm),
+                            FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                  backgroundColor: theme.colors.primary),
+                              onPressed: widget.onChatWithUs,
+                              icon: const Icon(Icons.chat_bubble_outline,
+                                  size: 18),
+                              label: Text(t('home.chatWithUs')),
+                            ),
+                          ],
+                        ],
+                      ),
+              ),
+      ),
+    );
+  }
+
   Widget _buildRatingSection(ConferBotTheme theme) {
+    if (widget.onHelpful != null || widget.helpful != null)
+      return _buildHelpfulSection(theme);
     final hasRated = widget.userRating != null;
 
     return Container(
@@ -533,7 +644,8 @@ class _ArticleRatingWidgetState extends State<ArticleRatingWidget> {
             onTapCancel: () => setState(() => _hoverRating = null),
             onTapUp: (_) => setState(() => _hoverRating = null),
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: widget.theme.spacing.xs),
+              padding:
+                  EdgeInsets.symmetric(horizontal: widget.theme.spacing.xs),
               child: AnimatedSwitcher(
                 duration: widget.theme.animations.fast,
                 child: widget.isLoading && _selectedRating == starRating
@@ -549,7 +661,9 @@ class _ArticleRatingWidgetState extends State<ArticleRatingWidget> {
                       )
                     : Icon(
                         isFilled ? Icons.star : Icons.star_border,
-                        color: isFilled ? Colors.amber : widget.theme.colors.textSecondary,
+                        color: isFilled
+                            ? Colors.amber
+                            : widget.theme.colors.textSecondary,
                         size: 32,
                         key: ValueKey('$starRating-$isFilled'),
                       ),
@@ -610,6 +724,7 @@ class ArticleThumbsRating extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _ThumbButton(
+          label: t('kb.helpedYes'),
           icon: Icons.thumb_up_outlined,
           activeIcon: Icons.thumb_up,
           isActive: isHelpful == true,
@@ -619,6 +734,7 @@ class ArticleThumbsRating extends StatelessWidget {
         ),
         SizedBox(width: theme.spacing.md),
         _ThumbButton(
+          label: t('kb.helpedNo'),
           icon: Icons.thumb_down_outlined,
           activeIcon: Icons.thumb_down,
           isActive: isHelpful == false,
@@ -632,6 +748,7 @@ class ArticleThumbsRating extends StatelessWidget {
 }
 
 class _ThumbButton extends StatelessWidget {
+  final String label;
   final IconData icon;
   final IconData activeIcon;
   final bool isActive;
@@ -640,6 +757,7 @@ class _ThumbButton extends StatelessWidget {
   final ConferBotTheme theme;
 
   const _ThumbButton({
+    required this.label,
     required this.icon,
     required this.activeIcon,
     required this.isActive,
@@ -650,40 +768,46 @@ class _ThumbButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(theme.borderRadius.full),
-        child: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: isActive
-                ? theme.colors.primary.withOpacity(0.1)
-                : theme.colors.surface,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isActive ? theme.colors.primary : theme.colors.border,
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(theme.borderRadius.full),
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: isActive
+                  ? theme.colors.primary.withOpacity(0.1)
+                  : theme.colors.surface,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isActive ? theme.colors.primary : theme.colors.border,
+              ),
             ),
-          ),
-          child: Center(
-            child: isLoading
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(theme.colors.primary),
+            child: Center(
+              child: isLoading
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation(theme.colors.primary),
+                      ),
+                    )
+                  : Icon(
+                      isActive ? activeIcon : icon,
+                      color: isActive
+                          ? theme.colors.primary
+                          : theme.colors.textSecondary,
+                      size: 24,
                     ),
-                  )
-                : Icon(
-                    isActive ? activeIcon : icon,
-                    color: isActive
-                        ? theme.colors.primary
-                        : theme.colors.textSecondary,
-                    size: 24,
-                  ),
+            ),
           ),
         ),
       ),
