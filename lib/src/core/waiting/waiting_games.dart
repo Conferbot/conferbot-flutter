@@ -27,6 +27,7 @@ library;
 import 'dart:async';
 import 'dart:math' as math;
 
+import '../i18n/i18n.dart' show t;
 import '../live_chat/handover_waiting.dart' show SetTimer, ClearTimer;
 
 /// The games' ids: rps, ttt, quiz, memory, reaction, emoji, scramble.
@@ -42,34 +43,40 @@ class GameIds {
 }
 
 class GameMeta {
-  const GameMeta({required this.id, required this.emoji, required this.name, required this.blurb});
+  const GameMeta({required this.id, required this.emoji});
 
   final String id;
   final String emoji;
-  final String name;
 
-  /// One line for the menu.
-  final String blurb;
+  /// The name in the active language (web ui.ts gameName, games.<id>.name).
+  String get name => t('games.$id.name');
+
+  /// One line for the menu, in the active language (games.<id>.blurb).
+  String get blurb => t('games.$id.blurb');
 
   @override
   String toString() => 'GameMeta($id)';
 }
 
 const List<GameMeta> gamesCatalogue = [
-  GameMeta(id: 'rps', emoji: '✊', name: 'Rock paper scissors', blurb: 'Best of three against the bot'),
-  GameMeta(id: 'ttt', emoji: '⭕', name: 'Tic-tac-toe', blurb: 'Three in a row beats the bot'),
-  GameMeta(id: 'quiz', emoji: '🧠', name: 'Quick quiz', blurb: 'Three quick questions'),
-  GameMeta(id: 'memory', emoji: '🃏', name: 'Memory match', blurb: 'Find the six pairs'),
-  GameMeta(id: 'reaction', emoji: '⚡', name: 'Reflex test', blurb: 'Tap the moment it turns green'),
-  GameMeta(id: 'emoji', emoji: '🤔', name: 'Emoji riddles', blurb: 'Guess the phrase from the emoji'),
-  GameMeta(id: 'scramble', emoji: '🔤', name: 'Word scramble', blurb: 'Unscramble the letters'),
+  GameMeta(id: 'rps', emoji: '✊'),
+  GameMeta(id: 'ttt', emoji: '⭕'),
+  GameMeta(id: 'quiz', emoji: '🧠'),
+  GameMeta(id: 'memory', emoji: '🃏'),
+  GameMeta(id: 'reaction', emoji: '⚡'),
+  GameMeta(id: 'emoji', emoji: '🤔'),
+  GameMeta(id: 'scramble', emoji: '🔤'),
 ];
 
 final List<String> gameIds = List.unmodifiable(gamesCatalogue.map((g) => g.id));
 
 GameMeta? gameMeta(String id) => gamesCatalogue.where((g) => g.id == id).firstOrNull;
 
+/// The stock offer as stored (English); drawn as [offerLine] (web ui.ts: the stock line is t("games.offer")).
 const defaultOfferText = 'While you wait - fancy a quick game? 🎮';
+
+/// The offer as drawn: the stock line in the active language, the owner's own as written.
+String offerLine(String offerText) => offerText == defaultOfferText ? t('games.offer') : offerText;
 const offerTextMax = 140;
 
 /// The games that work in a language: the emoji riddles are English
