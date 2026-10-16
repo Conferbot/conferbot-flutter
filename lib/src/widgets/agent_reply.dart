@@ -25,6 +25,14 @@ Future<void> _open(String? url) async {
   } catch (_) {}
 }
 
+/// A tap on a source or an article card: the article in the help centre,
+/// or the page in the browser; null (not tappable) when it opens nowhere.
+VoidCallback? _openTarget(OpenTarget? target, ConferBotProvider? provider) {
+  if (target == null) return null;
+  if (target.isArticle) return provider == null ? null : () => provider.openArticle(target.articleId!);
+  return () => _open(target.url);
+}
+
 ConferBotProvider? _providerOf(BuildContext context) {
   try {
     return Provider.of<ConferBotProvider>(context, listen: false);
@@ -181,13 +189,10 @@ class AgentReplyExtras extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: InkWell(
-                  // A help centre article opens in the help centre, by its id
-                  // (web agentSources.ts); a page opens in the browser.
-                  onTap: provider != null && provider.canOpenArticle(source.articleId)
-                      ? () => provider.openArticle(source.articleId!)
-                      : source.url == null
-                          ? null
-                          : () => _open(source.url),
+                  // A help centre article opens in the help centre, by its id,
+                  // while it is on (web agentSources.ts); else its page opens
+                  // in the browser; else it is drawn, not tappable.
+                  onTap: _openTarget(AgentBotParser.sourceTarget(source, provider?.canOpenArticles ?? false), provider),
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -206,7 +211,7 @@ class AgentReplyExtras extends StatelessWidget {
                             style: TextStyle(fontSize: theme.typography.fontSizeSm, fontWeight: FontWeight.w500, color: theme.colors.text),
                           ),
                         ),
-                        if (provider != null && provider.canOpenArticle(source.articleId)) ...[
+                        if (AgentBotParser.sourceTarget(source, provider?.canOpenArticles ?? false)?.isArticle == true) ...[
                           const SizedBox(width: 6),
                           Text(t('kb.helpArticle'),
                               style: TextStyle(fontSize: theme.typography.fontSizeXs, color: theme.colors.textSecondary)),
@@ -634,12 +639,12 @@ class RichAgentMessage extends StatelessWidget {
           _title(r.title, theme),
           if (r.snippet.isNotEmpty)
             Text(r.snippet, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: theme.typography.fontSizeSm, color: theme.colors.textSecondary)),
-          // In the help centre by id (web agentRich.ts openArticle), else
-          // the public help centre page when there is one.
-          if (provider != null && provider.canOpenArticle(r.articleId))
-            _articleLink(t('sdk.kb.readArticle'), () => provider.openArticle(r.articleId), theme)
-          else if (r.url != null)
-            _link(t('sdk.kb.readArticle'), r.url!, theme),
+          // Its public page when it has one, else the article in the app's
+          // help centre while it is on (web agentRich.ts openArticle).
+          if (AgentBotParser.richArticleTarget(r, provider?.canOpenArticles ?? false) case final target?)
+            target.isArticle
+                ? _articleLink(t('sdk.kb.readArticle'), () => provider!.openArticle(target.articleId!), theme)
+                : _link(t('sdk.kb.readArticle'), target.url!, theme),
         ]),
       RichCard r => _CardSurface(theme: theme, children: [
           if (r.imageUrl != null)
