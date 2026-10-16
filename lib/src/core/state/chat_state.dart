@@ -1358,6 +1358,45 @@ class ChatState extends ChangeNotifier {
 
   // ========== Reset ==========
 
+  /// A copy of the conversation's state as it is now: what "Edit" on an
+  /// answer returns to (core/delight/delight.dart; RN ChatState.toJSON).
+  ChatSnapshot snapshot() => ChatSnapshot._(
+        answerVariables: [for (final a in _answerVariables) a.copyWith()],
+        variables: _deepCopy(_variables) as Map<String, dynamic>,
+        userMetadata: _userMetadata.copyWith(metadata: _deepCopy(_userMetadata.metadata) as Map<String, dynamic>),
+        transcript: List.of(_transcript),
+        record: List.of(_record),
+        currentIndex: _currentIndex,
+        currentNodeId: _currentNodeId,
+      );
+
+  /// Puts a [snapshot] back in place, keeping this instance and its
+  /// listeners (RN ChatState.restore).
+  void restore(ChatSnapshot s) {
+    _answerVariables
+      ..clear()
+      ..addAll([for (final a in s.answerVariables) a.copyWith()]);
+    _variables
+      ..clear()
+      ..addAll(_deepCopy(s.variables) as Map<String, dynamic>);
+    _userMetadata = s.userMetadata.copyWith(metadata: _deepCopy(s.userMetadata.metadata) as Map<String, dynamic>);
+    _transcript
+      ..clear()
+      ..addAll(s.transcript);
+    _record
+      ..clear()
+      ..addAll(s.record);
+    _currentIndex = s.currentIndex;
+    _currentNodeId = s.currentNodeId;
+    notifyListeners();
+  }
+
+  static dynamic _deepCopy(dynamic v) {
+    if (v is Map) return <String, dynamic>{for (final e in v.entries) '${e.key}': _deepCopy(e.value)};
+    if (v is List) return [for (final x in v) _deepCopy(x)];
+    return v;
+  }
+
   /// Reset all state for new conversation
   /// Set clearPersistence to true to also clear stored session data
   void reset({bool clearPersistence = false}) {
@@ -1427,4 +1466,25 @@ class ChatState extends ChangeNotifier {
     reset();
     super.dispose();
   }
+}
+
+/// The conversation's state at one moment (ChatState.snapshot).
+class ChatSnapshot {
+  final List<AnswerVariable> answerVariables;
+  final Map<String, dynamic> variables;
+  final UserMetadata userMetadata;
+  final List<TranscriptEntry> transcript;
+  final List<RecordEntry> record;
+  final int currentIndex;
+  final String? currentNodeId;
+
+  const ChatSnapshot._({
+    required this.answerVariables,
+    required this.variables,
+    required this.userMetadata,
+    required this.transcript,
+    required this.record,
+    required this.currentIndex,
+    required this.currentNodeId,
+  });
 }
