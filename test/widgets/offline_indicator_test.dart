@@ -181,7 +181,10 @@ void main() {
         ),
       );
 
-      expect(find.byType(ListenableBuilder), findsOneWidget);
+      // MaterialApp and Scaffold draw ListenableBuilders of their own.
+      expect(
+          find.byWidgetPredicate((w) => w is ListenableBuilder && w.listenable is ConnectivityService),
+          findsOneWidget);
     });
   });
 
@@ -239,7 +242,10 @@ void main() {
         ),
       );
 
-      expect(find.byType(ListenableBuilder), findsOneWidget);
+      // MaterialApp and Scaffold draw ListenableBuilders of their own.
+      expect(
+          find.byWidgetPredicate((w) => w is ListenableBuilder && w.listenable is MessageQueueService),
+          findsOneWidget);
     });
   });
 }
