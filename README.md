@@ -279,6 +279,21 @@ The server checks the hash and drops it before storing. A chat with a matching h
 
 If no user is passed, the SDK generates a persistent anonymous visitor ID (stored via Hive) and reuses it across app restarts.
 
+### Signing in or out later
+
+When someone signs in (or out) after the chat is up, tell the provider, as `identify(user:)` on iOS and `Conferbot.identify` on Android:
+
+```dart
+context.read<ConferBotProvider>().identify(
+  ConferBotUser(id: 'user-42', email: 'jane@example.com', hash: hashFromYourServer),
+);
+
+// Signed out:
+context.read<ConferBotProvider>().identify(null);
+```
+
+From then on the message records carry the new user (with its `hash`), "Your requests" is read again for them (a signed-out user's list is dropped), and greeting rules that ask whether the visitor is signed in decide again. With no stored visitor ID, the user's id goes with the next socket handshake and session. A conversation already going keeps its session.
+
 ## Theming and Flow-Builder Customizations
 
 ### Server customizations apply automatically
@@ -483,7 +498,7 @@ Headless: `provider.waitHelpCard` (`HelpCardState`), `provider.openWaitHelpItem(
 As the web widget's "Your requests": the visitor's own conversations with your team, where each one stands in plain words ("We replied", "We're on it", "Solved"), and a reply box that reaches the team. A reply to a solved one opens it again.
 
 - **Where:** the chat menu (the header's ⋮) has **Your requests** once the visitor has one, **Your requests · New reply** when a team reply has not been read on this device. It opens over the chat: the list (new replies first, "New reply from Ada · 2 hours ago"), then one request with a banner, the conversation (links tappable) and the reply box (Sending..., Not sent with Try again, or "This conversation is closed for replies."). Back and Android's back go one step back. Team replies show up live while a request is open.
-- **Whose they are:** only the visitor's own. The device remembers, per bot, the last 30 chats the visitor wrote in and when each request was last read (shared_preferences), and the server lists a conversation only when its id is one of those and its visitor id matches. A signed-in user (`ConferBotUser` with a valid `hash`, see [Identity verification](#identity-verification)) also sees their verified conversations on this bot from any device. Only conversations a person on the team handles are requests; a chat the AI answered alone is not one. Nothing is asked for a first-time visitor.
+- **Whose they are:** only the visitor's own. The device remembers, per bot, the last 30 chats the visitor wrote in and when each request was last read (shared_preferences), and the server lists a conversation only when its id is one of those and its visitor id matches. A signed-in user (`ConferBotUser` with a valid `hash`, see [Identity verification](#identity-verification)) also sees their verified conversations on this bot from any device, read again when they sign in or out with `identify`. Only conversations a person on the team handles are requests; a chat the AI answered alone is not one. Nothing is asked for a first-time visitor.
 - **Look:** the theme's page, card and text colours, one accent (the bot's brand colour, else its header or launcher colour, else indigo), and the app's `ConferBotCustomization.fontFamily`. It slides in once (not with animations turned off).
 
 Headless: `provider.myRequests` (`List<RequestSummary>?`), `provider.requestsUnread` (for your own badge), `provider.openRequests([requestId])`, `provider.closeRequests()`, `provider.requestsOpen`; `provider.requests.portal` (`RequestsPortal`, a `ChangeNotifier` with `state` and the actions) is drawn by `RequestsPortalView`.
@@ -602,6 +617,7 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 | `sendAnswerFeedback` | `void sendAnswerFeedback(String agentMessageId, AnswerFeedback feedback)` | Send a "Helpful?" vote (`AnswerFeedback(helpful, [reason, comment])`) and keep it on the answer |
 | `openEmailTranscript` / `closeEmailTranscript` | `void openEmailTranscript()` / `void closeEmailTranscript()` | Show / hide the "Email me this chat" card |
 | `emailTranscript` | `Future<TranscriptEmailResult> emailTranscript(String email)` | Email the transcript to this address; on success the address is kept as the visitor's |
+| `identify` | `void identify(ConferBotUser? user)` | Sign a user in after construction, or out with `null` ([Signing in or out later](#signing-in-or-out-later)) |
 | `openRequests` / `closeRequests` | `Future<void> openRequests([String? requestId])` / `void closeRequests()` | Open "Your requests" (the list, or one request) / leave it |
 | `startNewChat` | `Future<void> startNewChat()` | A fresh conversation after a chat ended (not for a blocked visitor) |
 | `focusComposer` | `void focusComposer()` | Put the cursor in the chat's composer |
