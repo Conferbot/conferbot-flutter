@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../core/customization/auto_open.dart';
 import '../core/customization/launcher.dart';
 import '../core/customization/launcher_icons.dart';
 import '../core/customization/launcher_attention.dart' show wavingHand;
@@ -1115,6 +1116,7 @@ class _ConferBotFABState extends State<ConferBotFAB>
 
   @override
   void dispose() {
+    _autoOpenTimer?.cancel();
     _idleTimer?.cancel();
     _ticker?.dispose();
     _fxTicker?.dispose();
@@ -1198,6 +1200,34 @@ class _ConferBotFABState extends State<ConferBotFAB>
     if (!_isOpen) _openChat(context, provider);
   }
 
+  // ── Auto-open (core/customization/auto_open.dart) ─────────────────────────
+
+  Timer? _autoOpenTimer;
+  bool _autoOpenPlanned = false;
+
+  /// The owner's auto-open: once the bot's settings are here, for a visitor
+  /// with no conversation yet, once per app launch, not within 2 minutes of
+  /// a close (web index.ts live_chat auto-open).
+  void _planAutoOpen(BuildContext context, ConferBotProvider provider) {
+    if (_autoOpenPlanned || _sc(provider) == null) return;
+    _autoOpenPlanned = true;
+    int? plan() => AutoOpen.plan(
+          _sc(provider),
+          chatStarted: provider.sessionRestored || provider.chatSessionId != null,
+          isOpen: _isOpen,
+          alreadyAutoOpened: AutoOpenSession.opened,
+          closedAt: AutoOpenSession.closedAt,
+        );
+    final delay = plan();
+    if (delay == null) return;
+    _autoOpenTimer = Timer(Duration(milliseconds: delay), () {
+      // Still nothing started and the chat still shut when the delay is up.
+      if (!mounted || plan() == null) return;
+      AutoOpenSession.opened = true;
+      _openChat(this.context, provider);
+    });
+  }
+
   // ── Open chat sheet ───────────────────────────────────────────────────────
 
   Future<void> _openChat(BuildContext context, ConferBotProvider provider) async {
@@ -1235,6 +1265,8 @@ class _ConferBotFABState extends State<ConferBotFAB>
       },
     );
 
+    // A close keeps auto-open away for 2 minutes.
+    AutoOpenSession.closedAt = DateTime.now().millisecondsSinceEpoch;
     if (mounted) {
       setState(() => _isOpen = false);
     }
@@ -1286,6 +1318,13 @@ class _ConferBotFABState extends State<ConferBotFAB>
     final mascotStyle = hasLook && imageUrl == null && look.style == 'mascot';
 
     final isLeft = position == FabPosition.left;
+
+    // The owner's auto-open, once the bot's settings are here.
+    if (!_autoOpenPlanned && hasLook) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _planAutoOpen(context, provider);
+      });
+    }
 
     // The greeting card, decided from the bot's settings once they arrive.
     final greeting = _greeting ??= GreetingController(provider.botId)..addListener(_onGreeting);
@@ -1690,5 +1729,23 @@ class ConferBotFABScope extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Auto-open for this launch of the app (web: once per page load, and the
+/// isChatOpen=false cookie for 2 minutes after a close).
+class AutoOpenSession {
+  AutoOpenSession._();
+
+  /// The chat opened on its own already in this launch.
+  static bool opened = false;
+
+  /// When the visitor last closed the chat (ms since the epoch).
+  static int? closedAt;
+
+  @visibleForTesting
+  static void reset() {
+    opened = false;
+    closedAt = null;
   }
 }
