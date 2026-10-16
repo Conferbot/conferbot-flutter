@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/i18n/i18n.dart';
+import '../core/live_chat/typing_preview.dart';
 import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
 import '../config/constants.dart';
@@ -43,6 +44,10 @@ class ChatBottomBar extends StatefulWidget {
   /// way" under an AI answer).
   final FocusNode? focusNode;
 
+  /// The text as it is typed (the agent's typing preview, the waiting
+  /// nudge); [secret] is true for a field that must never be previewed.
+  final void Function(String text, {bool secret})? onDraftChanged;
+
   const ChatBottomBar({
     super.key,
     required this.onSend,
@@ -59,6 +64,7 @@ class ChatBottomBar extends StatefulWidget {
     this.theme,
     this.look,
     this.focusNode,
+    this.onDraftChanged,
   });
 
   @override
@@ -83,6 +89,7 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
     try {
       await widget.onSend(text);
       _controller.clear();
+      widget.onDraftChanged?.call('');
       setState(() {});
     } catch (e) {
       debugPrint('[ChatBottomBar] Error sending: $e');
@@ -167,7 +174,11 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                               maxLines: null,
                               textInputAction: TextInputAction.send,
                               onSubmitted: (_) => _handleSend(),
-                              onChanged: (_) => setState(() {}),
+                              onChanged: (v) {
+                                setState(() {});
+                                // This field never hides its text, so it is never a secret one.
+                                widget.onDraftChanged?.call(v, secret: TypingPreview.isSensitiveField());
+                              },
                               decoration: InputDecoration(
                                 hintText:
                                     widget.placeholder ?? t('chat.composer.placeholder'),
