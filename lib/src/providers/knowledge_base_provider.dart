@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../config/constants.dart';
+import '../core/help_centre/article_engagement.dart';
 import '../core/i18n/i18n.dart';
 import '../models/knowledge_base.dart';
 import '../services/knowledge_base_service.dart';
@@ -44,6 +45,13 @@ class KnowledgeBaseProvider with ChangeNotifier {
   String? _ratingError;
   String? _ratingSuccess;
 
+  // Helpful / not helpful, as the web asks (rate-article), per article.
+  final Map<String, bool> _helpful = {};
+
+  /// Reading time and scroll depth of the open article, and the ratings
+  /// sent this session, over the chat's socket (web knowledgeBase.ts).
+  final ArticleEngagement engagement;
+
   // Navigation history for back navigation
   final List<String> _navigationHistory = [];
 
@@ -65,7 +73,10 @@ class KnowledgeBaseProvider with ChangeNotifier {
     KnowledgeBaseData? initialData,
     this.showRecentArticles = true,
     KnowledgeBaseService? service,
+    HelpCentreLink? link,
+    int Function()? now,
   })  : _visitorId = visitorId,
+        engagement = ArticleEngagement(link: link, now: now, visitorId: visitorId),
         _data = initialData ?? KnowledgeBaseData.empty,
         _dataLoaded = initialData != null && initialData.isNotEmpty,
         _service = service ??
@@ -76,6 +87,11 @@ class KnowledgeBaseProvider with ChangeNotifier {
               // hard-coded production URL.
               baseUrl: baseUrl ?? ConferBotEndpoints.apiBaseUrl,
             );
+
+  /// The chat's socket and conversation: ratings, reading time and the
+  /// search inside article bodies go over it (null: REST only).
+  HelpCentreLink? get link => engagement.link;
+  set link(HelpCentreLink? value) => engagement.link = value;
 
   /// The server this help centre reads from.
   String get baseUrl => _service.baseUrl;
@@ -159,6 +175,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
   /// Set visitor ID for tracking and ratings
   void setVisitorId(String visitorId) {
     _visitorId = visitorId;
+    engagement.visitorId = visitorId;
   }
 
   /// Initialize the knowledge base (load categories and initial articles)
@@ -334,7 +351,12 @@ class KnowledgeBaseProvider with ChangeNotifier {
     if (_visitorId != null && _visitorId!.isNotEmpty) {
       _service.trackArticleView(articleId, _visitorId!);
     }
+    // Reading starts (the article before it, if any, is sent).
+    engagement.start(articleId);
   }
+
+  /// The open article was scrolled to [depth] percent of what scrolls.
+  void articleScrolled(double depth) => engagement.scrolled(depth);
 
   /// Select an article from the list. A list sent without bodies has the
   /// title and description only: the body is fetched now.
@@ -350,6 +372,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
 
   /// Clear selected article (go back to list)
   void clearSelectedArticle() {
+    engagement.send();
     _selectedArticle = null;
     _articleError = null;
     if (_navigationHistory.isNotEmpty) {
@@ -407,10 +430,20 @@ class KnowledgeBaseProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _service.searchArticles(botId, query);
       // Titles and descriptions match here at once; the server adds matches
-      // inside article bodies (as the web widget merges them).
+      // inside article bodies (as the web widget merges them): over the
+      // chat's socket (search-kb-articles, with snippets), else REST.
       final local = _localMatches(query);
+      final rows = await engagement.link?.search?.call(query);
+      if (_searchQuery != query) return;
+      if (rows != null) {
+        _showResults(query, local, rows);
+        _isSearching = false;
+        notifyListeners();
+        return;
+      }
+
+      final response = await _service.searchArticles(botId, query);
 
       if (response.success && response.data != null) {
         final seen = local.map((r) => r.article.id).toSet();
@@ -446,8 +479,33 @@ class KnowledgeBaseProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // The socket's rows after the local matches, once each; an article's
+  // snippet stands in for its summary when the summary does not match
+  // (web knowledgeBase.ts _kbArticleRow).
+  void _showResults(String query, List<ArticleSearchResult> local, List<Map<String, dynamic>> rows) {
+    final terms = _terms(query);
+    final seen = local.map((r) => r.article.id).toSet();
+    final remote = <ArticleSearchResult>[];
+    for (final row in rows) {
+      final id = '${row['_id'] ?? ''}';
+      if (id.isEmpty || !seen.add(id)) continue;
+      var article = _data.find(id) ?? KnowledgeBaseArticle.fromJson(row);
+      final snippet = row['snippet']?.toString().trim() ?? '';
+      final summary = (article.summary ?? '').toLowerCase();
+      if (snippet.isNotEmpty && !terms.any(summary.contains)) article = article.copyWith(summary: snippet);
+      remote.add(ArticleSearchResult(article: article, highlightedContent: snippet.isEmpty ? null : snippet));
+    }
+    _searchResults = [...local, ...remote];
+    _searchError = null;
+    _articles = _searchResults.map((r) => r.article).toList();
+    _pagination = _onePage(_articles.length);
+  }
+
+  static List<String> _terms(String query) =>
+      query.toLowerCase().split(RegExp(r'\s+')).where((t) => t.length >= 2).toList();
+
   List<ArticleSearchResult> _localMatches(String query) {
-    final terms = query.toLowerCase().split(RegExp(r'\s+')).where((t) => t.length >= 2).toList();
+    final terms = _terms(query);
     if (terms.isEmpty) return [];
     return _data.allArticles
         .where((a) {
@@ -469,7 +527,38 @@ class KnowledgeBaseProvider with ChangeNotifier {
     await loadArticles(refresh: true);
   }
 
-  /// Rate an article
+  /// Helpful or not, as the web asks: `rate-article` on the chat's socket
+  /// (5 for helpful, 1 for not), over REST when there is no socket. Once
+  /// per article per session; answered at once, as on the web. False when
+  /// this article was rated already.
+  Future<bool> rateHelpful(String articleId, bool helpful) async {
+    if (_helpful.containsKey(articleId) || _visitorRatings.containsKey(articleId)) return false;
+    final vote = engagement.rate(articleId, helpful);
+    if (vote == ArticleVote.already) return false;
+    _helpful[articleId] = helpful;
+    _ratingError = null;
+    notifyListeners();
+    if (vote == ArticleVote.offline && _visitorId != null && _visitorId!.isNotEmpty) {
+      try {
+        await _service.rateArticle(articleId, helpful ? 5 : 1, _visitorId!);
+      } catch (e) {
+        kbLogger.error('Rating error', e);
+      }
+    }
+    return true;
+  }
+
+  /// The visitor's answer to "Was this helpful?" for an article, if any
+  /// (a 1-5 rating from before counts: 4 and up as helpful).
+  bool? articleHelpful(String articleId) {
+    final h = _helpful[articleId];
+    if (h != null) return h;
+    final r = _visitorRatings[articleId];
+    return r == null ? null : r >= 4;
+  }
+
+  /// Rate an article 1-5 over REST.
+  @Deprecated('The help centre asks helpful / not helpful as the web does: use rateHelpful.')
   Future<bool> rateArticle(String articleId, int rating, {String? feedback}) async {
     if (_visitorId == null) {
       _ratingError = 'Visitor ID not set';
@@ -609,6 +698,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    engagement.send();
     _searchDebounce?.cancel();
     _service.dispose();
     super.dispose();
