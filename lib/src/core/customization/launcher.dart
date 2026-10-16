@@ -7,6 +7,7 @@ library;
 
 import 'dart:math' as math;
 
+import '../i18n/i18n.dart';
 import 'customizations.dart';
 import 'launcher_attention.dart';
 import 'launcher_entrance.dart';
@@ -121,7 +122,8 @@ class Launcher {
   static const shapes = ['circle', 'squircle', 'bubble', 'tab', 'peek'];
   static const styles = ['icon', 'label', 'avatar', 'mascot'];
   static const labelMax = 24;
-  static const defaultLabel = 'Chat with us';
+  /// "Chat with us" in the active language.
+  static String get defaultLabel => t('home.chatWithUs');
 
   /// The web folds the label back to the round button at this width and under.
   static const labelMinWidth = 480.0;
