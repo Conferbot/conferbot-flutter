@@ -16,6 +16,8 @@ library;
 
 import 'dart:math';
 
+import '../i18n/i18n.dart';
+
 /// The socket events (models/socket_events.dart has them too).
 class LiveEventNames {
   LiveEventNames._();
@@ -60,13 +62,15 @@ class LiveEvents {
 
   // ---- Back in the queue (live-chat-requeued) ----
 
+  /// The English words (the web's en takeover.requeued).
   static const requeuedDefault = 'Connecting you to another agent...';
 
-  /// What the visitor reads when the chat goes back to the queue (web requeuedText).
+  /// What the visitor reads when the chat goes back to the queue (web
+  /// requeuedText), in the active language.
   static String requeuedText([Object? teamName]) {
     var team = teamName is String ? teamName.replaceAll(RegExp(r'[<>]'), '').trim() : '';
     if (team.length > 60) team = team.substring(0, 60);
-    return team.isEmpty ? requeuedDefault : 'Connecting you to $team...';
+    return team.isEmpty ? t('takeover.requeued') : t('takeover.requeuedTeam', {'team': team});
   }
 
   /// The requeued line's record entry (web: id, type, time, text).
@@ -143,6 +147,13 @@ class LiveEvents {
   static const chatEndedText = 'Chat ended';
   static const newChatText = 'Start a new chat';
 
+  /// The same words in the active language (web system.closed,
+  /// system.chatEnded; "Start a new chat" is the SDK's own button). The
+  /// English constants above stay as what the record and the server say.
+  static String get closedLabel => t('system.closed');
+  static String get chatEndedLabel => t('system.chatEnded');
+  static String get newChatLabel => t('sdk.live.newChat');
+
   /// The handshake refused a blocked visitor (connect_error "visitor_blocked").
   static bool isBlockedError(dynamic err) {
     if (err is String) return err == 'visitor_blocked';
@@ -158,7 +169,7 @@ class LiveEvents {
   static String blockedText(dynamic data) {
     var m = data is Map && data['message'] is String ? (data['message'] as String).trim() : '';
     if (m.length > 200) m = m.substring(0, 200);
-    return m.isEmpty ? closedText : m;
+    return m.isEmpty ? closedLabel : m;
   }
 
   /// The chat's closed state, or null while it is open:
@@ -174,6 +185,6 @@ class LiveEvents {
     }
     if (stepWaiting || live) return null;
     if (!endedSinceLastLive(record)) return null;
-    return const ClosedState(kind: ClosedKind.ended, text: chatEndedText, newChat: true, inputOff: true);
+    return ClosedState(kind: ClosedKind.ended, text: chatEndedLabel, newChat: true, inputOff: true);
   }
 }
