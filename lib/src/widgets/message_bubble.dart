@@ -57,6 +57,10 @@ class MessageBubble extends StatelessWidget {
   /// Whether to enable text selection
   final bool selectable;
 
+  /// Drawn over the bubble itself, free to reach past its edges: the bot's
+  /// tapback and the confetti on an answer (widgets/delight/delight_views.dart).
+  final Widget? overlay;
+
   const MessageBubble({
     super.key,
     required this.message,
@@ -75,6 +79,7 @@ class MessageBubble extends StatelessWidget {
     this.onCodeCopied,
     this.showCodeCopyButton = true,
     this.selectable = false,
+    this.overlay,
   });
 
   @override
@@ -215,6 +220,7 @@ class MessageBubble extends StatelessWidget {
                     ? CrossAxisAlignment.end
                     : CrossAxisAlignment.start,
                 children: [
+                  _withOverlay(
                   Container(
                     constraints: BoxConstraints(
                       maxWidth: effectiveTheme.layout.maxBubbleWidth,
@@ -252,6 +258,7 @@ class MessageBubble extends StatelessWidget {
                       ],
                     ),
                   ),
+                  ),
                   // Timestamp and delivery status row
                   if (showTimestamp || (isUser && showDeliveryStatus)) ...[
                     SizedBox(height: effectiveTheme.spacing.xs / 2),
@@ -275,6 +282,11 @@ class MessageBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _withOverlay(Widget bubble) {
+    if (overlay == null) return bubble;
+    return Stack(clipBehavior: Clip.none, children: [bubble, Positioned.fill(child: overlay!)]);
   }
 
   Widget _buildFileMessage(BuildContext context, ConferBotTheme theme) {
