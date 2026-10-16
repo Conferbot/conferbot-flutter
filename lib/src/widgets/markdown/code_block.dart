@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/i18n/i18n.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 
@@ -240,7 +241,7 @@ class _CodeBlockState extends State<CodeBlock> {
               ),
               SizedBox(width: theme.spacing.xs),
               Text(
-                _copied ? 'Copied!' : 'Copy',
+                _copied ? t('exit.copied') : t('exit.copy'),
                 style: TextStyle(
                   fontSize: theme.typography.fontSizeXs,
                   color: _copied
