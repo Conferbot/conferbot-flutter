@@ -11,6 +11,7 @@ import 'customizations.dart';
 import 'launcher_attention.dart';
 import 'launcher_entrance.dart';
 import 'launcher_idle_call.dart';
+import 'mascot_art.dart';
 import 'widget_theme.dart';
 
 class ResolvedLauncher {
@@ -47,6 +48,13 @@ class ResolvedLauncher {
   final String style;
   final String label;
   final String? avatar;
+
+  /// The "mascot" style (launcherStyle.ts): the owner's mascot, its bust at
+  /// `scale`% of the button, centred and lifted 6% so its ears and hat peek
+  /// over the rim, in `accent` (widgetIconBgColor, else the header's), on a
+  /// soft light button (`light`: a radial white to the launcher colour at
+  /// 14% from 35% 30%). Open, the button is the brand colour with its cross.
+  final LauncherMascotLook mascot;
   final String? imageUrl;
   final String? iconId;
 
@@ -84,6 +92,7 @@ class ResolvedLauncher {
     required this.style,
     required this.label,
     required this.avatar,
+    this.mascot = const LauncherMascotLook(),
     required this.imageUrl,
     required this.iconId,
     required this.glyph,
@@ -95,6 +104,15 @@ class ResolvedLauncher {
     this.idleCallDelay = defaultIdleCallDelay,
     this.idleCallText = '',
   });
+}
+
+/// The launcher's mascot: the owner's look, its size (% of the button), its colour and the button's light.
+class LauncherMascotLook {
+  final MascotLook look;
+  final int scale;
+  final String accent;
+  final String light;
+  const LauncherMascotLook({this.look = const MascotLook(), this.scale = mascotScaleDefault, this.accent = '#4f46e5', this.light = '#ffffff'});
 }
 
 class Launcher {
@@ -209,6 +227,12 @@ class Launcher {
       style: style,
       label: label.isEmpty ? defaultLabel : label,
       avatar: avatar,
+      mascot: LauncherMascotLook(
+        look: mascotLookOf(c),
+        scale: mascotScaleOf(c),
+        accent: _str(c['widgetIconBgColor']).isNotEmpty ? _str(c['widgetIconBgColor']) : (_str(c['headerBgColor']).isNotEmpty ? _str(c['headerBgColor']) : '#4f46e5'),
+        light: mixColor(solid, 14, '#ffffff'),
+      ),
       imageUrl: imageUrl,
       iconId: _str(c['widgetIconSVG']).isEmpty ? null : _str(c['widgetIconSVG']),
       // The icon at 70% of the round button (css/liveChat/index.css), 50% of a tab.
