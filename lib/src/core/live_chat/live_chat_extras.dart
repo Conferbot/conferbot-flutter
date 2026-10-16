@@ -28,7 +28,9 @@ class LiveChatExtras extends ChangeNotifier {
     void Function()? continueFlow,
     Future<TranscriptEmailResult> Function(String chatSessionId, String email)? postTranscriptEmail,
     void Function(dynamic data)? onQueueStatus,
+    int Function()? now,
   })  : _socket = socket,
+        now = now ?? (() => DateTime.now().millisecondsSinceEpoch),
         _sessionId = sessionId,
         _addMessage = addMessage,
         _sendRecord = sendRecord,
@@ -47,6 +49,17 @@ class LiveChatExtras extends ChangeNotifier {
   /// it (its `help` is what to offer while waiting, core/waiting).
   final void Function(dynamic data) _onQueueStatus;
   ChatState get _state => ChatState.instance;
+
+  /// The clock the max wait and its countdown read (ms since the epoch).
+  final int Function() now;
+
+  /// When the handover's max wait runs out (ms since the epoch), for the
+  /// wait card's countdown, while a flow's handover waits for a person;
+  /// null otherwise.
+  int? waitEndsAt;
+
+  // A wait picked back up after a restart: the server's seconds left.
+  int? _restoredRemaining;
 
   QueueStatus? queue;
   HandoverWaiting? handoverWaiting;
@@ -258,21 +271,35 @@ class LiveChatExtras extends ChangeNotifier {
 
   /// The handover step's max wait: once it passes with nobody joined, the
   /// server is asked to decide (handover-timeout) and answers with
-  /// no-agents-available. Once per wait.
+  /// no-agents-available. Once per wait. A restored wait goes on from the
+  /// server's seconds left (web special.ts _attachHandoverWait). The wait
+  /// card counts down to it ([waitEndsAt]).
   void startWaitTimer(Map<String, dynamic>? nodeData, String? workspaceId) {
     if (_waitTimer != null) return;
-    final minutes = LiveChat.waitMinutes(nodeData?['maxWaitTime']);
-    _waitTimer = Timer(Duration(milliseconds: (minutes * 60000).round()), () {
+    final deadline = LiveChat.waitDeadline(nodeData?['maxWaitTime'], _restoredRemaining, now: now());
+    _restoredRemaining = null;
+    waitEndsAt = deadline;
+    final left = deadline - now();
+    _waitTimer = Timer(Duration(milliseconds: left < 0 ? 0 : left), () {
       final id = _sessionId();
       if (id == null) return;
       _socket()?.emit('handover-timeout', LiveChat.handoverTimeoutPayload(id, nodeData, workspaceId));
     });
+    notifyListeners();
   }
 
   void stopWaitTimer() {
     _waitTimer?.cancel();
     _waitTimer = null;
+    if (waitEndsAt != null) {
+      waitEndsAt = null;
+      notifyListeners();
+    }
   }
+
+  /// A restored wait for a person: its seconds left, before the wait starts
+  /// again (HandoverLifecycle.resumeRestored).
+  void resumeWaitWith(int? remainingSeconds) => _restoredRemaining = remainingSeconds;
 
   Future<void> _askQueue() async {
     final id = _sessionId();
@@ -441,6 +468,7 @@ class LiveChatExtras extends ChangeNotifier {
   void reset() {
     stopQueuePoll();
     stopWaitTimer();
+    _restoredRemaining = null;
     queue = null;
     handoverWaiting = null;
     noAgentsAvailable = false;
