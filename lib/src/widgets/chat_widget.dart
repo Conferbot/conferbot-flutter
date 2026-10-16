@@ -560,6 +560,9 @@ class _ChatWidgetState extends State<ChatWidget> {
       // ts/home/requests/card.ts; there is no home screen yet).
       onRequests: provider.requests.hasRequests ? () => provider.openRequests() : null,
       requestsUnread: provider.requestsUnread,
+      // Sound on / off, when the bot has a sound (web option-sound-toggle).
+      onToggleSound: provider.sounds.hasSounds ? provider.toggleSound : null,
+      soundOn: provider.sounds.soundOn,
       theme: provider.serverTheme,
       // Show handover indicator in header
       handoverIndicator: _buildHandoverIndicator(provider, theme),
@@ -1045,6 +1048,11 @@ class ChatHeaderWithKB extends StatelessWidget {
   /// "Your requests" in the chat menu; null leaves it out.
   final VoidCallback? onRequests;
 
+  /// Sound on / off in the chat menu (only when the bot has a sound); null
+  /// leaves it out. [soundOn] is the visitor's switch.
+  final VoidCallback? onToggleSound;
+  final bool soundOn;
+
   /// ‹ at the start: back to the home screen; null leaves it out.
   final VoidCallback? onBack;
 
@@ -1069,6 +1077,8 @@ class ChatHeaderWithKB extends StatelessWidget {
     this.onRequests,
     this.onBack,
     this.requestsUnread = 0,
+    this.onToggleSound,
+    this.soundOn = true,
   });
 
   // The stock "Online" in the active language; any other status as given.
@@ -1196,7 +1206,7 @@ class ChatHeaderWithKB extends StatelessWidget {
               ),
               const SizedBox(width: 4),
             ],
-            if (onEmailTranscript != null || onRequests != null) ...[
+            if (onEmailTranscript != null || onRequests != null || onToggleSound != null) ...[
               PopupMenuButton<String>(
                 key: const ValueKey('cb-chat-menu'),
                 icon: Icon(Icons.more_vert, color: t.colors.headerText),
@@ -1205,6 +1215,7 @@ class ChatHeaderWithKB extends StatelessWidget {
                 onSelected: (id) {
                   if (id == 'email-transcript') onEmailTranscript?.call();
                   if (id == 'requests') onRequests?.call();
+                  if (id == 'sound') onToggleSound?.call();
                 },
                 itemBuilder: (_) => [
                   if (onRequests != null)
@@ -1224,6 +1235,19 @@ class ChatHeaderWithKB extends StatelessWidget {
                       value: 'email-transcript',
                       child: Row(
                         children: [const Icon(Icons.mail_outline, size: 18), const SizedBox(width: 10), Text(EmailTranscript.menuLabel)],
+                      ),
+                    ),
+                  // The visitor's switch, saying where it is (web option-sound-toggle).
+                  if (onToggleSound != null)
+                    PopupMenuItem(
+                      key: const ValueKey('cb-menu-sound'),
+                      value: 'sound',
+                      child: Row(
+                        children: [
+                          Icon(soundOn ? Icons.volume_up_outlined : Icons.volume_off_outlined, size: 18),
+                          const SizedBox(width: 10),
+                          Text(I18n.t(soundOn ? 'chat.menu.soundOn' : 'chat.menu.soundOff')),
+                        ],
                       ),
                     ),
                 ],
