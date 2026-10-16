@@ -7,6 +7,7 @@ import '../core/live_chat/live_chat.dart';
 import '../core/live_chat/email_transcript.dart';
 import '../core/live_chat/live_chat_extras.dart';
 import '../core/live_chat/live_events.dart';
+import '../core/live_chat/reply_time.dart';
 import '../models/message.dart';
 import '../providers/conferbot_provider.dart';
 import '../theme/conferbot_theme.dart';
@@ -295,11 +296,17 @@ class HandoverWaitCard extends StatelessWidget {
 
   /// Leave the queue (ConferBotProvider.leaveQueue); no action when null.
   final VoidCallback? onLeave;
-  const HandoverWaitCard({super.key, required this.liveChat, required this.theme, this.message, this.onLeave});
+
+  /// The bot's reply time (customizations.replyTime): the usual wait the
+  /// card says when the server has no live estimate (web queueCard.ts).
+  final dynamic replyTime;
+  const HandoverWaitCard({super.key, required this.liveChat, required this.theme, this.message, this.onLeave, this.replyTime});
 
   @override
   Widget build(BuildContext context) {
     final queue = liveChat.queue;
+    // The estimate, else the usual wait, else a calm promise (web queueCard.ts).
+    final lines = LiveChat.waitCardLines(queue, ReplyTime.typicalWait(replyTime, queue?.typical));
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: theme.spacing.chatContentPadding),
       child: _LiveCard(
@@ -312,7 +319,11 @@ class HandoverWaitCard extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [_title(theme, LiveChat.queueLine(queue)), _sub(theme, LiveChat.queueSubline(queue))],
+                  children: [
+                    _title(theme, LiveChat.queueLine(queue)),
+                    _sub(theme, lines.estimate),
+                    if (lines.typical.isNotEmpty) KeyedSubtree(key: const ValueKey('cb-wait-typical'), child: _sub(theme, lines.typical)),
+                  ],
                 ),
               ),
             ],
