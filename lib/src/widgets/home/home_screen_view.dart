@@ -515,8 +515,9 @@ class _HomeScreenViewState extends State<HomeScreenView> {
                           lead: iconBox(r is AskArticleRow ? 'doc' : (r is AskQueryRow ? 'spark' : 'chat')),
                           title: switch (r) {
                             AskQueryRow() => TextSpan(children: [
-                                const TextSpan(text: '${HomeText.askQuery} '),
+                                TextSpan(text: HomeText.askQueryParts().$1),
                                 TextSpan(text: '“${r.query}”', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                if (HomeText.askQueryParts().$2.isNotEmpty) TextSpan(text: HomeText.askQueryParts().$2),
                               ]),
                             AskArticleRow() => runs(r.title),
                             AskChatRow() => TextSpan(text: r.title),
