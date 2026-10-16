@@ -162,32 +162,32 @@ void main() {
     testWidgets('help button shown while enableKnowledgeBase is on', (tester) async {
       final provider = chatProvider(enableKnowledgeBase: true);
       await pumpChat(tester, provider);
-      expect(find.byTooltip('Help Center'), findsOneWidget);
+      expect(find.byTooltip('Help centre'), findsOneWidget);
       await finish(tester);
     });
 
     testWidgets('no help button while it is off', (tester) async {
       final provider = chatProvider(enableKnowledgeBase: false);
       await pumpChat(tester, provider);
-      expect(find.byTooltip('Help Center'), findsNothing);
+      expect(find.byTooltip('Help centre'), findsNothing);
       await finish(tester);
     });
 
     testWidgets("the app's showKnowledgeBase overrides the server", (tester) async {
       final off = chatProvider(enableKnowledgeBase: false);
       await pumpChat(tester, off, showKnowledgeBase: true);
-      expect(find.byTooltip('Help Center'), findsOneWidget);
+      expect(find.byTooltip('Help centre'), findsOneWidget);
 
       final on = chatProvider(enableKnowledgeBase: true);
       await pumpChat(tester, on, showKnowledgeBase: false);
-      expect(find.byTooltip('Help Center'), findsNothing);
+      expect(find.byTooltip('Help centre'), findsNothing);
       await finish(tester);
     });
 
     testWidgets('the help button opens the help centre from the socket data', (tester) async {
       final provider = chatProvider(enableKnowledgeBase: true);
       await pumpChat(tester, provider);
-      await tester.tap(find.byTooltip('Help Center'));
+      await tester.tap(find.byTooltip('Help centre'));
       await tester.pump();
       await tester.pump();
       drain(tester);
