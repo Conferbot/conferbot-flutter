@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:conferbot_flutter/conferbot_flutter.dart';
 import 'package:conferbot_flutter/src/widgets/handover/queue_status.dart';
+import 'package:conferbot_flutter/src/widgets/live_chat_cards.dart';
+import 'package:conferbot_flutter/src/theme/default_theme.dart';
 
 void main() {
   group('QueueInfo', () {
@@ -315,7 +317,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: CompactQueueStatus(
-              maxWaitMinutes: 5,
               primaryColor: Colors.blue,
             ),
           ),
@@ -330,7 +331,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: CompactQueueStatus(
-              maxWaitMinutes: 5,
               primaryColor: Colors.blue,
               queueInfo: const QueueInfo(
                 position: 2,
@@ -351,7 +351,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: CompactQueueStatus(
-              maxWaitMinutes: 5,
               primaryColor: Colors.blue,
               onTap: () {
                 tapped = true;
@@ -367,19 +366,68 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('shows time icon', (WidgetTester tester) async {
+    testWidgets('no deadline: no time, and no countdown of its own', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: CompactQueueStatus(
-              maxWaitMinutes: 5,
               primaryColor: Colors.blue,
+              queueInfo: const QueueInfo(position: 2, estimatedWaitSeconds: 120),
             ),
           ),
         ),
       );
 
+      expect(find.byIcon(Icons.access_time), findsNothing);
+      expect(find.text('2:00'), findsNothing);
+    });
+
+    // #87: the header counts down to the wait card's deadline on its clock.
+    testWidgets('counts down to the wait card deadline, with the card', (WidgetTester tester) async {
+      var clock = 1000000;
+      int now() => clock;
+      final endsAt = clock + 65000;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(children: [
+              CompactQueueStatus(
+                primaryColor: Colors.blue,
+                endsAt: endsAt,
+                now: now,
+                // An estimate is not the deadline.
+                queueInfo: const QueueInfo(position: 2, estimatedWaitSeconds: 300),
+              ),
+              MaxWaitLine(endsAt: endsAt, now: now, theme: defaultTheme),
+            ]),
+          ),
+        ),
+      );
+
       expect(find.byIcon(Icons.access_time), findsOneWidget);
+      expect(find.text('1:05'), findsOneWidget);
+      expect(find.text('Max wait 1:05'), findsOneWidget);
+
+      clock += 1000;
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('1:04'), findsOneWidget);
+      expect(find.text('Max wait 1:04'), findsOneWidget);
+
+      // A restored wait: the server's seconds left move the deadline.
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CompactQueueStatus(primaryColor: Colors.blue, endsAt: clock + 30000, now: now),
+          ),
+        ),
+      );
+      expect(find.text('0:30'), findsOneWidget);
+
+      clock += 40000;
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('0:00'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.text('0:00'), findsOneWidget);
     });
 
     testWidgets('disposes properly', (WidgetTester tester) async {
@@ -387,7 +435,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: CompactQueueStatus(
-              maxWaitMinutes: 5,
               primaryColor: Colors.blue,
             ),
           ),
