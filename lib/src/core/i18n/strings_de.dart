@@ -854,6 +854,7 @@ final Map<String, String> i18nDe = <String, String>{
   "sdk.bubble.reactHint": "Lange drücken, um eine Reaktion hinzuzufügen",
   "sdk.calendar.dayClosed": "Dieser Tag ist nicht verfügbar.",
   "sdk.calendar.noTimes": "An diesem Tag sind keine Zeiten frei.",
+  "sdk.calendar.slotBooked": "{time}, gebucht",
   "sdk.card.learnMore": "Mehr erfahren",
   "sdk.chat.complete": "Unterhaltung abgeschlossen",
   "sdk.chat.loadOlder": "Ältere Nachrichten laden",
