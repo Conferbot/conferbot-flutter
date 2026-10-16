@@ -21,6 +21,8 @@
 /// and leave the input alone.
 library;
 
+import '../i18n/i18n.dart';
+
 enum HandoverOutcome { joined, unavailable, cancelled, ended }
 
 enum HandoverPhase { none, connecting, joined }
@@ -100,7 +102,8 @@ class RestoredLiveChat {
 class HandoverRecord {
   HandoverRecord._();
 
-  /// The web's English strings (ts/i18n/en.ts handover.*).
+  /// The web's English strings (ts/i18n/en.ts handover.*); `lineText` draws
+  /// them in the active language.
   static const pendingText = 'Connecting you with the team…';
   static const outcomeText = {
     HandoverOutcome.joined: 'Connected with the team',
@@ -109,8 +112,21 @@ class HandoverRecord {
     HandoverOutcome.ended: 'Chat ended before the team joined',
   };
 
-  /// The note under a person's join after an AI handed the visitor on.
+  /// The note under a person's join after an AI handed the visitor on. Kept
+  /// in English on the record entry (the web's HANDED_OVER_NOTE marker);
+  /// `handedOverNoteText` draws it in the active language.
   static const handedOverNote = 'They can see your conversation so far';
+
+  /// A join's note as drawn: the marker in the active language (web
+  /// agentJoinedDivider.ts), else as written.
+  static String handedOverNoteText(String note) => note == handedOverNote ? t('system.handedOverNote') : note;
+
+  static const _outcomeKey = {
+    HandoverOutcome.joined: 'handover.joined',
+    HandoverOutcome.unavailable: 'handover.unavailable',
+    HandoverOutcome.cancelled: 'handover.cancelled',
+    HandoverOutcome.ended: 'handover.ended',
+  };
 
   /// Things that close a live-chat episode for good.
   static const closers = ['agent-chat-ended', 'agent-declined-message', 'queue-self-resolved', 'ai-agent-inactive-close'];
@@ -124,19 +140,19 @@ class HandoverRecord {
   }
 
   /// The line's words: pending, or how the wait ended.
-  static String lineText([HandoverOutcome? outcome]) => outcome == null ? pendingText : outcomeText[outcome]!;
+  static String lineText([HandoverOutcome? outcome]) => t(outcome == null ? 'handover.pending' : _outcomeKey[outcome]!);
 
   /// "<name> joined the chat" (web agentJoinedDivider.ts).
   static String joinedText(String? name) {
     final n = (name ?? '').trim();
-    return '${n.isEmpty ? 'An agent' : n} joined the chat';
+    return '${n.isEmpty ? t('agent.anAgent') : n}${t('system.joined')}';
   }
 
   /// "<name> left the chat", or the pending line for a handover (web agentLeftDivider.ts).
   static String agentLeftText(String? name, bool handover) {
     if (handover) return lineText();
     final n = (name ?? '').trim();
-    return '${n.isEmpty ? 'The agent' : n} left the chat';
+    return '${n.isEmpty ? t('agent.theAgent') : n}${t('system.left')}';
   }
 
   // ---------- reading the record ----------
