@@ -1,33 +1,30 @@
 /// The rich steps' cards (web ts/chat/richNodesView.ts): carousel and
-/// product cards, a slider, a ranking, a rating matrix and an address.
-/// The step's question is its own chat line; these draw what the visitor
-/// answers with, and send the answer in the shape the step handlers read
-/// (core/nodes/handlers).
+/// product cards, a slider, a ranking and a rating matrix. The step's
+/// question is its own chat line; these draw what the visitor answers
+/// with, in the bot's option look (step_style.dart), and send the answer in
+/// the shape the step handlers read (core/nodes/handlers).
 library;
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/flow/i18n_en.dart';
 import '../../core/nodes/node_ui_state.dart' as ui_state;
 import '../../theme/conferbot_theme.dart';
+import 'step_style.dart';
 
-EdgeInsets _indent(ConferBotTheme theme) => EdgeInsets.only(left: theme.layout.avatarSize + 10);
+/// Opens a card's link button in the browser.
+void _open(String url) {
+  final uri = Uri.tryParse(url);
+  if (uri == null) return;
+  launchUrl(uri, mode: LaunchMode.externalApplication).catchError((Object _) => false);
+}
 
-ButtonStyle _primary(Color color, ConferBotTheme theme) => ElevatedButton.styleFrom(
-      backgroundColor: color,
-      foregroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(theme.borderRadius.md)),
-    );
-
-ButtonStyle _option(ConferBotTheme theme) => OutlinedButton.styleFrom(
-      backgroundColor: theme.colors.optionBubble,
-      foregroundColor: theme.colors.optionBubbleText,
-      side: BorderSide(color: theme.colors.border),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
-      minimumSize: Size.zero,
-      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(theme.borderRadius.md)),
-    );
+/// "conferbot.com" for a link button's subtitle.
+String _host(String url) {
+  final m = RegExp(r'^(?:[a-z][a-z0-9+.-]*:)?\/\/([^/?#:]+)', caseSensitive: false).firstMatch(url.trim());
+  return m == null ? '' : m.group(1)!.replaceFirst(RegExp(r'^www\.', caseSensitive: false), '');
+}
 
 // ==================== CAROUSEL ====================
 
@@ -40,12 +37,16 @@ class CarouselNodeWidget extends StatefulWidget {
   final Color primaryColor;
   final ConferBotTheme theme;
 
+  /// Opens a link button (the browser; tests pass their own).
+  final void Function(String url) onLink;
+
   const CarouselNodeWidget({
     super.key,
     required this.state,
     required this.onResponse,
     required this.primaryColor,
     required this.theme,
+    this.onLink = _open,
   });
 
   @override
@@ -54,22 +55,26 @@ class CarouselNodeWidget extends StatefulWidget {
 
 class _CarouselNodeWidgetState extends State<CarouselNodeWidget> {
   bool _done = false;
+  String? _picked;
 
-  void _answer(dynamic response) {
+  void _answer(dynamic response, [String? picked]) {
     if (_done) return;
-    setState(() => _done = true);
+    setState(() {
+      _done = true;
+      _picked = picked;
+    });
     widget.onResponse(response);
   }
 
-  Widget _card(ui_state.CarouselCard card) {
-    final theme = widget.theme;
+  Widget _card(ui_state.CarouselCard card, StepLook style, double width) {
     return Container(
-      width: 220,
-      margin: const EdgeInsets.only(right: 8),
+      width: width,
+      margin: const EdgeInsets.only(right: 10),
       decoration: BoxDecoration(
-        color: theme.colors.surface,
-        borderRadius: BorderRadius.circular(theme.borderRadius.lg),
-        border: Border.all(color: theme.colors.border),
+        color: style.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: style.line),
+        boxShadow: const [BoxShadow(color: Color(0x140F172A), blurRadius: 6, offset: Offset(0, 2), spreadRadius: -2)],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -77,44 +82,31 @@ class _CarouselNodeWidgetState extends State<CarouselNodeWidget> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (card.imageUrl != null)
-            SizedBox(
-              height: 120,
-              child: Image.network(card.imageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+            AspectRatio(
+              aspectRatio: 16 / 10,
+              child: Container(
+                color: const Color(0xFFF1F5F9),
+                child: Image.network(card.imageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+              ),
             ),
           Padding(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (card.title.isNotEmpty)
-                  Text(card.title, style: TextStyle(fontWeight: FontWeight.w600, color: theme.colors.text)),
+                if (card.title.isNotEmpty) Text(card.title, style: style.bold),
                 if (card.price != null) ...[
                   const SizedBox(height: 2),
-                  Text(card.price!, style: TextStyle(color: widget.primaryColor, fontWeight: FontWeight.w600)),
+                  Text(card.price!, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: style.text)),
                 ],
                 if (card.description != null) ...[
                   const SizedBox(height: 4),
-                  Text(card.description!, style: TextStyle(fontSize: theme.typography.fontSizeSm, color: theme.colors.textSecondary)),
+                  Text(card.description!, maxLines: 4, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, height: 1.4, color: style.muted)),
                 ],
                 for (final b in card.buttons) ...[
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      style: _option(theme),
-                      onPressed: _done
-                          ? null
-                          : () {
-                              if (b.url != null && b.url!.isNotEmpty) {
-                                launchUrl(Uri.parse(b.url!), mode: LaunchMode.externalApplication);
-                                return;
-                              }
-                              _answer({'buttonId': b.id, 'cardId': card.id, 'label': b.label});
-                            },
-                      child: Text(b.label),
-                    ),
-                  ),
+                  const SizedBox(height: 8),
+                  _button(card, b, style),
                 ],
               ],
             ),
@@ -124,23 +116,73 @@ class _CarouselNodeWidgetState extends State<CarouselNodeWidget> {
     );
   }
 
+  Widget _button(ui_state.CarouselCard card, ui_state.CarouselButton b, StepLook style) {
+    final link = b.url != null && b.url!.isNotEmpty;
+    if (link) {
+      // A link button: opens its page (its site under the label); the step waits.
+      final host = _host(b.url!);
+      return Material(
+        color: style.option,
+        borderRadius: BorderRadius.circular(style.radius),
+        child: InkWell(
+          key: ValueKey('card-btn-${b.id}'),
+          borderRadius: BorderRadius.circular(style.radius),
+          onTap: () => widget.onLink(b.url!),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(b.label, style: TextStyle(fontSize: style.fontSize - 0.5, fontWeight: FontWeight.w500, color: style.optionInk)),
+                      if (host.isNotEmpty) Text(host, style: TextStyle(fontSize: 11.5, color: style.optionInk.withOpacity(0.7))),
+                    ],
+                  ),
+                ),
+                Icon(Icons.open_in_new, size: 16, color: style.optionInk.withOpacity(0.8), semanticLabel: t('common.opensNewTab')),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      width: double.infinity,
+      child: StepOption(
+        key: ValueKey('card-btn-${b.id}'),
+        label: b.label,
+        style: style,
+        expand: true,
+        picked: _picked == b.id,
+        onPressed: _done ? null : () => _answer({'buttonId': b.id, 'cardId': card.id, 'label': b.label}, b.id),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final style = StepLook.of(context, widget.theme, widget.primaryColor);
+    final cards = widget.state.cards;
+    final width = cards.length == 1 ? 260.0 : 228.0;
     return Padding(
-      padding: _indent(widget.theme),
+      padding: stepIndent(widget.theme),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [for (final c in widget.state.cards) _card(c)]),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [for (final c in cards) _card(c, style, width)]),
           ),
           if (widget.state.showContinue) ...[
-            const SizedBox(height: 8),
-            ElevatedButton(
-              style: _primary(widget.primaryColor, widget.theme),
-              onPressed: _done ? null : () => _answer(const {'action': 'continue', 'label': 'Continue'}),
-              child: const Text('Continue'),
+            const SizedBox(height: 10),
+            StepButton(
+              key: const ValueKey('card-continue'),
+              label: t('common.continue'),
+              style: style,
+              primary: true,
+              onPressed: _done ? null : () => _answer({'action': 'continue', 'label': t('common.continue')}),
             ),
           ],
         ],
@@ -174,53 +216,84 @@ class _SliderNodeWidgetState extends State<SliderNodeWidget> {
   late double _value = widget.state.defaultValue.toDouble();
   bool _done = false;
 
-  num get _snapped {
+  num _snap(num raw) {
     final s = widget.state;
     final step = s.step <= 0 ? 1 : s.step;
-    final n = ((_value - s.min) / step).round();
-    final v = s.min + n * step;
-    final clamped = v.clamp(s.min, s.max);
-    return clamped == clamped.roundToDouble() ? clamped.round() : double.parse(clamped.toStringAsFixed(6));
+    final n = ((raw - s.min) / step).round();
+    final v = (s.min + n * step).clamp(s.min, s.max);
+    return v == v.roundToDouble() ? v.round() : double.parse(v.toStringAsFixed(6));
   }
 
-  String get _label {
+  String _label(num v) {
     final s = widget.state;
-    final v = '$_snapped';
-    if (s.unit.isEmpty) return v;
+    if (s.unit.isEmpty) return '$v';
     return s.unitPosition == 'prefix' ? '${s.unit}$v' : '$v ${s.unit}';
   }
 
   @override
   Widget build(BuildContext context) {
+    final style = StepLook.of(context, widget.theme, widget.primaryColor);
     final s = widget.state;
     final min = s.min.toDouble();
     final max = s.max.toDouble() > min ? s.max.toDouble() : min + 1;
     final steps = s.step > 0 ? ((max - min) / s.step).round() : null;
+    final shown = _label(_snap(_value));
     return Padding(
-      padding: _indent(widget.theme),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(_label, textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600, color: widget.theme.colors.text)),
-          Slider(
-            value: _value.clamp(min, max),
-            min: min,
-            max: max,
-            divisions: steps != null && steps > 0 && steps <= 1000 ? steps : null,
-            activeColor: widget.primaryColor,
-            onChanged: _done ? null : (v) => setState(() => _value = v),
-          ),
-          ElevatedButton(
-            style: _primary(widget.primaryColor, widget.theme),
-            onPressed: _done
-                ? null
-                : () {
-                    setState(() => _done = true);
-                    widget.onResponse({'value': _snapped, 'label': _label});
-                  },
-            child: Text(s.submitLabel),
-          ),
-        ],
+      padding: stepIndent(widget.theme),
+      child: StepCard(
+        style: style,
+        done: _done,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(shown,
+                key: const ValueKey('slider-value'),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: style.text, fontFeatures: const [FontFeature.tabularFigures()])),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: style.accent,
+                inactiveTrackColor: style.accent.withOpacity(0.18),
+                thumbColor: style.accent,
+                overlayColor: style.accent.withOpacity(0.12),
+                trackHeight: 4,
+                showValueIndicator: ShowValueIndicator.never,
+                tickMarkShape: SliderTickMarkShape.noTickMark,
+              ),
+              child: Slider(
+                key: const ValueKey('slider'),
+                value: _value.clamp(min, max),
+                min: min,
+                max: max,
+                divisions: steps != null && steps > 0 && steps <= 1000 ? steps : null,
+                semanticFormatterCallback: (v) => _label(_snap(v)),
+                onChanged: _done ? null : (v) => setState(() => _value = v),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [Text(_label(_snap(min)), style: style.hint), Text(_label(_snap(max)), style: style.hint)],
+              ),
+            ),
+            StepActions(children: [
+              StepButton(
+                key: const ValueKey('slider-go'),
+                label: s.submitLabel,
+                style: style,
+                primary: true,
+                onPressed: _done
+                    ? null
+                    : () {
+                        setState(() => _done = true);
+                        widget.onResponse({'value': _snap(_value), 'label': shown});
+                      },
+              ),
+            ]),
+          ],
+        ),
       ),
     );
   }
@@ -255,61 +328,92 @@ class _RankingNodeWidgetState extends State<RankingNodeWidget> {
     final j = i + dir;
     if (j < 0 || j >= _order.length) return;
     setState(() {
-      final t = _order[i];
+      final t0 = _order[i];
       _order[i] = _order[j];
-      _order[j] = t;
+      _order[j] = t0;
     });
   }
 
+  Widget _arrow(Color color, IconData icon, String tip, Key key, VoidCallback? onTap) => SizedBox(
+        width: 34,
+        height: 34,
+        child: IconButton(
+          key: key,
+          tooltip: tip,
+          padding: EdgeInsets.zero,
+          iconSize: 20,
+          color: color,
+          disabledColor: color.withOpacity(0.3),
+          onPressed: onTap,
+          icon: Icon(icon),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final theme = widget.theme;
+    final style = StepLook.of(context, widget.theme, widget.primaryColor);
     return Padding(
-      padding: _indent(theme),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < _order.length; i++)
-            Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: theme.colors.surface,
-                borderRadius: BorderRadius.circular(theme.borderRadius.md),
-                border: Border.all(color: theme.colors.border),
+      padding: stepIndent(widget.theme),
+      child: StepCard(
+        style: style,
+        done: _done,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!_done) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(t('ranking.help'), style: style.hint)),
+            for (var i = 0; i < _order.length; i++)
+              Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(left: 10, right: 2),
+                decoration: BoxDecoration(
+                  color: style.option,
+                  borderRadius: BorderRadius.circular(style.radius),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: style.optionInk.withOpacity(0.12), shape: BoxShape.circle),
+                      child: Text('${i + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: style.optionInk)),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(_order[i].text, style: TextStyle(fontSize: style.fontSize - 0.5, color: style.optionInk)),
+                      ),
+                    ),
+                    if (!_done) ...[
+                      _arrow(style.optionInk, Icons.keyboard_arrow_up, t('ranking.moveUp', {'item': _order[i].text}),
+                          ValueKey('rank-up-${_order[i].id}'), i == 0 ? null : () => _move(i, -1)),
+                      _arrow(style.optionInk, Icons.keyboard_arrow_down, t('ranking.moveDown', {'item': _order[i].text}),
+                          ValueKey('rank-down-${_order[i].id}'), i == _order.length - 1 ? null : () => _move(i, 1)),
+                    ],
+                  ],
+                ),
               ),
-              child: Row(
-                children: [
-                  Text('${i + 1}.', style: TextStyle(color: theme.colors.textSecondary)),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(_order[i].text, style: TextStyle(color: theme.colors.text))),
-                  IconButton(
-                    tooltip: 'Move up',
-                    icon: const Icon(Icons.arrow_upward, size: 18),
-                    onPressed: _done || i == 0 ? null : () => _move(i, -1),
-                  ),
-                  IconButton(
-                    tooltip: 'Move down',
-                    icon: const Icon(Icons.arrow_downward, size: 18),
-                    onPressed: _done || i == _order.length - 1 ? null : () => _move(i, 1),
-                  ),
-                ],
+            StepActions(children: [
+              StepButton(
+                key: const ValueKey('rank-go'),
+                label: widget.state.submitLabel,
+                style: style,
+                primary: true,
+                onPressed: _done
+                    ? null
+                    : () {
+                        setState(() => _done = true);
+                        widget.onResponse({
+                          'order': [for (final o in _order) o.id],
+                          'label': [for (var i = 0; i < _order.length; i++) '${i + 1}. ${_order[i].text}'].join(' · '),
+                        });
+                      },
               ),
-            ),
-          ElevatedButton(
-            style: _primary(widget.primaryColor, theme),
-            onPressed: _done
-                ? null
-                : () {
-                    setState(() => _done = true);
-                    widget.onResponse({
-                      'order': [for (final o in _order) o.id],
-                      'label': [for (var i = 0; i < _order.length; i++) '${i + 1}. ${_order[i].text}'].join(' · '),
-                    });
-                  },
-            child: Text(widget.state.submitLabel),
-          ),
-        ],
+            ]),
+          ],
+        ),
       ),
     );
   }
@@ -319,12 +423,13 @@ class _RankingNodeWidgetState extends State<RankingNodeWidget> {
 
 /// Rows rated against columns: one column per row, or several with mode
 /// "multiple". Sent as `{cells: {rowId: colId | [colIds]}}`; the step says
-/// when rows are missing.
+/// when rows are missing, and the picks stay for the next try.
 class MatrixNodeWidget extends StatefulWidget {
   final ui_state.MatrixUIState state;
   final ValueChanged<dynamic> onResponse;
   final Color primaryColor;
   final ConferBotTheme theme;
+  final String? error;
 
   const MatrixNodeWidget({
     super.key,
@@ -332,6 +437,7 @@ class MatrixNodeWidget extends StatefulWidget {
     required this.onResponse,
     required this.primaryColor,
     required this.theme,
+    this.error,
   });
 
   @override
@@ -340,9 +446,15 @@ class MatrixNodeWidget extends StatefulWidget {
 
 class _MatrixNodeWidgetState extends State<MatrixNodeWidget> {
   final Map<String, Set<String>> _cells = {};
-  bool _done = false;
+  bool _sent = false;
 
   bool get _multiple => widget.state.mode == 'multiple';
+
+  @override
+  void didUpdateWidget(MatrixNodeWidget old) {
+    super.didUpdateWidget(old);
+    if (!identical(old.state, widget.state) || old.error != widget.error) _sent = false;
+  }
 
   void _toggle(String row, String col) {
     setState(() {
@@ -359,165 +471,71 @@ class _MatrixNodeWidgetState extends State<MatrixNodeWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = widget.theme;
+    final style = StepLook.of(context, widget.theme, widget.primaryColor);
     final s = widget.state;
+    final answered = s.rows.where((r) => (_cells[r.id] ?? const {}).isNotEmpty).length;
     return Padding(
-      padding: _indent(theme),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final row in s.rows) ...[
-            Text(row.text, style: TextStyle(fontWeight: FontWeight.w600, color: theme.colors.text)),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final col in s.columns)
-                  ChoiceChip(
-                    label: Text(col.text),
-                    selected: _cells[row.id]?.contains(col.id) ?? false,
-                    selectedColor: widget.primaryColor.withOpacity(0.2),
-                    onSelected: _done ? null : (_) => _toggle(row.id, col.id),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-          ],
-          ElevatedButton(
-            style: _primary(widget.primaryColor, theme),
-            onPressed: _done
-                ? null
-                : () {
-                    final cells = <String, dynamic>{
-                      for (final e in _cells.entries)
-                        if (e.value.isNotEmpty) e.key: _multiple ? e.value.toList() : e.value.first,
-                    };
-                    final answered = cells.length;
-                    // The step refuses a missing row and keeps waiting.
-                    if (!s.requireAll || answered == s.rows.length) setState(() => _done = true);
-                    widget.onResponse({'cells': cells});
-                  },
-            child: Text(s.submitLabel),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ==================== ADDRESS ====================
-
-/// An address: searched and picked (`{action: search, q}`, then
-/// `{action: pick, index}`), or typed field by field (`{action: manual,
-/// line1, city, region, postal, country}`).
-class AddressNodeWidget extends StatefulWidget {
-  final ui_state.AddressUIState state;
-  final ValueChanged<dynamic> onResponse;
-  final Color primaryColor;
-  final ConferBotTheme theme;
-
-  const AddressNodeWidget({
-    super.key,
-    required this.state,
-    required this.onResponse,
-    required this.primaryColor,
-    required this.theme,
-  });
-
-  @override
-  State<AddressNodeWidget> createState() => _AddressNodeWidgetState();
-}
-
-class _AddressNodeWidgetState extends State<AddressNodeWidget> {
-  final _search = TextEditingController();
-  final _fields = {
-    'line1': TextEditingController(),
-    'city': TextEditingController(),
-    'region': TextEditingController(),
-    'postal': TextEditingController(),
-    'country': TextEditingController(),
-  };
-  bool _manual = false;
-  bool _done = false;
-
-  static const _labels = {
-    'line1': 'Street address',
-    'city': 'City',
-    'region': 'State / region',
-    'postal': 'Postal code',
-    'country': 'Country',
-  };
-
-  @override
-  void dispose() {
-    _search.dispose();
-    for (final c in _fields.values) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  InputDecoration _decoration(String label) => InputDecoration(
-        labelText: label,
-        isDense: true,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(widget.theme.borderRadius.md)),
-      );
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = widget.theme;
-    final results = widget.state.results;
-    return Padding(
-      padding: _indent(theme),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (!_manual) ...[
-            TextField(
-              controller: _search,
-              enabled: !_done,
-              decoration: _decoration('Search your address'),
-              textInputAction: TextInputAction.search,
-              onSubmitted: (q) {
-                if (q.trim().length >= 3) widget.onResponse({'action': 'search', 'q': q.trim()});
-              },
-            ),
-            for (var i = 0; i < results.length; i++)
-              ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.place_outlined),
-                title: Text('${results[i]['formatted'] ?? results[i]['display'] ?? results[i]['line1'] ?? ''}'),
-                onTap: _done
-                    ? null
-                    : () {
-                        setState(() => _done = true);
-                        widget.onResponse({'action': 'pick', 'index': i});
-                      },
-              ),
-            if (widget.state.allowManualEntry)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(onPressed: _done ? null : () => setState(() => _manual = true), child: const Text('Enter it manually')),
-              ),
-          ] else ...[
-            for (final e in _fields.entries) ...[
-              TextField(controller: e.value, enabled: !_done, decoration: _decoration(_labels[e.key]!)),
+      padding: stepIndent(widget.theme),
+      child: StepCard(
+        style: style,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_multiple) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(t('matrix.pickAny'), style: style.hint)),
+            for (final row in s.rows) ...[
+              Text(row.text, style: style.bold),
               const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final col in s.columns)
+                    StepOption(
+                      key: ValueKey('mx-${row.id}-${col.id}'),
+                      label: col.text,
+                      style: style,
+                      picked: _cells[row.id]?.contains(col.id) ?? false,
+                      icon: (_cells[row.id]?.contains(col.id) ?? false)
+                          ? (_multiple ? Icons.check_box : Icons.radio_button_checked)
+                          : (_multiple ? Icons.check_box_outline_blank : Icons.radio_button_unchecked),
+                      onPressed: _sent ? null : () => _toggle(row.id, col.id),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
             ],
-            ElevatedButton(
-              style: _primary(widget.primaryColor, theme),
-              onPressed: _done
-                  ? null
-                  : () => widget.onResponse({
-                        'action': 'manual',
-                        for (final e in _fields.entries) e.key: e.value.text.trim(),
-                      }),
-              child: const Text('Send'),
+            StepStatus(style: style, error: widget.error),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
+                  Expanded(child: Text(t('matrix.progress', {'n': answered, 'total': s.rows.length}), style: style.hint)),
+                  StepButton(
+                    key: const ValueKey('mx-go'),
+                    label: s.submitLabel,
+                    style: style,
+                    primary: true,
+                    onPressed: _sent
+                        ? null
+                        : () {
+                            setState(() => _sent = true);
+                            widget.onResponse({
+                              'cells': <String, dynamic>{
+                                for (final r in s.rows)
+                                  if ((_cells[r.id] ?? const {}).isNotEmpty)
+                                    r.id: _multiple
+                                        ? [for (final c in s.columns) if (_cells[r.id]!.contains(c.id)) c.id]
+                                        : _cells[r.id]!.first,
+                              },
+                            });
+                          },
+                  ),
+                ],
+              ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
