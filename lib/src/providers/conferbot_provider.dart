@@ -39,6 +39,10 @@ import '../core/requests/requests_extras.dart';
 import '../core/live_chat/reply_time.dart';
 import '../core/customization/customizations.dart';
 import '../core/customization/widget_theme.dart';
+import '../core/customization/personalize.dart';
+import '../core/home/home.dart' hide homeModel, homePalette;
+import '../core/home/home.dart' as rules show homeModel, homePalette;
+import '../core/home/home_extras.dart';
 
 /// ConferBot provider configuration
 class ConferBotConfig {
@@ -122,6 +126,11 @@ class ConferBotProvider with ChangeNotifier {
   /// menu's item, the unread count and the portal's screens
   /// (core/requests/requests_extras.dart).
   late final RequestsExtras requests;
+
+  /// The home screen: which view the open chat shows (home, conversation,
+  /// help centre), what the device remembers for "Welcome back", the help
+  /// centre's data and the server's article search (core/home/home_extras.dart).
+  late final HomeExtras home;
 
   // The session whose flow has been started (or picked back up): bot data
   // comes again on every reconnect and must not run the flow again.
@@ -287,9 +296,28 @@ class ConferBotProvider with ChangeNotifier {
       // The portal sits over the chat: closing it shows that chat.
       openChat: () {
         if (!_isOpen) openChat();
+        home.showChat();
       },
     );
     requests.addListener(notifyListeners);
+
+    home = HomeExtras(
+      botId: () => botId,
+      // The settings as the chat uses them: themed and personalised.
+      customizations: () => _themed,
+      chatSessionId: () => _chatSessionId,
+      store: () => const SharedPreferencesRequestsStore(),
+      socket: () => SocketClientRequestsSocket(_socketClient),
+      connected: () => _socketClient.isConnected,
+      send: (text) => unawaited(sendMessage(text).catchError((_) {})),
+      // The home came into view: the requests card reads again (at most every 15s).
+      onHomeShown: () => unawaited(requests.onChatShown()),
+    );
+    home.addListener(notifyListeners);
+    // Seen receipts count the chat as visible only on the conversation.
+    home.chosen.addListener(() {
+      if (_isOpen) liveChat.reportReceipts(chatVisible: _chatOnScreen);
+    });
     // A chat the visitor wrote in may become a request (web _sendResponse).
     _socketClient.onResponseRecord = (sessionId, record) => requests.onRecord(sessionId, record is List ? record : null);
 
@@ -310,6 +338,49 @@ class ConferBotProvider with ChangeNotifier {
   List<RecordItem> get record => List.unmodifiable(_record);
   Agent? get currentAgent => _currentAgent;
   int get unreadCount => _unreadCount;
+
+  /// The bot's settings as the server sent them, before "Greet by name".
+  Map<String, dynamic>? _rawCustomizations;
+
+  /// "Hi {{first_name|there}}": the signed-in user (its metadata and name)
+  /// and a name the chat asked for fill the owner's texts before anything
+  /// reads them, the greeting card and the home screen alike
+  /// (core/customization/personalize.dart, web ownerLayout.ts). Run again on
+  /// [identify].
+  void _personalize() {
+    final u = _user;
+    final context = u == null ? null : <String, dynamic>{...?u.metadata, if (u.name != null && u.name!.isNotEmpty) 'name': u.name};
+    _serverCustomizations = personalizeCustomizations(_rawCustomizations, visitorVars(context, ChatState.instance.userMetadata.name));
+  }
+
+  /// The open chat shows the conversation (not the home screen or help centre).
+  bool get _chatOnScreen => _isOpen && home.view == HomeView.chat;
+
+  /// What the home screen shows (core/home/home.dart), or null when the
+  /// owner has none (`enableInitialPage` off) or the settings have not come.
+  HomeModel? get homeModel {
+    final c = _themed;
+    if (c == null) return null;
+    final a = _agentBot;
+    final kb = home.knowledgeBase;
+    return rules.homeModel(
+      c: c,
+      botName: botName,
+      agent: a == null ? null : HomeAgent(displayName: a.displayName, starters: a.starters, avatar: a.avatar),
+      categories: kb.categories,
+      recentArticles: kb.recentArticles,
+      memory: home.memory,
+      chatSessionId: _chatSessionId,
+      requests: requests.list,
+      seen: requests.memory.seen,
+    );
+  }
+
+  /// The home screen's surfaces: the widget theme's, else the classic widget's.
+  HomePalette get homePalette {
+    final t = widgetTheme.tokens;
+    return t == null ? classicHomePalette : rules.homePalette(bg2: t.bg2, card: t.card, card2: t.card2, ink: t.ink, muted: t.muted, line: t.line);
+  }
 
   /// Server customizations (theme, bot name, avatar, etc.)
   /// The settings with the widget theme's palette applied (theme colours),
@@ -904,7 +975,7 @@ class ConferBotProvider with ChangeNotifier {
         _agentTyping = false;
 
         // The visitor's delivered / seen receipt for it.
-        liveChat.reportReceipts(chatVisible: _isOpen);
+        liveChat.reportReceipts(chatVisible: _chatOnScreen);
 
         // Track agent message in analytics
         _analyticsProvider?.trackMessage(
@@ -1506,6 +1577,8 @@ class ConferBotProvider with ChangeNotifier {
     _helpCentreData = kb is Map ? KnowledgeBaseData.fromJson(Map<String, dynamic>.from(kb)) : KnowledgeBaseData.empty;
     // As sent, for the articles offered while waiting and the quiz.
     waiting.setKnowledgeBase(kb);
+    // The home screen's help card and ask box.
+    home.setKnowledgeBase(kb);
     if (chatbotData != null) {
       liveChat.setChatbotData(chatbotData);
       // Server sends: { elements: [{ nodes: [...], edges: [...] }], customizations: {...}, ... }
@@ -1524,7 +1597,8 @@ class ConferBotProvider with ChangeNotifier {
       }
 
       // Parse server customizations (theme colors, bot name, etc.)
-      _serverCustomizations = chatbotData['customizations'] as Map<String, dynamic>?;
+      _rawCustomizations = chatbotData['customizations'] as Map<String, dynamic>?;
+      _personalize();
       if (_serverCustomizations != null) {
         _logger.debug('Server customizations: ${_serverCustomizations!.keys.toList()}');
         _logger.debug('headerBgColor: ${_serverCustomizations!['headerBgColor']}');
@@ -1757,6 +1831,8 @@ class ConferBotProvider with ChangeNotifier {
     ChatState.instance.visitorContext = user?.toVisitorContext();
     if (_visitorId == null) _socketClient.visitorId = user?.id;
     unawaited(requests.onUserChanged());
+    // "Hi {{first_name|there}}" again for whoever it is now.
+    _personalize();
     notifyListeners();
   }
 
@@ -1768,6 +1844,8 @@ class ConferBotProvider with ChangeNotifier {
     if (config.autoConnect && !_started.isCompleted) await _started.future;
     // The chat opening: the visitor's requests again, at most every 15s.
     requests.onChatShown();
+    // What the device remembers for "Welcome back".
+    unawaited(home.load());
     // Check if we have a restored session that we can resume
     if (_sessionRestored && _chatSessionId != null) {
       _logger.info('Resuming restored session: $_chatSessionId');
@@ -1898,7 +1976,7 @@ class ConferBotProvider with ChangeNotifier {
 
     _isOpen = true;
     _unreadCount = 0;
-    liveChat.reportReceipts(chatVisible: true);
+    liveChat.reportReceipts(chatVisible: _chatOnScreen);
     notifyListeners();
   }
 
@@ -1948,6 +2026,9 @@ class ConferBotProvider with ChangeNotifier {
     }
 
     _flowEngine.submitResponse(response);
+    // A name the flow asked for: "Welcome back, <name>" and greet by name.
+    final asked = ChatState.instance.userMetadata.name;
+    if (asked != null && asked.isNotEmpty) unawaited(home.rememberName(asked));
   }
 
   /// The choice chips under the step's question line (the last line it said).
@@ -1982,6 +2063,10 @@ class ConferBotProvider with ChangeNotifier {
       notifyListeners();
       return;
     }
+
+    // What they type in a live or agent chat is what they came for, for
+    // "Welcome back" (web special.ts _handleHumanHandoverInputSubmit).
+    if (_isLiveChatMode || _agentBot != null) unawaited(home.rememberText(text));
 
     // Live chat mode: send as visitor message to agent
     if (_isLiveChatMode) {
@@ -2285,6 +2370,7 @@ class ConferBotProvider with ChangeNotifier {
     _flowEngine.reset();
     liveChat.reset();
     requests.reset();
+    home.reset();
     handover.reset();
     waiting.reset();
     _flowStartedFor = null;
@@ -2346,6 +2432,7 @@ class ConferBotProvider with ChangeNotifier {
     _socketClient.onResponseRecord = null;
     requests.removeListener(notifyListeners);
     requests.dispose();
+    home.dispose();
     _paginationController?.removeListener(_onPaginationChange);
     _analyticsProvider?.removeListener(_onAnalyticsChange);
 
