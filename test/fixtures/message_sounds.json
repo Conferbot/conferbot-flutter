@@ -1,0 +1,97 @@
+{
+ "revision": "3bd60df",
+ "sounds": {
+  "message.pop": {
+   "bytes": 5336,
+   "sha256": "63176633eb62c82adbc53f87c96c579cbed1a9b18e6f76317324851c602178e7"
+  },
+  "message.chime": {
+   "bytes": 15040,
+   "sha256": "a09c4d2603bc87963349db63c4c8df8b6bb8fd4c968d48916dede549f9381d9e"
+  },
+  "message.bubble": {
+   "bytes": 7984,
+   "sha256": "8499b947622dcf511ac20626f4667fc0e72dbe618a5e9ae6952391cd245d3541"
+  },
+  "soft.open": {
+   "bytes": 11952,
+   "sha256": "b0bef580adef3f6abb869fe53fb7dad0897408733048a6bb22e328ff40ba3fb7"
+  },
+  "soft.message": {
+   "bytes": 13276,
+   "sha256": "9a6d15063ec4dc18c37b70b31701f2512f8b63528a287d215125eda47e92815d"
+  },
+  "soft.send": {
+   "bytes": 4896,
+   "sha256": "dc4ace85a56cf99ca7dc0efc35210150b44474cdfaf426f4d9fe500cfb8d5346"
+  },
+  "soft.close": {
+   "bytes": 8424,
+   "sha256": "0f69d5e1c14edb1c12a0c3fea372c8313f9be3e6bbcf3d69f0cdbb3e05d9159c"
+  },
+  "playful.open": {
+   "bytes": 11070,
+   "sha256": "68d95e23223e138d777d2e2ec91008f815f2452369aee0886f15a67bc5467843"
+  },
+  "playful.message": {
+   "bytes": 9746,
+   "sha256": "a72312f101953f9d65a4b875f33991ffde755cba4f209f24964506e8b425f0c9"
+  },
+  "playful.send": {
+   "bytes": 4014,
+   "sha256": "0f449068f1dba1c412adc43a509a5e203d434280ae1ab36ba9dd203315384ee2"
+  },
+  "playful.close": {
+   "bytes": 10188,
+   "sha256": "f9a2c01b016de76ec231a37abd52f2295c3cdf946c143b831dd94c50259878f5"
+  },
+  "retro.open": {
+   "bytes": 9526,
+   "sha256": "09ae122a478de0d74cf1e2708b8e2fd4fedfbea775150af1e269b59be7b59f40"
+  },
+  "retro.message": {
+   "bytes": 11510,
+   "sha256": "3bddfc542b04eb0b5a2eb63d817970cafd6459a809ffdf8b35c90fe117f8e7e1"
+  },
+  "retro.send": {
+   "bytes": 3132,
+   "sha256": "0333d3fc2a04ed0a70fd5b67180b38184e28e02fa3a905667733a49ab02af03d"
+  },
+  "retro.close": {
+   "bytes": 7984,
+   "sha256": "bc324721daa940d8a056c65c8ad2508de835cfe315a1e8f984b823aff35967d4"
+  },
+  "bubbly.open": {
+   "bytes": 10628,
+   "sha256": "18dfa71301d0b2ba97ceb6fd4105b44d13ff63635c9a80fa26ed051650e2af8b"
+  },
+  "bubbly.message": {
+   "bytes": 7984,
+   "sha256": "8499b947622dcf511ac20626f4667fc0e72dbe618a5e9ae6952391cd245d3541"
+  },
+  "bubbly.send": {
+   "bytes": 3572,
+   "sha256": "c8f3a593103347ea99e39d43a622cb6cd3252a6412b18065978daf4564763e73"
+  },
+  "bubbly.close": {
+   "bytes": 5336,
+   "sha256": "0f0c31fb730afa6c33e263e5e261b8db7a6f3290d670cf95d3c7c78d1cee4d1c"
+  },
+  "premium.open": {
+   "bytes": 21654,
+   "sha256": "e7328ef4d73bda0dd43ccff75d2345acccdc068f698d1bc8cdaa51e007a909e3"
+  },
+  "premium.message": {
+   "bytes": 17684,
+   "sha256": "16024edbaa2b72ae3c15412fba8b3fb1b41de5a6b8162cc36593bfa54d449dd0"
+  },
+  "premium.send": {
+   "bytes": 5778,
+   "sha256": "4f883e219bae1a59c08cac9c57a92c6b2a741636d6b7ed2ffa85233b66979432"
+  },
+  "premium.close": {
+   "bytes": 12834,
+   "sha256": "0115f6f42b062831cd4a1575e1894acdc79df232b23aed63ea06c2bc9992d080"
+  }
+ }
+}
