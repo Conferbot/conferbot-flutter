@@ -231,8 +231,11 @@ class HomeScreenView extends StatefulWidget {
   /// How an image is fetched (default: the network).
   final ImageProvider Function(String url)? imageFor;
 
-  /// Where the home's mascot will go (a later item): drawn above the greeting.
-  final WidgetBuilder? mascotBuilder;
+  /// The app's own mascot spot, above the greeting: given the owner's
+  /// mascot (look and colour), e.g. `(context, m) => Mascot(look: m.look,
+  /// accent: m.accent, mood: 'wave')`. The web's home draws none, so nothing
+  /// is drawn without it.
+  final Widget Function(BuildContext context, HomeMascot mascot)? mascotBuilder;
 
   @override
   State<HomeScreenView> createState() => _HomeScreenViewState();
@@ -931,7 +934,7 @@ class _HomeScreenViewState extends State<HomeScreenView> {
                   Flexible(child: Text(m.brand!.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: ts(15, bandInk, weight: FontWeight.w600, spacing: -0.15))),
               ]),
             ),
-          if (widget.mascotBuilder != null) widget.mascotBuilder!(context),
+          if (widget.mascotBuilder != null) widget.mascotBuilder!(context, m.mascot),
           Text(m.hello, key: const ValueKey('cb-home-hello'), style: ts(13.5, bandInk.withValues(alpha: 0.82), weight: FontWeight.w600)),
           if (m.title.isNotEmpty)
             Semantics(
