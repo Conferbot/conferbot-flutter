@@ -3,6 +3,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
+import '../../utils/chat_markdown.dart';
 import 'markdown_theme.dart';
 import 'link_handler.dart';
 import 'code_block.dart';
@@ -95,8 +96,8 @@ class MarkdownMessage extends StatelessWidget {
         LinkHandlerScope.of(context) ??
         const MarkdownLinkHandler();
 
-    final markdownWidget = MarkdownBody(
-      data: content,
+    Widget body(String data) => MarkdownBody(
+      data: data,
       selectable: selectable,
       shrinkWrap: shrinkWrap,
       styleSheet: styleSheet,
@@ -130,6 +131,32 @@ class MarkdownMessage extends StatelessWidget {
       fitContent: true,
       softLineBreak: true,
     );
+
+    // Tables scroll sideways, as on the web (utils/agentHtml.ts wraps them):
+    // they are drawn here, the text around them by the markdown renderer.
+    final parts = content.contains('|') ? ChatMarkdown.splitTables(content) : const <Object>[];
+    final Widget markdownWidget = parts.any((p) => p is ChatBlock)
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final part in parts)
+                part is ChatBlock
+                    ? Padding(
+                        padding: EdgeInsets.symmetric(vertical: effectiveTheme.spacing.xs),
+                        child: ChatTable(
+                          table: part,
+                          textColor: effectiveMarkdownTheme.textColor,
+                          linkColor: effectiveMarkdownTheme.linkColor,
+                          fontSize: effectiveTheme.typography.fontSizeMd,
+                          baseStyle: effectiveMarkdownTheme.baseTextStyle,
+                          onLinkTap: (url) => _handleLinkTap(context, url, effectiveLinkHandler),
+                        ),
+                      )
+                    : body(part as String),
+            ],
+          )
+        : body(content);
 
     if (padding != null) {
       return Padding(
@@ -195,6 +222,78 @@ class MarkdownMessage extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// A markdown table as the web draws an agent's (conferbot-widget
+/// utils/agentHtml.ts, RN AgentReply/ChatText.tsx): a sideways scroll, cells
+/// padded 5 / 9, the head bold over a 2px rule, each row over a hairline at
+/// 18% of the text colour.
+class ChatTable extends StatelessWidget {
+  final ChatBlock table;
+  final Color textColor;
+  final Color linkColor;
+  final double fontSize;
+  final TextStyle? baseStyle;
+  final void Function(String url)? onLinkTap;
+
+  const ChatTable({
+    super.key,
+    required this.table,
+    required this.textColor,
+    required this.linkColor,
+    required this.fontSize,
+    this.baseStyle,
+    this.onLinkTap,
+  });
+
+  TextSpan _span(ChatInline i, TextStyle base) => switch (i.kind) {
+        InlineKind.bold => TextSpan(text: i.text, style: base.copyWith(fontWeight: FontWeight.w700)),
+        InlineKind.italic => TextSpan(text: i.text, style: base.copyWith(fontStyle: FontStyle.italic)),
+        InlineKind.code => TextSpan(text: i.text, style: base.copyWith(fontFamily: 'monospace', fontSize: (base.fontSize ?? fontSize) * 0.9)),
+        InlineKind.strike => TextSpan(text: i.text, style: base.copyWith(decoration: TextDecoration.lineThrough)),
+        InlineKind.link => TextSpan(text: i.text, style: base.copyWith(color: linkColor, decoration: TextDecoration.underline)),
+        InlineKind.plain => TextSpan(text: i.text, style: base),
+      };
+
+  Widget _cell(List<ChatInline> inlines, TextStyle base) {
+    final link = inlines.where((i) => i.kind == InlineKind.link).firstOrNull;
+    final text = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 9),
+      child: Text.rich(TextSpan(children: inlines.map((i) => _span(i, base)).toList())),
+    );
+    return link != null && onLinkTap != null ? GestureDetector(onTap: () => onLinkTap!(link.url!), child: text) : text;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final base = (baseStyle ?? const TextStyle()).copyWith(color: textColor, fontSize: baseStyle?.fontSize ?? fontSize);
+    final head = base.copyWith(fontWeight: FontWeight.w700);
+    final hairline = BorderSide(color: textColor.withOpacity(0.18), width: 0.5);
+    return Semantics(
+      container: true,
+      label: ChatMarkdown.plainText([table]),
+      child: ExcludeSemantics(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Table(
+            defaultColumnWidth: const IntrinsicColumnWidth(),
+            defaultVerticalAlignment: TableCellVerticalAlignment.top,
+            children: [
+              TableRow(
+                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: textColor.withOpacity(0.18), width: 2))),
+                children: [for (final c in table.head) _cell(c, head)],
+              ),
+              for (var r = 0; r < table.rows.length; r++)
+                TableRow(
+                  decoration: r < table.rows.length - 1 ? BoxDecoration(border: Border(bottom: hairline)) : null,
+                  children: [for (final c in table.rows[r]) _cell(c, base)],
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
