@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/i18n/i18n.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 import '../../utils/validation_utils.dart';
@@ -56,9 +57,9 @@ class PreChatFormField {
   }) {
     return PreChatFormField(
       id: id ?? 'name',
-      questionText: questionText ?? 'What is your name?',
+      questionText: questionText ?? t('sdk.prechat.askName'),
       answerType: 'name',
-      placeholder: 'Enter your name',
+      placeholder: t('sdk.prechat.namePlaceholder'),
       required: required,
     );
   }
@@ -72,9 +73,9 @@ class PreChatFormField {
   }) {
     return PreChatFormField(
       id: id ?? 'email',
-      questionText: questionText ?? 'What is your email address?',
+      questionText: questionText ?? t('sdk.prechat.askEmail'),
       answerType: 'email',
-      placeholder: 'Enter your email',
+      placeholder: t('sdk.prechat.emailPlaceholder'),
       required: required,
       incorrectEmailResponse: incorrectEmailResponse,
     );
@@ -89,9 +90,9 @@ class PreChatFormField {
   }) {
     return PreChatFormField(
       id: id ?? 'phone',
-      questionText: questionText ?? 'What is your phone number?',
+      questionText: questionText ?? t('sdk.prechat.askPhone'),
       answerType: 'phone',
-      placeholder: 'Enter your phone number',
+      placeholder: t('sdk.prechat.phonePlaceholder'),
       required: required,
       incorrectPhoneNumberResponse: incorrectPhoneNumberResponse,
     );
@@ -165,11 +166,11 @@ class PreChatFormWidget extends StatefulWidget {
   /// Optional description text
   final String? description;
 
-  /// Submit button text
-  final String submitButtonText;
+  /// Submit button text (default: "Start Chat" in the active language)
+  final String? submitButtonText;
 
-  /// Cancel button text
-  final String cancelButtonText;
+  /// Cancel button text (default: "Cancel" in the active language)
+  final String? cancelButtonText;
 
   /// Whether to show a cancel button
   final bool showCancelButton;
@@ -195,8 +196,8 @@ class PreChatFormWidget extends StatefulWidget {
     this.theme,
     this.title,
     this.description,
-    this.submitButtonText = 'Start Chat',
-    this.cancelButtonText = 'Cancel',
+    this.submitButtonText,
+    this.cancelButtonText,
     this.showCancelButton = false,
     this.isLoading = false,
     this.showProgress = false,
@@ -277,7 +278,7 @@ class _PreChatFormWidgetState extends State<PreChatFormWidget> {
   String? _validateField(PreChatFormField field, String? value) {
     if (value == null || value.trim().isEmpty) {
       if (field.required) {
-        return 'This field is required';
+        return t('sdk.validation.required');
       }
       return null;
     }
@@ -288,35 +289,35 @@ class _PreChatFormWidgetState extends State<PreChatFormWidget> {
     if (field.validationRegex != null) {
       final regex = RegExp(field.validationRegex!);
       if (!regex.hasMatch(trimmedValue)) {
-        return 'Please enter a valid value';
+        return t('sdk.validation.invalidValue');
       }
     }
 
     // Min length validation
     if (field.minLength != null && trimmedValue.length < field.minLength!) {
-      return 'Must be at least ${field.minLength} characters';
+      return t('sdk.validation.atLeast', {'n': field.minLength});
     }
 
     switch (field.answerType.toLowerCase()) {
       case 'email':
         if (!ValidationUtils.isValidEmail(trimmedValue)) {
-          return field.incorrectEmailResponse ?? 'Please enter a valid email address';
+          return field.incorrectEmailResponse ?? t('validation.email');
         }
         break;
       case 'phone':
       case 'mobile':
         if (!ValidationUtils.isValidPhoneNumber(trimmedValue)) {
-          return field.incorrectPhoneNumberResponse ?? 'Please enter a valid phone number';
+          return field.incorrectPhoneNumberResponse ?? t('validation.phone');
         }
         break;
       case 'name':
         if (trimmedValue.length < 2) {
-          return 'Please enter your full name';
+          return t('sdk.validation.fullName');
         }
         break;
       case 'url':
         if (!(Uri.tryParse(trimmedValue)?.hasAbsolutePath ?? false)) {
-          return 'Please enter a valid URL';
+          return t('validation.url');
         }
         break;
     }
@@ -719,7 +720,7 @@ class _PreChatFormWidgetState extends State<PreChatFormWidget> {
         ),
       ),
       hint: Text(
-        field.placeholder ?? 'Select an option',
+        field.placeholder ?? t('sdk.select.placeholder'),
         style: TextStyle(color: theme.colors.textSecondary.withOpacity(0.7)),
       ),
       items: field.options!.map((option) {
@@ -744,19 +745,19 @@ class _PreChatFormWidgetState extends State<PreChatFormWidget> {
   String _getDefaultPlaceholder(String answerType) {
     switch (answerType.toLowerCase()) {
       case 'name':
-        return 'Enter your name';
+        return t('sdk.prechat.namePlaceholder');
       case 'email':
-        return 'Enter your email address';
+        return t('sdk.prechat.emailAddressPlaceholder');
       case 'phone':
       case 'mobile':
-        return 'Enter your phone number';
+        return t('sdk.prechat.phonePlaceholder');
       case 'url':
-        return 'Enter URL';
+        return t('sdk.input.url');
       case 'multiline':
       case 'textarea':
-        return 'Enter your message';
+        return t('sdk.prechat.messagePlaceholder');
       default:
-        return 'Enter your answer';
+        return t('sdk.prechat.answerPlaceholder');
     }
   }
 
@@ -779,7 +780,7 @@ class _PreChatFormWidgetState extends State<PreChatFormWidget> {
                   ),
                 ),
                 child: Text(
-                  widget.cancelButtonText,
+                  widget.cancelButtonText ?? t('common.cancel'),
                   style: TextStyle(
                     fontWeight: theme.typography.fontWeightMedium,
                   ),
@@ -815,7 +816,7 @@ class _PreChatFormWidgetState extends State<PreChatFormWidget> {
                       ),
                     )
                   : Text(
-                      widget.submitButtonText,
+                      widget.submitButtonText ?? t('sdk.prechat.start'),
                       style: TextStyle(
                         fontWeight: theme.typography.fontWeightSemiBold,
                       ),
@@ -932,25 +933,25 @@ class _SequentialPreChatWidgetState extends State<SequentialPreChatWidget>
     // Validate
     String? error;
     if (value.isEmpty && currentQuestion.required) {
-      error = 'This field is required';
+      error = t('sdk.validation.required');
     } else if (value.isNotEmpty) {
       switch (currentQuestion.answerType.toLowerCase()) {
         case 'email':
           if (!ValidationUtils.isValidEmail(value)) {
             error = currentQuestion.incorrectEmailResponse ??
-                'Please enter a valid email address';
+                t('validation.email');
           }
           break;
         case 'phone':
         case 'mobile':
           if (!ValidationUtils.isValidPhoneNumber(value)) {
             error = currentQuestion.incorrectPhoneNumberResponse ??
-                'Please enter a valid phone number';
+                t('validation.phone');
           }
           break;
         case 'name':
           if (value.length < 2) {
-            error = 'Please enter your full name';
+            error = t('sdk.validation.fullName');
           }
           break;
       }
@@ -1047,7 +1048,7 @@ class _SequentialPreChatWidgetState extends State<SequentialPreChatWidget>
 
         // Progress text
         Text(
-          'Question ${widget.currentIndex + 1} of ${widget.questions.length}',
+          t('node.questionOf', {'n': widget.currentIndex + 1, 'total': widget.questions.length}),
           style: TextStyle(
             fontSize: effectiveTheme.typography.fontSizeXs,
             color: effectiveTheme.colors.textSecondary,
@@ -1067,7 +1068,7 @@ class _SequentialPreChatWidgetState extends State<SequentialPreChatWidget>
         if (currentQuestion.required) ...[
           SizedBox(height: effectiveTheme.spacing.xs / 2),
           Text(
-            'Required',
+            t('sdk.prechat.required'),
             style: TextStyle(
               fontSize: effectiveTheme.typography.fontSizeXs,
               color: effectiveTheme.colors.textSecondary,
@@ -1173,8 +1174,8 @@ class _SequentialPreChatWidgetState extends State<SequentialPreChatWidget>
                     children: [
                       Text(
                         widget.currentIndex >= widget.questions.length - 1
-                            ? 'Start Chat'
-                            : 'Continue',
+                            ? t('sdk.prechat.start')
+                            : t('common.continue'),
                         style: TextStyle(
                           fontWeight: effectiveTheme.typography.fontWeightSemiBold,
                         ),
@@ -1232,14 +1233,14 @@ class _SequentialPreChatWidgetState extends State<SequentialPreChatWidget>
   String _getDefaultPlaceholder(String answerType) {
     switch (answerType.toLowerCase()) {
       case 'name':
-        return 'Enter your name';
+        return t('sdk.prechat.namePlaceholder');
       case 'email':
-        return 'Enter your email address';
+        return t('sdk.prechat.emailAddressPlaceholder');
       case 'phone':
       case 'mobile':
-        return 'Enter your phone number';
+        return t('sdk.prechat.phonePlaceholder');
       default:
-        return 'Enter your answer';
+        return t('sdk.prechat.answerPlaceholder');
     }
   }
 }
