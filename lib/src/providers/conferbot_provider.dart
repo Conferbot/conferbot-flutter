@@ -20,12 +20,15 @@ import '../core/state/message_storage_service.dart';
 import '../utils/logger.dart';
 import '../utils/chat_markdown.dart';
 import '../core/agent/agent_bot.dart';
+import '../core/agent/answer_feedback.dart';
 import '../core/help_centre/help_centre.dart';
 import '../models/knowledge_base.dart';
 import '../core/agent/agent_handover.dart';
 import 'analytics_provider.dart';
 import '../core/live_chat/live_chat.dart';
 import '../core/live_chat/live_chat_extras.dart';
+import '../core/live_chat/live_events.dart';
+import '../core/live_chat/email_transcript.dart';
 import '../core/live_chat/handover_lifecycle.dart';
 import '../core/live_chat/handover_state.dart';
 import '../core/live_chat/reply_time.dart';
@@ -194,6 +197,8 @@ class ConferBotProvider with ChangeNotifier {
       },
       sendRecord: _sendRecord,
       continueFlow: () => _flowEngine.continueAfterHandover(),
+      // "Email me this chat" (core/live_chat/email_transcript.dart).
+      postTranscriptEmail: (sessionId, email) => _apiClient.sendTranscriptEmail(sessionId, email),
     );
     liveChat.addListener(notifyListeners);
 
@@ -215,6 +220,12 @@ class ConferBotProvider with ChangeNotifier {
       },
       setAgent: (a) {
         _currentAgent = Agent(id: a.id, name: a.name, email: a.email);
+        notifyListeners();
+      },
+      // Back in the queue: nobody is in the chat (core/live_chat/live_events.dart).
+      clearAgent: () {
+        _currentAgent = null;
+        _agentTyping = false;
         notifyListeners();
       },
     );
@@ -315,6 +326,48 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Waiting for the AI's reply (the typing dots), at most 45 seconds.
   bool get awaitingReply => _awaitingReply;
+
+  /// The workspace blocked this visitor: the closed line's words, else null.
+  String? get visitorBlocked => liveChat.blocked;
+
+  /// The chat's closed state (core/live_chat/live_events.dart): blocked, or
+  /// the live chat ended with nothing going on (then "Start a new chat").
+  ClosedState? get closedState => LiveEvents.closedStateOf(
+        ChatState.instance.getRecordForServer(),
+        blocked: liveChat.blocked,
+        stepWaiting: _flowEngine.currentUIState != null || _flowEngine.isProcessing,
+        live: _isLiveChatMode && _currentAgent != null,
+      );
+
+  /// The newest AI answer that can be rated: only it asks "Helpful?".
+  String? get newestRateableAnswerId {
+    final seen = <String>{};
+    return Helpful.newestRateableId([
+      for (final m in [...paginatedMessages, ..._record])
+        if (m is AgentMessageRecord && seen.add(m.id))
+          (id: m.id, rateable: m.agentDetails.isAIAgent && m.extras?.isFallback != true && !m.deleted),
+    ]);
+  }
+
+  // The chat on screen registers how its composer takes focus.
+  VoidCallback? _composerFocuser;
+
+  /// The chat on screen registers how its composer takes focus (null to clear).
+  set composerFocuser(VoidCallback? focus) => _composerFocuser = focus;
+
+  /// Put the cursor in the composer ("Ask another way" under an answer).
+  void focusComposer() => _composerFocuser?.call();
+
+  /// "Email me this chat" (core/live_chat/email_transcript.dart): the card
+  /// from the chat menu, and where the transcript went once sent.
+  bool get emailTranscriptOpen => liveChat.mailOpen;
+  String? get emailTranscriptSentTo => liveChat.mailSentTo;
+  void openEmailTranscript() => liveChat.openEmailTranscript();
+  void closeEmailTranscript() => liveChat.closeEmailTranscript();
+
+  /// Email the transcript to this address; on success the address is kept
+  /// as the visitor's. Only the server sends it, and only there.
+  Future<TranscriptEmailResult> emailTranscript(String email) => liveChat.emailTranscript(email);
 
   /// Bot name from server customizations
   String? get botName {
@@ -470,6 +523,15 @@ class ConferBotProvider with ChangeNotifier {
     if (config.enablePersistence) {
       await _initializeSessionPersistence();
     }
+
+    // The visitor as the records name it: the server refuses a blocked one
+    // at the handshake (web core/socket.ts).
+    if (_visitorId == null && StorageService.instance.isInitialized) {
+      try {
+        _visitorId = await StorageService.instance.getOrCreateVisitorId();
+      } catch (_) {}
+    }
+    _socketClient.visitorId = _visitorId ?? user?.id;
 
     await _socketClient.connect();
     _logger.debug('Socket connect() returned, registering listeners...');
@@ -812,6 +874,8 @@ class ConferBotProvider with ChangeNotifier {
     // visitor draws nothing (core/live_chat/handover_state.dart agentLeftKind).
     _socketClient.on(SocketEvents.agentLeft, (data) {
       if (!_isOwnSession(data)) return;
+      // The AI left: no reply is coming, so no "took too long" either.
+      _setAwaitingReply(false);
       final kind = handover.onAgentLeft(data, fallbackName: _currentAgent?.name);
       if (kind == AgentLeftKind.left) _currentAgent = null;
       if (kind == AgentLeftKind.handover) _talkToPersonRetired = true;
@@ -820,9 +884,15 @@ class ConferBotProvider with ChangeNotifier {
     });
 
     // Chat ended
-    _socketClient.on(SocketEvents.chatEnded, (_) {
-      // Add system message "Chat has ended"
-      final msgId = 'chat_ended_${DateTime.now().millisecondsSinceEpoch}';
+    _socketClient.on(SocketEvents.chatEnded, (data) {
+      if (!_isOwnSession(data)) return;
+      _setAwaitingReply(false);
+      // The same end again (an agent's double click, an AI close racing a
+      // person's): one "Chat ended" line, not two (web endedSinceLastLive).
+      if (LiveEvents.endedSinceLastLive(ChatState.instance.getRecordForServer())) return;
+      // Its own id: never the session's, or a second live chat's end would
+      // merge into the first one's entry (web agentListeners.ts).
+      final msgId = LiveEvents.eventId('agent-chat-ended');
       final systemMessage = SystemMessageRecord(
         id: msgId,
         time: DateTime.now(),
@@ -853,6 +923,17 @@ class ConferBotProvider with ChangeNotifier {
       notifyListeners();
     });
 
+    // Blocked by the workspace, mid-chat or at the handshake: the dots stop,
+    // nobody is here (handover and liveChat close the rest).
+    _socketClient.on(SocketEvents.visitorBlocked, (data) {
+      if (!_isOwnSession(data)) return;
+      _setAwaitingReply(false);
+      _currentAgent = null;
+      _agentTyping = false;
+      _suggestions = const [];
+      notifyListeners();
+    });
+
     // Agent typing status
     _socketClient.on(SocketEvents.agentTypingStatus, (data) {
       if (data != null && data is Map<String, dynamic>) {
@@ -873,8 +954,13 @@ class ConferBotProvider with ChangeNotifier {
     _awaitReplyTimer?.cancel();
     _awaitingReply = on;
     if (on) {
-      _awaitReplyTimer = Timer(const Duration(seconds: 45), () {
+      _awaitReplyTimer = Timer(AgentBotParser.awaitReply, () {
+        _awaitReplyTimer = null;
         _awaitingReply = false;
+        // Say so, instead of silently dropping the dots (web
+        // agentListeners.ts). On screen only, not in the record.
+        final notice = AgentBotParser.replyTimeoutNotice();
+        _addMessageToRecord(SystemMessageRecord(id: notice.id, time: DateTime.now(), text: notice.text, kind: 'reply-timeout'));
         notifyListeners();
       });
     }
@@ -1102,10 +1188,11 @@ class ConferBotProvider with ChangeNotifier {
     });
   }
 
-  /// "Helpful?" on an AI answer: kept on the message, sent to the server.
-  void sendAnswerFeedback(String agentMessageId, bool helpful, [String? reason]) {
-    final feedback = AnswerFeedback(helpful, helpful ? null : reason);
+  /// "Helpful?" on an AI answer (core/agent/answer_feedback.dart): kept on
+  /// the message and on its record entry, as the web keeps it, and sent.
+  void sendAnswerFeedback(String agentMessageId, AnswerFeedback feedback) {
     _updateMessage(agentMessageId, (m) => m is AgentMessageRecord ? m.copyWith(feedback: feedback) : null);
+    ChatState.instance.setAnswerFeedback(agentMessageId, feedback.toJson());
     _socketClient.emitWithAck(SocketEvents.aiAnswerFeedback, {
       'chatSessionId': _chatSessionId,
       'agentMessageId': agentMessageId,
@@ -1657,8 +1744,8 @@ class ConferBotProvider with ChangeNotifier {
         return;
       }
 
-      // Initialize and start the flow engine
-      if (_steps.isNotEmpty) {
+      // Initialize and start the flow engine (never for a blocked visitor)
+      if (_steps.isNotEmpty && liveChat.blocked == null) {
         _flowEngine.initialize(
           chatSessionId: _chatSessionId!,
           visitorId: _visitorId ?? '',
@@ -2063,6 +2150,14 @@ class ConferBotProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// "Start a new chat" once a live chat has ended: a fresh conversation,
+  /// opened. Not for a blocked visitor (the server refuses them).
+  Future<void> startNewChat() async {
+    if (liveChat.blocked != null) return;
+    resetConversation();
+    await openChat();
+  }
+
   /// Listen to custom socket event
   void on(String event, Function(dynamic) callback) {
     _socketClient.on(event, callback);
@@ -2143,4 +2238,7 @@ class _EngineHandoverFlow implements HandoverFlow {
 
   @override
   void resumeFrom(String nodeId) => _engine().resumeFromNode(nodeId);
+
+  @override
+  void stop() => _engine().reset();
 }
