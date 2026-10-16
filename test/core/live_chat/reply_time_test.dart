@@ -3,6 +3,7 @@
 // widget's tests/replyTime.test.js), plus a person in the chat (web
 // headerPresence.ts markHeaderLive), and the home card's homeLine /
 // homePeople (the web's tests/replyTime.test.js).
+import 'package:conferbot_flutter/src/core/i18n/i18n.dart';
 import 'package:conferbot_flutter/src/core/live_chat/reply_time.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -94,6 +95,29 @@ void main() {
       expect(p(null, agent: true), const HomeLine('Answers instantly, day or night'));
       expect(p({...online('few_minutes'), 'state': 'offline'}, agent: true), const HomeLine('Answers instantly, day or night'));
       expect(p({'mode': 'hide', 'handover': true}, agent: true).text, 'Answers instantly, day or night');
+    });
+  });
+
+  group('typicalWait (the wait card, web replyTime.ts typicalWait)', () {
+    tearDown(() => I18n.setWidgetLanguage('en'));
+
+    test("says the routed team's usual wait first, else the workspace's", () {
+      expect(ReplyTime.typicalWait({'mode': 'auto', 'bucket': 'few_hours'}, {'bucket': 'under_minute'}), 'Typical wait: under a minute');
+      expect(ReplyTime.typicalWait({'mode': 'auto', 'bucket': 'few_hours'}), 'Typical wait: a few hours');
+      expect(ReplyTime.typicalWait({'mode': 'auto', 'bucket': 'unknown', 'wait': 'about 3 minutes'}), 'Typical wait: about 3 minutes');
+      expect(ReplyTime.typicalWait(null, {'bucket': 'day'}), 'Typical wait: up to a day');
+    });
+
+    test('says nothing when the owner chose Fixed or Hide, or there is no data', () {
+      expect(ReplyTime.typicalWait({'mode': 'hide', 'bucket': 'few_minutes'}, {'bucket': 'few_minutes'}), isNull);
+      expect(ReplyTime.typicalWait({'mode': 'fixed', 'text': 'Within a day', 'bucket': 'few_minutes'}), isNull);
+      expect(ReplyTime.typicalWait({'mode': 'auto'}), isNull);
+      expect(ReplyTime.typicalWait(null, null), isNull);
+    });
+
+    test("is in the visitor's language", () {
+      I18n.setWidgetLanguage('de');
+      expect(ReplyTime.typicalWait({'mode': 'auto', 'bucket': 'few_minutes'}), isNot(contains('Typical')));
     });
   });
 }
