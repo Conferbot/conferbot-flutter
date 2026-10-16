@@ -375,6 +375,30 @@ class AgentBotParser {
     return true;
   }
 
+  /// Where a source opens (web agentSources.ts chip; RN agentBot.ts
+  /// sourceTarget): a help article in the app's help centre when it can open
+  /// there (the help centre is on and the host can show an article), else
+  /// its public page, else nowhere (drawn, not tappable).
+  static OpenTarget? sourceTarget(AgentSource? s, bool canOpenArticles) {
+    if (s == null) return null;
+    final id = s.articleId;
+    if (id != null && _objectId.hasMatch(id) && canOpenArticles) return OpenTarget.article(id, s.title);
+    final url = _http(s.url);
+    if (url != null) return OpenTarget.url(url);
+    return null;
+  }
+
+  /// Where the agent's rich article card opens (web agentRich.ts; RN
+  /// agentBot.ts richArticleTarget): its public page when it has one, else
+  /// the article in the app's help centre.
+  static OpenTarget? richArticleTarget(RichArticle? r, bool canOpenArticles) {
+    if (r == null) return null;
+    final url = _http(r.url);
+    if (url != null) return OpenTarget.url(url);
+    if (r.articleId.isNotEmpty && _objectId.hasMatch(r.articleId) && canOpenArticles) return OpenTarget.article(r.articleId, r.title);
+    return null;
+  }
+
   /// "https://www.conferbot.com/pricing" -> "conferbot.com"
   static String sourceHost(String? url) {
     final m = RegExp(r'^https?://([^/?#:]+)', caseSensitive: false).firstMatch(url ?? '');
@@ -567,4 +591,29 @@ class AgentBotParser {
       actionRequest: actionRequestOf(data['actionRequest']),
     );
   }
+}
+
+/// Where a source or an article card opens: an article in the app's help
+/// centre ([articleId]), or a page in the browser ([url]).
+class OpenTarget {
+  final String? articleId;
+  final String? url;
+  final String title;
+  const OpenTarget.article(String id, this.title)
+      : articleId = id,
+        url = null;
+  const OpenTarget.url(String this.url)
+      : articleId = null,
+        title = '';
+
+  bool get isArticle => articleId != null;
+
+  @override
+  bool operator ==(Object other) => other is OpenTarget && other.articleId == articleId && other.url == url && other.title == title;
+
+  @override
+  int get hashCode => Object.hash(articleId, url, title);
+
+  @override
+  String toString() => isArticle ? 'OpenTarget.article($articleId)' : 'OpenTarget.url($url)';
 }
