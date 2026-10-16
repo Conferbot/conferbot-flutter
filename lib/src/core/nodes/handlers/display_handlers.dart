@@ -7,6 +7,7 @@
 /// 4000 ms at most).
 library;
 
+import '../../flow/i18n_en.dart';
 import '../../flow/inputs.dart' show linkHref;
 import '../../flow/js.dart' show jsNumber;
 import '../../flow/text.dart' show fillLinkVariables, fillVariables, sanitizeOwnerHtml, stripHtmlAndDecode;
@@ -78,7 +79,7 @@ class ImageHandler extends BaseNodeHandler {
   Future<NodeResult> handle(FlowNode node, ChatState state) async {
     final url = (node.data['image'] ?? '').toString().trim();
     botSay(state, '', node.id, nodeType, {'imageUrl': url, 'mediaNodeId': node.id});
-    return NodeResult.displayUI(ImageUIState(url: url, altText: 'Image', nodeId: node.id));
+    return NodeResult.displayUI(ImageUIState(url: url, altText: t('sdk.media.image'), nodeId: node.id));
   }
 }
 
@@ -179,7 +180,7 @@ class NavigateHandler extends BaseNodeHandler {
 
   String _doneLabel(Map<String, dynamic> data) {
     final d = (data['doneNavigatingText'] ?? '').toString().trim();
-    return d.isNotEmpty ? d : 'Done';
+    return d.isNotEmpty ? d : t('common.done');
   }
 
   String _linkText(dynamic text, ChatState state) =>
