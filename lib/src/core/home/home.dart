@@ -24,8 +24,10 @@
 /// "For this page" articles and a greeting page rule's own questions; an app
 /// has no page address or title, so the agent's own questions are used), the
 /// help card's own search's "For this page", and the floating panel's
-/// three-article cap (wider than 500px only). The mascot is a later item:
-/// [HomeModel.mascot] is where it will go.
+/// three-article cap (wider than 500px only). The web's home draws no mascot
+/// (it appears on the launcher, the greeting card, the typing bubble and the
+/// idle call); [HomeModel.mascot] is the owner's, for an app's own spot
+/// (`HomeScreenView(mascotBuilder:)`, the `Mascot` widget).
 ///
 /// Pure: everything the view needs comes out of [homeModel].
 library;
@@ -33,6 +35,7 @@ library;
 import 'dart:convert';
 import 'dart:math' as math;
 
+import '../customization/mascot_art.dart';
 import '../live_chat/reply_time.dart';
 import '../requests/requests.dart';
 import '../waiting/wait_articles.dart';
@@ -788,6 +791,15 @@ class HomeTrust {
   final List<String> logos;
 }
 
+/// The owner's mascot (art3d mascotLookOf) and its colour, for an app that draws it on its home.
+class HomeMascot {
+  final MascotLook look;
+
+  /// The colour it is drawn in when the owner chose none: widgetIconBgColor, else the header's.
+  final String accent;
+  const HomeMascot(this.look, this.accent);
+}
+
 class HomeModel {
   const HomeModel({
     required this.hello,
@@ -806,6 +818,7 @@ class HomeModel {
     required this.trust,
     required this.order,
     required this.articles,
+    this.mascot = const HomeMascot(MascotLook(), '#4f46e5'),
   });
 
   /// "Good afternoon", or "Welcome back, Jamie".
@@ -838,8 +851,8 @@ class HomeModel {
   /// Every article the ask box and the help card search.
   final List<HelpArticle> articles;
 
-  /// Where the home's mascot will go (a later item): null for now.
-  Object? get mascot => null;
+  /// The owner's mascot and its colour, for an app that draws it on its home (`mascotBuilder`); the web's home has none.
+  final HomeMascot mascot;
 }
 
 String _truncate(dynamic text, int max) {
@@ -982,7 +995,17 @@ HomeModel? homeModel({
     trust: trust,
     order: order,
     articles: articles,
+    mascot: HomeMascot(mascotLookOf(cc), _mascotAccent(cc)),
   );
+}
+
+/// The mascot's colour when the owner chose none: widgetIconBgColor, else the header's.
+String _mascotAccent(Map<String, dynamic> c) {
+  for (final k in ['widgetIconBgColor', 'headerBgColor']) {
+    final v = c[k];
+    if (v is String && v.trim().isNotEmpty) return v.trim();
+  }
+  return '#4f46e5';
 }
 
 /// While the visitor types in the ask box, the list is the page: these go (web cb-home--asking).
