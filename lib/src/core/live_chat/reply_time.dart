@@ -96,6 +96,25 @@ class ReplyTime {
     if (personInChat) return online;
     return headerLine(rt, agent: agentBot, now: now, locale: locale) ?? online;
   }
+  // ------------------------------------------------------------ the wait card (web typicalWait)
+
+  /// The usual wait, per bucket, in the active language (web reply.wait.*).
+  static Map<String, String> get waits => {for (final b in _buckets) b: t('reply.wait.$b')};
+
+  static String _waitOf(dynamic bucket, dynamic fallback) =>
+      _buckets.contains(bucket) ? t('reply.wait.$bucket') : _str(fallback);
+
+  /// "Typical wait: a few minutes" for the wait card (web replyTime.ts
+  /// typicalWait): the routed team's usual first reply (queue-status
+  /// `typical`), else the workspace's (customizations.replyTime). null when
+  /// the owner chose Fixed or Hide, or there is no data.
+  static String? typicalWait(dynamic rt, [dynamic queueTypical]) {
+    if (rt is Map && (rt['mode'] == 'hide' || _fixedOf(rt).isNotEmpty)) return null;
+    var w = queueTypical is Map ? _waitOf(queueTypical['bucket'], queueTypical['wait']) : '';
+    if (w.isEmpty && rt is Map) w = _waitOf(rt['bucket'], rt['wait']);
+    return w.isEmpty ? null : t('reply.typicalWait', {'wait': w});
+  }
+
   // ------------------------------------------------------------ the home card (web homeLine, homePeople)
 
   static bool _live(dynamic rt) => rt is Map && rt['mode'] != 'hide';
