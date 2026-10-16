@@ -190,13 +190,21 @@ Full `ConferBotFABScope` parameters: `apiKey`, `botId`, `child` (required), plus
 
 ### What the launcher draws
 
-Once the bot's settings arrive, the launcher is drawn as the web widget draws it on a phone: colour or left-to-right gradient, icon ink that stays readable on light colours, launcher icon or uploaded image, left/right position, the phone size and offsets (`mobileWidgetSize`, `mobileOffsetBottom`, `mobileOffsetSide`; else 16 from the edges), shape (`launcherShape`: speech bubble by default, circle, squircle, tab, peek), style (`launcherStyle`: icon, the bot's avatar with an online dot, or the label pill on tablets; phones show the round button, as the web does), a soft glow in the header colour, and the greeting card (see below). All 56 dashboard launcher icons are drawn as on the web, and they move as on the web: an idle moment about 2s after the launcher shows and a few more after (`launcherAnimation` subtle / lively; off stops it), a reaction when a message arrives while the chat is closed, and the ripple rings. Nothing moves while the chat is open, after it was opened, or with the phone's animations turned off.
+Once the bot's settings arrive, the launcher is drawn as the web widget draws it on a phone: colour or left-to-right gradient, icon ink that stays readable on light colours, launcher icon or uploaded image, left/right position, the phone size and offsets (`mobileWidgetSize`, `mobileOffsetBottom`, `mobileOffsetSide`; else 16 from the edges), shape (`launcherShape`: speech bubble by default, circle, squircle, tab, peek), style (`launcherStyle`: icon, the bot's avatar with an online dot, the label pill on tablets (phones show the round button, as the web does), or your mascot, below; an uploaded image always wins), a soft glow in the header colour, and the greeting card (see below). All 56 dashboard launcher icons are drawn as on the web, and they move as on the web: an idle moment about 2s after the launcher shows and a few more after (`launcherAnimation` subtle / lively; off stops it), a reaction when a message arrives while the chat is closed, and the ripple rings. Nothing moves while the chat is open, after it was opened, or with the phone's animations turned off.
+
+**Your mascot.** The mascot you design in the dashboard: one of 27 characters (`mascotShape`) with its eyes (`mascotEyes`), accessory (`mascotAccessory`), colour (`mascotColor`, else the launcher's) and name (`mascotName`).
+
+- The `mascot` launcher style shows its head over a soft light button at `mascotLauncherScale`% of the button (70-150, 112 by default), blinking now and then, and hopping with a big smile when a reply arrives while the chat is closed. Open, the button is the brand colour with its cross.
+- `mascotInGreeting` puts it on the greeting card in place of the avatar, by its name, waving twice.
+- `mascotMotion` sets how the greeting card and its figure (the mascot or the avatar) move: lively (the default: the card springs up, the figure pops in, waves and nods, the Online dot pings once, the words fade up, then a slow breath and at most three small gestures before it stands still), subtle (a rise, the ping and one tilt) or off. Opened from the card, the figure hands off toward the launcher as the card collapses; the card's x makes it bow as the card fades. A voice-note card makes it talk while the waveform plays. No gestures while the app is in the background.
+- The idle call (below) sends your mascot out, about its own joints.
+- With the phone's animations off it stands still (a happy one keeps its smile). Glows and the bevel are not drawn.
 
 Three more effects are opt-in from the dashboard, all off by default, as on the web:
 
 - **Entrance** (`launcherEntrance`): classic (it just appears) or lightning, rocket, portal, ufo, drop, confetti, coin, meteor, magic, parachute, plane, egg. It plays once per app session per bot, never over an open chat. The launcher is hidden until the effect reveals it (a tap still opens the chat and ends it); the greeting card stays hidden until the launcher has landed, then fades up 150 ms later.
 - **Attention** (`launcherAttention`): off, pulse, wobble, bounce, wave, float, shine, heartbeat, orbit. The first beat comes 1.5s after the launcher (or, for wave and float, the greeting card) shows, then one beat per lap. It pauses while the launcher plays an idle or message moment and stops for the session once the chat is opened. While it moves the launcher, the idle moments and the three load ripples give way to it.
-- **Idle call** (`launcherIdleCall`, `launcherIdleCallDelay` 5-120s, default 12; `launcherIdleCallText`, 24 characters): off, psst, peek, wave, knock, tap. If the chat has not been opened, the mascot slips out from behind the launcher and calls the visitor; its speech bubble opens the chat. At most twice per app session, 3 minutes apart, then 3 days of rest (also after the chat is opened); closing the greeting stops calls for the session. It waits while the chat is open, the app is in the background, the keyboard is up, an entrance is landing, or the greeting has been up less than 15s. With the greeting up there is no bubble.
+- **Idle call** (`launcherIdleCall`, `launcherIdleCallDelay` 5-120s, default 12; `launcherIdleCallText`, 24 characters): off, psst, peek, wave, knock, tap. If the chat has not been opened, your mascot slips out from behind the launcher and calls the visitor; its speech bubble opens the chat. At most twice per app session, 3 minutes apart, then 3 days of rest (also after the chat is opened); closing the greeting stops calls for the session. It waits while the chat is open, the app is in the background, the keyboard is up, an entrance is landing, or the greeting has been up less than 15s. With the greeting up there is no bubble.
 
 None of them plays with the phone's animations turned off. Glows, blurs and other web filters are not drawn.
 
@@ -233,6 +241,7 @@ These flow-builder settings are read live from the server and override `ConferBo
 | `widgetBorderRadius` | Bubble corner radius (default: circle) |
 | `widgetIconSVG` | Which bubble icon to draw |
 | `chatIconCta`, `chatIconCtaText`, `greetingRules`, `greetingDelay`, `greetingClickAction`, `greetingFrequency`, `greetingFrequencyDays`, `greetingStyle` | Greeting card above the bubble |
+| `launcherStyle: mascot`, `mascotShape`, `mascotEyes`, `mascotAccessory`, `mascotColor`, `mascotName`, `mascotLauncherScale`, `mascotInGreeting`, `mascotMotion` | Your mascot: in the launcher, on the greeting card, in the idle call and the typing bubble |
 
 ## Passing User Identity
 
@@ -384,6 +393,7 @@ The flow engine (`NodeFlowEngine`, driven by the provider) runs a bot the way th
 - The chat starts at the first welcome step. A step that doesn't branch leaves by its first edge. A branch (a choice, a condition, an AI route) leaves by its exact handle; when that handle has no edge, the chat ends. An unknown step shows nothing and continues along its first edge.
 - The steps read the fields the builder saves. A question saves its answer only when it has an answer variable. Logic and integration results are saved by name.
 - Bot text fills `{x}`, `${x}`, `{{x}}`, `${ANSWERS.x}` and `$${x}` from the answers. An unknown variable shows nothing.
+- The typing bubble follows `typingStyle`: dots, wave, shimmer, a pencil writing a line, or your mascot swaying by three thought dots ("Pip is typing" for screen readers when you named it).
 - Typing dots before each step last as long as the web's (by the length of what is said). An image or video moves on once it loads, or after 4 seconds at most.
 - Card numbers, bank accounts, government ids and passwords are masked in the answers and in the record the server gets, unless the bot's `redactSensitive` is off. What the visitor typed stays in their own chat.
 - GPT, AI route, AI extract, knowledge-base answers, OTP, address search and payments go through the bot's server (`/api/v1/bot/:botId/...`). No API key is ever on the device.
@@ -524,7 +534,14 @@ When the owner turns on the home screen (Customize > Home, `enableInitialPage`),
 - **Customer logos** (`homeTrustLogos`, https only, with `homeTrustLabel`), shown once one has loaded.
 - **Moving between views:** the chat header's ‹ and Android's back go from the conversation to the home; the home's cross closes the chat. A greeting card's "send" (and its questions) go past the home to the conversation. The views switch in the owner's `viewTransition` / `viewTransitionDirection`: fade, slide, and every other kind as a slide; classic and none at once; a 200ms fade with the phone's animations off.
 
-Calm and in the bot's look: the widget theme's page, cards and text (light or dark), one accent, the app's `ConferBotCustomization.fontFamily`. Each part rises into place once, never with animations off. Not in apps: the web's page-aware parts ("For this page" articles), which need a web page. The mascot comes later.
+Calm and in the bot's look: the widget theme's page, cards and text (light or dark), one accent, the app's `ConferBotCustomization.fontFamily`. Each part rises into place once, never with animations off. Not in apps: the web's page-aware parts ("For this page" articles), which need a web page.
+
+The web's home has no mascot. To put yours on the home, or anywhere in your app (moods: idle, wave, think, happy):
+
+```dart
+ChatWidget(homeMascotBuilder: (context, m) => Mascot(look: m.look, accent: m.accent, size: 56, mood: 'wave'));
+Mascot(look: provider.customizations.mascot, accent: provider.customizations.mascotAccent, mood: 'think');
+```
 
 Headless: `provider.homeModel` (`HomeModel?`, everything the screen draws, null without a home), `provider.homePalette`, and `provider.home` (`HomeExtras`): `view`, `chosen` (a `ValueNotifier<HomeView?>`), `showHome()`, `showChat([text])`, `showHelp({categoryId})`, `back()`, `memory`, `searchArticleText(query)`. `HomeScreenView` and `ViewSwitch` are exported for your own chat screen.
 
