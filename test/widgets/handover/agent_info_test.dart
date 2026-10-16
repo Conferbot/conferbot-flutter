@@ -434,6 +434,7 @@ void main() {
 
       expect(find.text('Agent Connected'), findsOneWidget);
       expect(find.text('Connected Agent has joined the chat'), findsOneWidget);
+      await _runOutAutoDismiss(tester);
     });
 
     testWidgets('has close button', (WidgetTester tester) async {
@@ -451,6 +452,7 @@ void main() {
       );
 
       expect(find.byIcon(Icons.close), findsOneWidget);
+      await _runOutAutoDismiss(tester);
     });
 
     testWidgets('has check icon', (WidgetTester tester) async {
@@ -468,6 +470,27 @@ void main() {
       );
 
       expect(find.byIcon(Icons.check), findsOneWidget);
+      await _runOutAutoDismiss(tester);
+    });
+
+    testWidgets('dismisses itself after displayDuration', (WidgetTester tester) async {
+      var dismissed = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AgentConnectedBanner(
+              agent: createTestAgent(),
+              primaryColor: Colors.blue,
+              onDismiss: () => dismissed++,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(seconds: 4));
+      expect(dismissed, 0);
+      await _runOutAutoDismiss(tester);
+      expect(dismissed, 1);
     });
 
     testWidgets('disposes properly', (WidgetTester tester) async {
@@ -492,7 +515,8 @@ void main() {
         ),
       );
 
-      await tester.pump();
+      // The auto-dismiss delay fires after the banner is gone: nothing happens.
+      await _runOutAutoDismiss(tester);
     });
   });
 
@@ -577,4 +601,11 @@ void main() {
       expect(AgentInfoSize.values, contains(AgentInfoSize.large));
     });
   });
+}
+
+/// AgentConnectedBanner dismisses itself after its 5 s displayDuration
+/// (a Future.delayed) and a 400 ms slide out; runs both so no timer is left.
+Future<void> _runOutAutoDismiss(WidgetTester tester) async {
+  await tester.pump(const Duration(seconds: 6));
+  await tester.pump(const Duration(milliseconds: 500));
 }
