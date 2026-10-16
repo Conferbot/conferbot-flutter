@@ -49,6 +49,7 @@ import '../services/chat_sounds.dart';
 import '../core/delight/delight.dart';
 import '../core/delight/delight_extras.dart';
 import '../core/live_chat/typing_preview.dart';
+import '../services/font_loader.dart';
 
 /// ConferBot provider configuration
 class ConferBotConfig {
@@ -161,6 +162,18 @@ class ConferBotProvider with ChangeNotifier {
     final sid = _chatSessionId;
     if (sid != null && _socketClient.isConnected) _socketClient.emit('visitor-draft', {'chatSessionId': sid, 'draft': draft});
   });
+
+  /// The chat's font: the owner's, else the theme's, loaded from Google Fonts
+  /// (services/font_loader.dart). `chatFont.body` / `chatFont.display` are
+  /// family names, or null for the platform font.
+  late final ChatFont chatFont = ChatFont()..addListener(notifyListeners);
+
+  /// The family the chat's text is drawn in: the bot's font once loaded,
+  /// else the app's own `ConferBotCustomization.fontFamily`, else null.
+  String? get chatFontFamily => chatFont.body ?? customization?.fontFamily;
+
+  /// The family the chat's headings are drawn in (the header's title).
+  String? get chatDisplayFontFamily => chatFont.display ?? chatFontFamily;
 
   /// The step that said each row of the conversation, by row id.
   final Map<String, String> _rowNodes = {};
@@ -1739,6 +1752,8 @@ class ConferBotProvider with ChangeNotifier {
       _rawCustomizations = chatbotData['customizations'] as Map<String, dynamic>?;
       _personalize();
       _applyWidgetLanguage();
+      // The owner's font over the theme's (core/customization/owner_font.dart).
+      chatFont.update(_serverCustomizations?['font'], themeFont: widgetTheme.font, themeFontRole: widgetTheme.fontRole);
       if (_serverCustomizations != null) {
         _logger.debug('Server customizations: ${_serverCustomizations!.keys.toList()}');
         _logger.debug('headerBgColor: ${_serverCustomizations!['headerBgColor']}');
@@ -2606,6 +2621,8 @@ class ConferBotProvider with ChangeNotifier {
     sounds.dispose();
     delight.removeListener(notifyListeners);
     delight.dispose();
+    chatFont.removeListener(notifyListeners);
+    chatFont.dispose();
     _drafts.clear();
     _paginationController?.removeListener(_onPaginationChange);
     _analyticsProvider?.removeListener(_onAnalyticsChange);
