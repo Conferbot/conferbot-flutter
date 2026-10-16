@@ -93,7 +93,9 @@ class ConferBotProvider with ChangeNotifier {
   final String botId;
   final ConferBotConfig config;
   final ConferBotCustomization? customization;
-  final ConferBotUser? user;
+  /// The signed-in user: the constructor's, then whatever [identify] set.
+  ConferBotUser? get user => _user;
+  ConferBotUser? _user;
   final String? baseUrl;
   final String? socketUrl;
 
@@ -183,10 +185,10 @@ class ConferBotProvider with ChangeNotifier {
     required this.botId,
     this.config = const ConferBotConfig(),
     this.customization,
-    this.user,
+    ConferBotUser? user,
     this.baseUrl,
     this.socketUrl,
-  }) {
+  }) : _user = user {
     ChatState.instance.visitorContext = user?.toVisitorContext();
     _apiClient = ApiClient(
       apiKey: apiKey,
@@ -1740,6 +1742,21 @@ class ConferBotProvider with ChangeNotifier {
     } catch (e) {
       _logger.debug('Live chat restore failed: $e');
     }
+    notifyListeners();
+  }
+
+  /// Sign a user in after construction, or out with `null` (RN's `user`
+  /// prop, iOS `identify(user:)`, Android `Conferbot.identify`).
+  ///
+  /// The next response records carry the user as `visitorContext` (with its
+  /// identity `hash`), "Your requests" is read again for them (a signed-out
+  /// user's list is dropped), and the greeting card's signed-in fact follows.
+  /// With no stored visitor id, the user's id is the next handshake's visitor.
+  void identify(ConferBotUser? user) {
+    _user = user;
+    ChatState.instance.visitorContext = user?.toVisitorContext();
+    if (_visitorId == null) _socketClient.visitorId = user?.id;
+    unawaited(requests.onUserChanged());
     notifyListeners();
   }
 
