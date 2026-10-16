@@ -116,6 +116,10 @@ class FlowContext {
   /// ({url, referrer}; hidden-fields).
   final Map<String, String>? page;
 
+  /// The bot's bookings (the bot data's calendarBookings), for a calendar's
+  /// taken slots.
+  final List<dynamic> calendarBookings;
+
   /// Give the waiting step an answer from outside (a socket event).
   final void Function(dynamic response) respond;
 
@@ -150,6 +154,7 @@ class FlowContext {
     this.customizations = const {},
     this.visitorTimeZone = 'UTC',
     this.page,
+    this.calendarBookings = const [],
     required this.respond,
     required this.shown,
     required this.isStale,
