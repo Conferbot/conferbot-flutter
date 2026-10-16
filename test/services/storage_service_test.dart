@@ -162,9 +162,10 @@ void main() {
 
     test('should load valid session only', () async {
       // Save an expired session
+      // saveSession marks the session active now, so it is aged after.
       final expiredSession = PersistedChatSession(chatbotId: 'bot_expired');
-      expiredSession.lastActivityAt = DateTime.now().subtract(const Duration(minutes: 35));
       await storageService.saveSession('bot_expired', expiredSession);
+      expiredSession.lastActivityAt = DateTime.now().subtract(const Duration(minutes: 35));
 
       // Save a valid session
       final validSession = PersistedChatSession(chatbotId: 'bot_valid');
@@ -179,9 +180,10 @@ void main() {
 
     test('should cleanup expired sessions', () async {
       // Save expired session
+      // saveSession marks the session active now, so it is aged after.
       final expiredSession = PersistedChatSession(chatbotId: 'bot_expired');
-      expiredSession.lastActivityAt = DateTime.now().subtract(const Duration(minutes: 35));
       await storageService.saveSession('bot_expired', expiredSession);
+      expiredSession.lastActivityAt = DateTime.now().subtract(const Duration(minutes: 35));
 
       // Save valid session
       final validSession = PersistedChatSession(chatbotId: 'bot_valid');
