@@ -234,6 +234,9 @@ class _ChatWidgetState extends State<ChatWidget> {
     kb.showRecentArticles = provider.serverCustomizations?['hideRecentArticles'] != true;
     kb.setInitialData(provider.helpCentreData);
     kb.setVisitorId(provider.visitorId ?? '');
+    // Ratings, reading time and the search inside bodies go over the
+    // chat's socket, as on the web (REST without it).
+    kb.link ??= provider.helpCentreLink;
     return kb;
   }
 
@@ -282,6 +285,8 @@ class _ChatWidgetState extends State<ChatWidget> {
 
   void _closeKnowledgeBase() {
     final provider = context.read<ConferBotProvider>();
+    // The article being read is left: its reading time goes now.
+    _kbProvider?.engagement.send();
     // The home's help view goes back where it was opened from.
     if (provider.home.view == HomeView.help) provider.home.leaveHelp();
     setState(() {
@@ -464,6 +469,10 @@ class _ChatWidgetState extends State<ChatWidget> {
             title: t('home.helpCentre'),
             onClose: _closeKnowledgeBase,
             onArticleInsertToChat: _handleArticleInsert,
+            onChatWithUs: () {
+              _closeKnowledgeBase();
+              provider.home.showChat();
+            },
             theme: effectiveTheme,
           ),
         ),
