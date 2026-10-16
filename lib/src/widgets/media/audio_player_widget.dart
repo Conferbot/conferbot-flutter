@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import '../../core/i18n/i18n.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 import '../../services/media_service.dart';
@@ -261,7 +262,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
       setState(() {
         _isLoading = false;
         _hasError = true;
-        _errorMessage = 'Failed to play audio';
+        _errorMessage = t('sdk.media.audioFailed');
       });
       widget.onError?.call(e.toString());
       debugPrint('[AudioPlayerWidget] Error playing audio: $e');
@@ -405,7 +406,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget>
           if (_hasError) ...[
             SizedBox(height: theme.spacing.xs),
             Text(
-              _errorMessage ?? 'Playback error',
+              _errorMessage ?? t('sdk.voice.playbackErrorTitle'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeXs,
                 color: theme.colors.error,
