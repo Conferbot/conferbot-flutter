@@ -241,6 +241,9 @@ class _CalendarStepWidgetState extends State<CalendarStepWidget> {
     return d == null ? null : DateTime(d.year, d.month, d.day);
   }
 
+  /// The picked day's times already booked.
+  Set<String> get _booked => _day == null ? const {} : (widget.state.bookedSlots?[dayKey(_day!)] ?? const []).toSet();
+
   Map<String, List<String>>? get _slots => widget.state.showTimeSelection ? widget.state.availableSlots : null;
 
   @override
@@ -402,18 +405,26 @@ class _CalendarStepWidgetState extends State<CalendarStepWidget> {
               runSpacing: 6,
               children: [
                 for (final s in slots)
-                  StepOption(
-                    key: ValueKey('cal-slot-$s'),
-                    label: s,
-                    style: style,
-                    icon: Icons.schedule,
-                    onPressed: _sent
-                        ? null
-                        : () {
-                            setState(() => _sent = true);
-                            widget.onResponse({'date': dayKey(_day!), 'slot': s, 'label': '${_shownDate(_day!)} $s'});
-                          },
-                  ),
+                  // Already booked: shown greyed out, not pickable (web displayStep.ts calendar-node).
+                  if (_booked.contains(s))
+                    Semantics(
+                      label: t('sdk.calendar.slotBooked', {'time': s}),
+                      excludeSemantics: true,
+                      child: StepOption(key: ValueKey('cal-slot-$s'), label: s, style: style, icon: Icons.event_busy, onPressed: null),
+                    )
+                  else
+                    StepOption(
+                      key: ValueKey('cal-slot-$s'),
+                      label: s,
+                      style: style,
+                      icon: Icons.schedule,
+                      onPressed: _sent
+                          ? null
+                          : () {
+                              setState(() => _sent = true);
+                              widget.onResponse({'date': dayKey(_day!), 'slot': s, 'label': '${_shownDate(_day!)} $s'});
+                            },
+                    ),
               ],
             ),
           ],
