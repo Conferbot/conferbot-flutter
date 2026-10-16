@@ -518,6 +518,27 @@ stop(); // stop listening
 
 `cb:waiting-for-human` fires from the server's `handover-waiting`, or 20 seconds into a wait for a person with nobody yet (once per wait, and only while the chat is open). No signal carries the visitor's email.
 
+### Redirect after chat
+
+When the owner sets a URL in Customize > Conversations > Post-chat redirect, the SDK follows it as the web widget does: once the conversation ends (the flow reaches its end, or an agent ends the chat) and the post-chat rating is sent or put away, a quiet line reads "Taking you to example.com in 10s" with Cancel, then the URL opens in the system browser (`url_launcher`, outside the app). It stops if the visitor cancels, starts a new chat, closes the chat or the app goes to the background, and it is offered only once per conversation (remembered in `shared_preferences`). Only `http(s)` addresses are followed.
+
+```dart
+ConferBotProvider(
+  apiKey: '...',
+  botId: '...',
+  config: ConferBotConfig(
+    // Open it in your own screen instead; true = handled, no countdown.
+    onPostChatRedirect: (url) {
+      navigatorKey.currentState?.pushNamed('/web', arguments: url);
+      return true;
+    },
+    // Or turn it off: disablePostChatRedirect: true,
+  ),
+);
+```
+
+Headless: `provider.postChatRedirect.line` (`RedirectLine`: `text`, `said`, `phase`, `cancelLabel`), `provider.postChatRedirect.cancel()`, `continueNow()`.
+
 ### While you wait
 
 As on the web widget, while the visitor waits for a person (a flow's handover step with no AI agent on it, an AI handing the chat to the team, or a restored chat still in the queue):
@@ -662,7 +683,7 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 | Class / member | Signature | Description |
 |---|---|---|
 | `ConferBotProvider` | `ConferBotProvider({required String apiKey, required String botId, ConferBotConfig config = const ConferBotConfig(), ConferBotCustomization? customization, ConferBotUser? user, String? baseUrl, String? socketUrl})` | Core state manager; connects socket and REST, runs the node flow engine |
-| `ConferBotConfig` | `const ConferBotConfig({bool enableNotifications = true, bool enableOfflineMode = true, bool autoConnect = true, int? reconnectionAttempts, int? reconnectionDelay, bool enablePagination = true, PaginationConfig? paginationConfig, bool enableAnalytics = true, Duration analyticsFlushInterval = const Duration(seconds: 30), bool enablePersistence = true, Duration sessionTimeout = const Duration(minutes: 30)})` | SDK behavior switches |
+| `ConferBotConfig` | `const ConferBotConfig({bool enableNotifications = true, bool enableOfflineMode = true, bool autoConnect = true, int? reconnectionAttempts, int? reconnectionDelay, bool enablePagination = true, PaginationConfig? paginationConfig, bool enableAnalytics = true, Duration analyticsFlushInterval = const Duration(seconds: 30), bool enablePersistence = true, Duration sessionTimeout = const Duration(minutes: 30), String? widgetLanguage, bool Function(String url)? onPostChatRedirect, bool disablePostChatRedirect = false})` | SDK behavior switches |
 | `ChatWidget` | `const ChatWidget({String? title, String? placeholder, bool showTimestamps = false, bool enableAttachments = false, ConferBotTheme? theme, bool enablePagination = true, MessageListPaginationConfig? paginationConfig, bool? showKnowledgeBase, ValueChanged<KnowledgeBaseArticle>? onArticleInsert, bool showOfflineIndicator = true, bool showDeliveryStatus = true, bool showHandoverPreChatForm = true, bool showHandoverPostChatSurvey = true, int handoverMaxWaitMinutes = 5, ValueChanged<SurveyResult>? onHandoverSurveySubmit})` | Drop-in full chat UI |
 | `ConferBotFAB` | `const ConferBotFAB({required Widget child, ConferBotFABConfig config = const ConferBotFABConfig(), ConferBotTheme? theme})` | Floating chat bubble overlaying your app |
 | `ConferBotFABConfig` | `const ConferBotFABConfig({double size = 50.0, FabPosition position = FabPosition.right, double offsetX = 10.0, double offsetBottom = 10.0})` | FAB fallbacks (server values win) |
