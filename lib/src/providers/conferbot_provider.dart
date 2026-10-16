@@ -44,6 +44,8 @@ import '../core/customization/personalize.dart';
 import '../core/home/home.dart' hide homeModel, homePalette;
 import '../core/home/home.dart' as rules show homeModel, homePalette;
 import '../core/home/home_extras.dart';
+import '../core/customization/message_sound.dart';
+import '../services/chat_sounds.dart';
 
 /// ConferBot provider configuration
 class ConferBotConfig {
@@ -140,6 +142,11 @@ class ConferBotProvider with ChangeNotifier {
   /// help centre), what the device remembers for "Welcome back", the help
   /// centre's data and the server's article search (core/home/home_extras.dart).
   late final HomeExtras home;
+
+  /// The chat's sounds: a message arriving, opening, closing and sending,
+  /// under the owner's messageSound / soundPack / launcher sound, and the
+  /// visitor's Sound on / off (services/chat_sounds.dart).
+  late final ChatSounds sounds;
 
   // The session whose flow has been started (or picked back up): bot data
   // comes again on every reconnect and must not run the flow again.
@@ -339,6 +346,9 @@ class ConferBotProvider with ChangeNotifier {
       onHomeShown: () => unawaited(requests.onChatShown()),
     );
     home.addListener(notifyListeners);
+
+    sounds = ChatSounds(customizations: () => _serverCustomizations);
+    sounds.addListener(notifyListeners);
     // Seen receipts count the chat as visible only on the conversation.
     home.chosen.addListener(() {
       if (_isOpen) liveChat.reportReceipts(chatVisible: _chatOnScreen);
@@ -1501,6 +1511,8 @@ class ConferBotProvider with ChangeNotifier {
     if (!_isOpen) {
       _unreadCount++;
     }
+    // A message arriving (a bot step, a person's or the AI's message).
+    sounds.rowAdded(message.toJson());
 
     // Also add to pagination controller if available
     if (_paginationController != null) {
@@ -1865,6 +1877,8 @@ class ConferBotProvider with ChangeNotifier {
   /// Open chat and start the flow
   /// If a previous session was restored, it will resume from where it left off
   Future<void> openChat() async {
+    // The visitor's Sound on / off, as they left it.
+    unawaited(sounds.load());
     // Not before start-up is done: a session being restored would be
     // replaced by a new one (and its handover ticket left behind).
     if (config.autoConnect && !_started.isCompleted) await _started.future;
@@ -1886,7 +1900,7 @@ class ConferBotProvider with ChangeNotifier {
 
       // An agent bot picks its conversation back up.
       if (_agentBot != null) {
-        _isOpen = true;
+        _markOpen();
         _unreadCount = 0;
         _startAgentBotChat();
         _resumeRestoredAgentChat();
@@ -1899,7 +1913,7 @@ class ConferBotProvider with ChangeNotifier {
       // it comes later.
       if (_steps.isNotEmpty && _socketClient.isConnected) _resumeRestoredFlow();
 
-      _isOpen = true;
+      _markOpen();
       _unreadCount = 0;
       notifyListeners();
       return;
@@ -1978,7 +1992,7 @@ class ConferBotProvider with ChangeNotifier {
 
       // An agent bot opens into the agent chat, never the shell flow.
       if (_agentBot != null) {
-        _isOpen = true;
+        _markOpen();
         _unreadCount = 0;
         _startAgentBotChat();
         notifyListeners();
@@ -2000,14 +2014,25 @@ class ConferBotProvider with ChangeNotifier {
       }
     }
 
-    _isOpen = true;
+    _markOpen();
     _unreadCount = 0;
     liveChat.reportReceipts(chatVisible: _chatOnScreen);
     notifyListeners();
   }
 
+  /// The chat opening: the launcher sound, or the pack's open.
+  void _markOpen() {
+    if (!_isOpen) sounds.play(SoundEvent.open);
+    _isOpen = true;
+  }
+
+  /// Sound on / off from the chat menu, kept on the device.
+  void toggleSound() => sounds.toggle();
+
   /// Close chat
   void closeChat() {
+    // The launcher sound, or the pack's close.
+    if (_isOpen) sounds.play(SoundEvent.close);
     _isOpen = false;
     requests.onChatShown();
 
@@ -2089,6 +2114,9 @@ class ConferBotProvider with ChangeNotifier {
       notifyListeners();
       return;
     }
+
+    // The pack's send sound.
+    sounds.play(SoundEvent.send);
 
     // What they type in a live or agent chat is what they came for, for
     // "Welcome back" (web special.ts _handleHumanHandoverInputSubmit).
@@ -2460,6 +2488,8 @@ class ConferBotProvider with ChangeNotifier {
     requests.removeListener(notifyListeners);
     requests.dispose();
     home.dispose();
+    sounds.removeListener(notifyListeners);
+    sounds.dispose();
     _paginationController?.removeListener(_onPaginationChange);
     _analyticsProvider?.removeListener(_onAnalyticsChange);
 
