@@ -15,69 +15,83 @@ library;
 
 import 'package:intl/intl.dart';
 
+import '../i18n/i18n.dart';
+
 class ReplyTime {
   ReplyTime._();
 
-  static const online = 'Online';
+  static String get online => t('status.online');
   static const sep = ' · ';
 
-  /// "The team typically replies <phrase>"
-  static const phrases = {
-    'under_minute': 'in under a minute',
-    'few_minutes': 'in a few minutes',
-    'under_15_minutes': 'in under 15 minutes',
-    'under_hour': 'in under an hour',
-    'few_hours': 'in a few hours',
-    'day': 'within a day',
-    'few_days': 'in a few days',
-  };
+  static const _buckets = ['under_minute', 'few_minutes', 'under_15_minutes', 'under_hour', 'few_hours', 'day', 'few_days'];
+
+  /// "The team typically replies <phrase>", per bucket, in the active
+  /// language (web reply.phrase.*).
+  static Map<String, String> get phrases => {for (final b in _buckets) b: t('reply.phrase.$b')};
+
+  static String _phrase(dynamic bucket) => _buckets.contains(bucket) ? t('reply.phrase.$bucket') : '';
+
+  /// The visitor's language and region for dates (web: locale ||
+  /// widgetLocale() || "en-US").
+  static String _locale(String? locale) {
+    if (locale != null && locale.isNotEmpty) return locale;
+    final l = I18n.intlLocale;
+    return l == 'en' ? 'en_US' : l;
+  }
 
   static String _str(dynamic v) => v is String ? v.trim() : '';
 
   /// When the team is back, in the visitor's time: "at 9 AM" (today),
   /// "tomorrow 9 AM", "Monday 9:30 AM", "Mon, Oct 12 9 AM".
-  static String backWhen(dynamic backAt, {DateTime? now, String locale = 'en_US'}) {
+  static String backWhen(dynamic backAt, {DateTime? now, String? locale}) {
     final raw = _str(backAt);
     if (raw.isEmpty) return '';
     final parsed = DateTime.tryParse(raw);
     if (parsed == null) return '';
     final d = parsed.toLocal();
     final n = now ?? DateTime.now();
-    final time = DateFormat(d.minute != 0 ? 'h:mm a' : 'h a', locale).format(d);
+    final loc = _locale(locale);
+    // English keeps its own patterns; other languages use their own clock
+    // and date order.
+    final english = loc.startsWith('en');
+    final time = english
+        ? DateFormat(d.minute != 0 ? 'h:mm a' : 'h a', loc).format(d)
+        : (d.minute != 0 ? DateFormat.jm(loc) : DateFormat.j(loc)).format(d);
     final days = DateTime(d.year, d.month, d.day).difference(DateTime(n.year, n.month, n.day)).inHours / 24;
     final whole = days.round();
-    if (whole <= 0) return 'at $time';
-    if (whole == 1) return 'tomorrow $time';
-    if (whole < 7) return '${DateFormat('EEEE', locale).format(d)} $time';
-    return '${DateFormat('EEE, MMM d', locale).format(d)} $time';
+    if (whole <= 0) return t('reply.atTime', {'time': time});
+    if (whole == 1) return '${t('reply.tomorrow')} $time';
+    if (whole < 7) return '${DateFormat('EEEE', loc).format(d)} $time';
+    return '${(english ? DateFormat('EEE, MMM d', loc) : DateFormat.MMMEd(loc)).format(d)} $time';
   }
 
   /// The header's status from the server's reply time; null keeps "Online".
   /// The bot stays Online when the team is away or offline ("Online · team
   /// back at 9 AM", "Online · team replies by email"). [agent]: an AI agent
   /// bot, which answers itself whatever the hour (no line).
-  static String? headerLine(dynamic rt, {bool agent = false, DateTime? now, String locale = 'en_US'}) {
+  static String? headerLine(dynamic rt, {bool agent = false, DateTime? now, String? locale}) {
     if (rt is! Map || rt['mode'] == 'hide' || rt['handover'] != true || agent) return null;
     final state = rt['state'];
     if (state == 'away' || state == 'offline') {
       final when = backWhen(rt['backAt'], now: now, locale: locale);
       final words = when.isNotEmpty
-          ? 'team back $when'
+          ? t('reply.teamBack', {'when': when})
           : rt['leaveMessage'] == false
-              ? 'team away right now'
-              : 'team replies by email';
+              ? t('reply.teamAwayNow')
+              : t('reply.teamByEmail');
       return '$online$sep$words';
     }
     final fixed = rt['mode'] == 'fixed' ? _str(rt['text']) : '';
     if (fixed.isNotEmpty) return fixed;
-    final phrase = phrases[rt['bucket']] ?? _str(rt['phrase']);
-    return phrase.isEmpty ? null : 'Typically replies $phrase';
+    final known = _phrase(rt['bucket']);
+    final phrase = known.isNotEmpty ? known : _str(rt['phrase']);
+    return phrase.isEmpty ? null : t('reply.typicallyShort', {'phrase': phrase});
   }
 
   /// What the header shows under the bot name: the reply-time line, or plain
   /// "Online" once a person is in the chat (the snapshot about an away team
   /// is no longer true), or nothing when the owner turned it off ([hidden]).
-  static String? headerStatus(dynamic rt, {bool personInChat = false, bool agentBot = false, bool hidden = false, DateTime? now, String locale = 'en_US'}) {
+  static String? headerStatus(dynamic rt, {bool personInChat = false, bool agentBot = false, bool hidden = false, DateTime? now, String? locale}) {
     if (hidden) return null;
     if (personInChat) return online;
     return headerLine(rt, agent: agentBot, now: now, locale: locale) ?? online;
@@ -86,27 +100,31 @@ class ReplyTime {
 
   static bool _live(dynamic rt) => rt is Map && rt['mode'] != 'hide';
   static String _fixedOf(Map rt) => rt['mode'] == 'fixed' ? _str(rt['text']) : '';
-  static String _phraseOf(Map rt) => phrases[rt['bucket']] ?? _str(rt['phrase']);
+  static String _phraseOf(Map rt) {
+    final known = _phrase(rt['bucket']);
+    return known.isNotEmpty ? known : _str(rt['phrase']);
+  }
 
-  static String typically(String phrase) => 'The team typically replies $phrase';
-  static String teamReplies(String phrase) => 'team replies $phrase';
-  static const answersInstantly = 'Answers instantly';
-  static const answersAlways = 'Answers instantly, day or night';
-  static const awayNow = "We're away right now";
-  static String back(String when) => 'back $when';
-  static const offline = 'The team is offline';
-  static const byEmail = "we'll reply by email";
-  static const offlineNow = 'The team is offline right now';
-  static String usually(String phrase) => 'Usually replies $phrase';
-  static const usuallyInstantly = 'Usually replies instantly';
-  static String teamBackAt(String when) => 'Team back $when';
-  static const teamRepliesByEmail = 'Team replies by email';
-  static const teamAwayRightNow = 'Team away right now';
+  // The home card's words (web replyTime.ts STRINGS, reply.*), read when drawn.
+  static String typically(String phrase) => t('reply.typically', {'phrase': phrase});
+  static String teamReplies(String phrase) => t('reply.teamReplies', {'phrase': phrase});
+  static String get answersInstantly => t('reply.answersInstantly');
+  static String get answersAlways => t('reply.answersAlways');
+  static String get awayNow => t('reply.away');
+  static String back(String when) => t('reply.back', {'when': when});
+  static String get offline => t('reply.offline');
+  static String get byEmail => t('reply.byEmail');
+  static String get offlineNow => t('reply.offlineNow');
+  static String usually(String phrase) => t('reply.usually', {'phrase': phrase});
+  static String get usuallyInstantly => t('reply.usuallyInstantly');
+  static String teamBackAt(String when) => t('reply.teamBackAt', {'when': when});
+  static String get teamRepliesByEmail => t('reply.teamRepliesByEmail');
+  static String get teamAwayRightNow => t('reply.teamAwayRightNow');
 
   /// The "Talk to us" card's line (web replyTime.ts homeLine). A
   /// [HomeLine.hidden] line means take it away (the owner chose Hide); null
   /// keeps the old line.
-  static HomeLine? homeLine(dynamic rt, {bool agent = false, DateTime? now, String locale = 'en_US'}) {
+  static HomeLine? homeLine(dynamic rt, {bool agent = false, DateTime? now, String? locale}) {
     if (rt is Map && rt['mode'] == 'hide') return agent ? null : HomeLine.hidden;
     if (!_live(rt) || rt['handover'] != true) return null;
     final m = rt as Map;
@@ -116,7 +134,7 @@ class ReplyTime {
     final state = m['state'];
     if (agent) {
       // The AI answers whatever the hour; say when people are around.
-      if (state == 'away') return HomeLine(answersInstantly + (when.isNotEmpty ? '${sep}team back $when' : ''), away: true);
+      if (state == 'away') return HomeLine(answersInstantly + (when.isNotEmpty ? '$sep${t('reply.teamBack', {'when': when})}' : ''), away: true);
       if (state == 'offline' || words.isEmpty) return null;
       return HomeLine('$answersInstantly$sep${fixed.isNotEmpty ? fixed : teamReplies(words)}');
     }
@@ -138,11 +156,11 @@ class ReplyTime {
   /// - a team that is away or offline: "Team back tomorrow 9 AM", else "Team
   ///   replies by email" (or "Team away right now" with leave-a-message off);
   /// - Hide: no words ("").
-  static HomeLine homePeople(dynamic rt, {bool agent = false, DateTime? now, String locale = 'en_US'}) {
+  static HomeLine homePeople(dynamic rt, {bool agent = false, DateTime? now, String? locale}) {
     final line = homeLine(rt, agent: agent, now: now, locale: locale);
-    if (agent) return line != null && !line.hide ? HomeLine(line.text, away: line.away) : const HomeLine(answersAlways);
+    if (agent) return line != null && !line.hide ? HomeLine(line.text, away: line.away) : HomeLine(answersAlways);
     if (line != null && line.hide) return const HomeLine('');
-    if (!_live(rt) || rt['handover'] != true) return const HomeLine(answersAlways);
+    if (!_live(rt) || rt['handover'] != true) return HomeLine(answersAlways);
     final m = rt as Map;
     final state = m['state'];
     if (state == 'away' || state == 'offline') {
