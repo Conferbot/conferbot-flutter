@@ -325,6 +325,8 @@ class ConferBotProvider with ChangeNotifier {
       postTranscriptEmail: (sessionId, email) => _apiClient.sendTranscriptEmail(sessionId, email),
       // A queue-status's help is what to offer while waiting (core/waiting).
       onQueueStatus: (data) => waiting.onQueueStatus(data),
+      // A conversation asked for its rating is remembered across restarts (#88).
+      store: () => config.enablePersistence ? const SharedPreferencesRequestsStore() : null,
     );
     liveChat.addListener(notifyListeners);
 
@@ -447,7 +449,8 @@ class ConferBotProvider with ChangeNotifier {
       blocked: () => liveChat.blocked != null,
       // A person in the chat, or one on their way.
       live: () => _isLiveChatMode || !handover.talkToPersonAllowed,
-      ratingPending: () => liveChat.csatConfig != null && liveChat.csatOpen && !liveChat.csatSent,
+      // Up, or due 1.5 s after the flow's end, and not answered yet (#88).
+      ratingPending: () => liveChat.ratingPending,
       disabled: () => config.disablePostChatRedirect,
       onPostChatRedirect: () => config.onPostChatRedirect,
       store: () => config.enablePersistence ? const SharedPreferencesRequestsStore() : null,
@@ -1674,8 +1677,12 @@ class ConferBotProvider with ChangeNotifier {
   void _setupFlowEngineListeners() {
     _flowEngine.addListener(_onFlowEngineChange);
 
-    // The flow's end is the conversation's end (the post-chat redirect).
-    _flowEngine.isFlowCompleteStream.listen((_) => postChatRedirect.conversationEnded());
+    // The flow's end is the conversation's end: the post-chat rating 1.5 s
+    // later, as the web asks (#88), then the redirect, which waits for it.
+    _flowEngine.isFlowCompleteStream.listen((_) {
+      unawaited(liveChat.flowEnded());
+      postChatRedirect.conversationEnded();
+    });
 
     // The lines the flow's steps say (questions, answers, media, links),
     // as the web widget draws them.
