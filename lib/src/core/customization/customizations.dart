@@ -4,6 +4,7 @@
 /// what each one turns into on screen. Pure: the widgets read the result.
 library;
 
+import '../i18n/i18n.dart';
 import 'mascot_art.dart';
 import 'mascot_motion.dart' show normalizeMascotMotion;
 import 'widget_theme.dart';
@@ -187,7 +188,10 @@ class Customizations {
     final tail = themeShape?.rTail ?? 6.0;
     final optionSet = _num(c['optionBubbleBorderRadius']);
     final name = [_str(c['logoText']), _str(c['botName']), botName].firstWhere((s) => s.isNotEmpty, orElse: () => 'Chat');
-    final tagline = c['enableTagline'] == true && _str(c['tagline']).isNotEmpty ? _str(c['tagline']) : null;
+    // The stock "We're here to help" a new bot has is shown in the visitor's
+    // language (web stockText "header.tagline").
+    final tagline =
+        c['enableTagline'] == true && _str(c['tagline']).isNotEmpty ? I18n.stockText(_str(c['tagline']), 'header.tagline') : null;
     final avatarSet = _num(c['avatarSize']);
     final avatarSize = avatarSet != null && avatarSet > 0 && avatarSet != 40 ? avatarSet : 32.0;
     final shape = c['avatarShape'] == 'square' || c['avatarShape'] == 'rounded' ? c['avatarShape'] as String : 'circle';
