@@ -14,6 +14,7 @@ import '../core/customization/launcher_attention.dart';
 import '../core/customization/launcher_entrance.dart';
 import '../core/customization/launcher_idle_call.dart';
 import '../core/customization/mascot_art.dart';
+import '../core/i18n/i18n.dart';
 import 'fx_svg.dart';
 import 'launcher_fx_controllers.dart';
 import 'mascot/mascot_view.dart';
@@ -169,7 +170,7 @@ class IdleCallBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: '$line Open the chat',
+      label: '$line ${t('launcher.openThe')}',
       child: GestureDetector(
         onTap: onTap,
         child: Stack(clipBehavior: Clip.none, children: [
