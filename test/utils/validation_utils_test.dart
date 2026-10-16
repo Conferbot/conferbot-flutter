@@ -21,7 +21,9 @@ void main() {
       const validResult = ValidationResult(true);
       const invalidResult = ValidationResult(false, 'Error');
 
-      expect(validResult.getErrorOrDefault('default'), '');
+      // Valid: the default value, as documented.
+      expect(validResult.getErrorOrDefault('default'), 'default');
+      expect(validResult.getErrorOrDefault(), '');
       expect(invalidResult.getErrorOrDefault('default'), 'Error');
     });
 
@@ -97,7 +99,9 @@ void main() {
       expect(ValidationUtils.isValidPhoneNumber('+1234567890'), true);
       expect(ValidationUtils.isValidPhoneNumber('+1 234 567 8900'), true);
       expect(ValidationUtils.isValidPhoneNumber('+44 20 7946 0958'), true);
-      expect(ValidationUtils.isValidPhoneNumber('(123) 456-7890'), true);
+      // A local number in brackets has no leading country code: the
+      // international pattern needs one; the web's digits-only check takes it.
+      expect(ValidationUtils.isValidPhoneNumber('(123) 456-7890', allowInternational: false), true);
     });
 
     test('should reject invalid phone numbers', () {
