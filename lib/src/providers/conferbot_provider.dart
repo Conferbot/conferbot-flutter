@@ -325,6 +325,12 @@ class ConferBotProvider with ChangeNotifier {
       // Where a wait for a person begins and ends: the help card's timer.
       waitStart: () => waiting.startWait(),
       waitEnd: () => waiting.endWait(),
+      // An agent bot's inactivity close only pauses it (no flow to go on with).
+      isAgentBot: () => _agentBot != null,
+      // The escalation's handover-timeout names the bot's workspace.
+      workspaceId: () => ChatState.instance.workspaceId ?? _serverWorkspaceId,
+      // A restored wait's countdown goes on from the server's seconds left.
+      onRestoredWait: (remaining) => liveChat.resumeWaitWith(remaining),
     );
 
     waiting = WaitingExtras(
@@ -527,10 +533,18 @@ class ConferBotProvider with ChangeNotifier {
   /// The chat on screen registers how it opens an article (null to clear).
   set articleOpener(void Function(String articleId)? opener) => _articleOpener = opener;
 
-  /// Can an AI source or rich article card open this article in the help
-  /// centre? Only while a chat that shows the help centre is on screen.
-  bool canOpenArticle(String? articleId) =>
-      _articleOpener != null && HelpCentre.canOpenArticle(visible: true, articleId: articleId);
+  /// The chat on screen says whether it shows the help centre (the owner's
+  /// switch, or its own `showKnowledgeBase`); unset, the owner's switch.
+  set articlesShown(bool Function()? shown) => _articlesShown = shown;
+  bool Function()? _articlesShown;
+
+  /// Can AI sources and rich article cards open articles in the help
+  /// centre? Only while a chat is on screen whose help centre is on (RN
+  /// agentBot.ts canOpenArticles: helpCentreOn and the host can show one).
+  bool get canOpenArticles => _articleOpener != null && (_articlesShown?.call() ?? helpCentreOn);
+
+  /// Can this article open in the help centre?
+  bool canOpenArticle(String? articleId) => canOpenArticles && HelpCentre.canOpenArticle(visible: true, articleId: articleId);
 
   /// Open a help centre article by id; false when it cannot open here.
   bool openArticle(String articleId) {
@@ -1439,16 +1453,13 @@ class ConferBotProvider with ChangeNotifier {
     _socketClient.on(SocketEvents.agentMessageEdited, (data) => change(data, false));
     _socketClient.on(SocketEvents.agentMessageDeleted, (data) => change(data, true));
 
-    // Closed for inactivity; the visitor's next message reopens it.
+    // Paused for inactivity; a later message from the visitor reopens it.
+    // The line and its record entry are the handover's
+    // (core/live_chat/handover_lifecycle.dart onInactiveClose).
     _socketClient.on(SocketEvents.aiAgentInactiveClose, (data) {
       if (!_isOwnSession(data)) return;
       _setAwaitingReply(false);
       _suggestions = const [];
-      ChatState.instance.pushToRecord(RecordEntry(
-        id: 'ai-close-${DateTime.now().millisecondsSinceEpoch}',
-        shape: 'ai-agent-inactive-close',
-        type: 'ai-agent-inactive-close',
-      ));
       notifyListeners();
     });
     _socketClient.on(SocketEvents.aiAgentResumed, (data) {
