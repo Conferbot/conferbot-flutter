@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/nodes/node_ui_state.dart';
 import '../../models/agent.dart';
 import '../../theme/conferbot_theme.dart';
@@ -231,9 +232,9 @@ class _HumanHandoverOverlayState extends State<HumanHandoverOverlay>
         onCancel: widget.onCancel,
         primaryColor: widget.primaryColor,
         theme: theme,
-        title: 'Before we connect you',
+        title: t('sdk.prechat.title'),
         description: widget.handoverMessage ??
-            'Please provide your details so our agent can assist you better.',
+            t('sdk.handover.detailsPrompt'),
         showCancelButton: widget.onCancel != null,
       ),
     );
@@ -260,7 +261,7 @@ class _HumanHandoverOverlayState extends State<HumanHandoverOverlay>
     final agent = widget.agent ??
         Agent(
           id: 'unknown',
-          name: widget.uiState.agentName ?? 'Support Agent',
+          name: widget.uiState.agentName ?? t('sdk.agent.supportAgent'),
         );
 
     return Column(
@@ -318,7 +319,7 @@ class _HumanHandoverOverlayState extends State<HumanHandoverOverlay>
 
             // Title
             Text(
-              'No Agents Available',
+              t('sdk.handover.noAgentsTitle'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeLg,
                 fontWeight: theme.typography.fontWeightSemiBold,
@@ -330,7 +331,7 @@ class _HumanHandoverOverlayState extends State<HumanHandoverOverlay>
 
             // Description
             Text(
-              'All our agents are currently busy. Please try again later or leave us a message.',
+              t('sdk.handover.allBusyMessage'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeMd,
                 color: theme.colors.textSecondary,
@@ -354,7 +355,7 @@ class _HumanHandoverOverlayState extends State<HumanHandoverOverlay>
                         borderRadius: BorderRadius.circular(theme.borderRadius.md),
                       ),
                     ),
-                    child: const Text('Go Back'),
+                    child: Text(t('sdk.handover.goBack')),
                   ),
                 ),
                 SizedBox(width: theme.spacing.md),
@@ -373,7 +374,7 @@ class _HumanHandoverOverlayState extends State<HumanHandoverOverlay>
                       ),
                       elevation: 0,
                     ),
-                    child: const Text('Leave Message'),
+                    child: Text(t('sdk.handover.leaveMessage')),
                   ),
                 ),
               ],
