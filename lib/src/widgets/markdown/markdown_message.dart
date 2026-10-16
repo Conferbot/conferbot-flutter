@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
+import '../../core/i18n/i18n.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 import '../../utils/chat_markdown.dart';
@@ -199,7 +200,7 @@ class MarkdownMessage extends StatelessWidget {
               Icon(Icons.broken_image, size: 16, color: Colors.grey.shade600),
               const SizedBox(width: 4),
               Text(
-                alt ?? 'Image failed to load',
+                alt ?? t('sdk.media.imageFailed'),
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade600,
