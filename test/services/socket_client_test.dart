@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:conferbot_flutter/src/models/socket_events.dart';
+import 'package:conferbot_flutter/src/services/socket_client.dart';
 import '../mocks/mock_socket_client.dart';
 
 void main() {
@@ -240,11 +241,18 @@ void main() {
   });
 
   group('SocketClient Emit When Disconnected', () {
+    // The real client drops an emit while disconnected (the mock records
+    // every emit, so the fake-socket tests can read what was sent).
     test('should not emit when not connected', () {
-      socketClient.mockIsConnected = false;
-      socketClient.emit('test-event', {});
-
-      expect(socketClient.emittedEvents.isEmpty, true);
+      final real = SocketClient(
+        apiKey: 'test_api_key',
+        botId: 'test_bot_id',
+        config: const SocketClientConfig(autoReconnect: false),
+      );
+      expect(real.isConnected, false);
+      expect(() => real.emit('test-event', {}), returnsNormally);
+      expect(real.isConnected, false);
+      real.dispose();
     });
 
     test('should emit when connected', () {
