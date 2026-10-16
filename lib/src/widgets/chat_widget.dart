@@ -29,6 +29,7 @@ import 'chat_background.dart';
 import '../core/live_chat/live_chat.dart';
 import '../core/state/chat_state.dart';
 import '../core/help_centre/help_centre.dart';
+import '../core/live_chat/email_transcript.dart';
 import 'package:file_picker/file_picker.dart';
 
 /// Complete drop-in chat widget with node rendering support
@@ -115,6 +116,9 @@ class _ChatWidgetState extends State<ChatWidget> {
   final ConnectivityService _connectivity = ConnectivityService.instance;
   final MessageQueueService _messageQueue = MessageQueueService.instance;
 
+  // The composer's focus: "Ask another way" under an AI answer puts the cursor there.
+  final FocusNode _composerFocus = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -183,6 +187,9 @@ class _ChatWidgetState extends State<ChatWidget> {
     // AI sources and rich article cards open articles through this chat.
     _chatProvider = context.read<ConferBotProvider>();
     _chatProvider!.articleOpener = _openArticleById;
+    _chatProvider!.composerFocuser = () {
+      if (mounted) _composerFocus.requestFocus();
+    };
   }
 
   /// Is the help centre offered? The app's override first, else the owner's
@@ -333,6 +340,8 @@ class _ChatWidgetState extends State<ChatWidget> {
     _connectivity.removeListener(_onConnectivityChange);
     _messageQueue.removeListener(_onQueueChange);
     _chatProvider?.articleOpener = null;
+    _chatProvider?.composerFocuser = null;
+    _composerFocus.dispose();
     _kbProvider?.dispose();
     super.dispose();
   }
@@ -402,6 +411,9 @@ class _ChatWidgetState extends State<ChatWidget> {
       showConnectionStatus: true,
       showKnowledgeBase: _helpCentreVisible(provider),
       onKnowledgeBaseTap: _openKnowledgeBase,
+      // The chat menu: the conversation to the visitor's inbox (web
+      // emailTranscript.ts), once there is one and the visitor is not blocked.
+      onEmailTranscript: provider.chatSessionId != null && provider.visitorBlocked == null ? provider.openEmailTranscript : null,
       theme: provider.serverTheme,
       // Show handover indicator in header
       handoverIndicator: _buildHandoverIndicator(provider, theme),
@@ -463,7 +475,8 @@ class _ChatWidgetState extends State<ChatWidget> {
 
     // Build the inline interactive node widget (choices, inputs, etc.)
     Widget? interactiveNode;
-    final uiState = provider.currentUIState;
+    // A blocked visitor gets no step card (core/live_chat/live_events.dart).
+    final uiState = provider.visitorBlocked == null ? provider.currentUIState : null;
     if (uiState != null && uiState is! HumanHandoverUIState) {
       interactiveNode = Padding(
         padding: EdgeInsets.symmetric(
@@ -724,9 +737,11 @@ class _ChatWidgetState extends State<ChatWidget> {
         ? 'Offline - messages will be queued'
         : widget.placeholder ?? 'Type a message...';
 
-    // A live chat: locked or replies off, and a file for the agent.
+    // A live chat: locked or replies off, and a file for the agent; a closed
+    // chat (blocked, or ended with nothing going on) takes no more input.
     final live = provider.liveChat;
-    final repliesOff = live.lockedBy != null || !live.visitorInputEnabled;
+    final closed = provider.closedState;
+    final repliesOff = live.lockedBy != null || !live.visitorInputEnabled || closed?.inputOff == true;
     final canAttach = provider.isLiveChatMode &&
         (LiveChat.visitorUploadsOn(provider.serverCustomizations) || live.fileRequestedBy != null);
 
@@ -739,8 +754,13 @@ class _ChatWidgetState extends State<ChatWidget> {
       onSend: (text) async {
         await provider.sendMessage(text);
       },
-      placeholder: repliesOff ? 'Replies are turned off for now' : placeholder,
+      placeholder: closed?.inputOff == true
+          ? closed!.text
+          : repliesOff
+              ? 'Replies are turned off for now'
+              : placeholder,
       disabled: provider.isProcessing || repliesOff,
+      focusNode: _composerFocus,
       enableAttachments: widget.enableAttachments || canAttach,
       onAttachmentPress: canAttach ? _pickLiveFile : null,
       showKnowledgeBase: _helpCentreVisible(provider),
@@ -825,6 +845,9 @@ class ChatHeaderWithKB extends StatelessWidget {
   /// The bot's settings as the web applies them; null keeps the host app's look.
   final ResolvedCustomizations? look;
 
+  /// "Email me this chat" in the chat menu; null leaves it out.
+  final VoidCallback? onEmailTranscript;
+
   const ChatHeaderWithKB({
     super.key,
     this.title,
@@ -839,6 +862,7 @@ class ChatHeaderWithKB extends StatelessWidget {
     this.theme,
     this.handoverIndicator,
     this.look,
+    this.onEmailTranscript,
   });
 
   @override
@@ -943,6 +967,26 @@ class ChatHeaderWithKB extends StatelessWidget {
                 tooltip: 'Help Center',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 4),
+            ],
+            if (onEmailTranscript != null) ...[
+              PopupMenuButton<String>(
+                key: const ValueKey('cb-chat-menu'),
+                icon: Icon(Icons.more_vert, color: t.colors.headerText),
+                tooltip: 'Chat menu',
+                padding: EdgeInsets.zero,
+                onSelected: (id) {
+                  if (id == 'email-transcript') onEmailTranscript!();
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'email-transcript',
+                    child: Row(
+                      children: [Icon(Icons.mail_outline, size: 18), SizedBox(width: 10), Text(EmailTranscript.menu)],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(width: 4),
             ],
