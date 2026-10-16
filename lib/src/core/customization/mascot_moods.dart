@@ -21,6 +21,7 @@
 /// Ported from the React Native SDK's core/mascotMoods.ts. Pure.
 library;
 
+import '../i18n/i18n.dart';
 import 'keyframes.dart';
 
 const mascotMoods = ['idle', 'wave', 'think', 'happy'];
@@ -160,4 +161,5 @@ class TypingPencilSpec {
 }
 
 /// "Pip is typing" when the owner named their mascot (chatChrome.ts typingBubbleHtml), else "Typing".
-String typingLabel(String style, String mascotName) => style == 'mascot' && mascotName.isNotEmpty ? '$mascotName is typing' : 'Typing';
+String typingLabel(String style, String mascotName) =>
+    style == 'mascot' && mascotName.isNotEmpty ? t('typing.named', {'name': mascotName}) : t('typing.typing');
