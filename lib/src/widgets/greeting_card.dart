@@ -24,6 +24,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../core/customization/svg_path.dart';
+import '../core/i18n/i18n.dart';
 import '../core/customization/widget_theme.dart';
 import 'greeting_controller.dart';
 import 'mascot/greeting_motion.dart';
@@ -417,7 +418,7 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
       right: right,
       child: Semantics(
         button: true,
-        label: 'Dismiss',
+        label: t('common.dismiss'),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onClose,
@@ -468,7 +469,7 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
           const SizedBox(width: 5),
         ],
         Flexible(
-          child: Text(statusText ?? 'Online', maxLines: row ? 1 : 2, overflow: TextOverflow.ellipsis, style: _base.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF64748B), height: 1.25).merge(status)),
+          child: Text(statusText ?? t('status.online'), maxLines: row ? 1 : 2, overflow: TextOverflow.ellipsis, style: _base.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF64748B), height: 1.25).merge(status)),
         ),
       ]),
     );
@@ -705,7 +706,7 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
               opacity: late,
               child: Padding(
                 padding: const EdgeInsets.only(right: 6),
-                child: Text('Delivered', textAlign: TextAlign.right, style: _base.copyWith(fontFamily: d.font, fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF8E8E93))),
+                child: Text(t('receipt.delivered'), textAlign: TextAlign.right, style: _base.copyWith(fontFamily: d.font, fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF8E8E93))),
               ),
             ),
             if (d.starters.isNotEmpty) ...[
@@ -804,7 +805,7 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
                     upper: true,
                     padRight: 62,
                     dot: false,
-                    statusText: 'Greetings from ${d.head.name}',
+                    statusText: t('greeting.from', {'name': d.head.name}),
                     name: TextStyle(fontFamily: serif, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.44, color: const Color(0xFF8A6D4B)),
                     status: TextStyle(fontFamily: serif, fontSize: 17, fontWeight: FontWeight.w600, fontStyle: FontStyle.italic, color: const Color(0xFF2B2118), height: 1.25),
                   ),
@@ -1002,7 +1003,7 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
           row: true,
           upper: true,
           dot: false,
-          statusText: 'now',
+          statusText: t('sdk.greeting.now'),
           name: TextStyle(fontFamily: sys, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.24, color: const Color(0xFF555555)),
           status: TextStyle(fontFamily: sys, color: const Color(0xFF8E8E93)),
         ),
