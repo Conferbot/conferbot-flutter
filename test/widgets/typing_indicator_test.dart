@@ -2,10 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:conferbot_flutter/conferbot_flutter.dart';
 
+/// Only the indicator's own widgets: MaterialApp's page route draws
+/// FadeTransitions, Rows and SizedBoxes of its own.
+Finder _inIndicator(Type type) => find.descendant(of: find.byType(TypingIndicator), matching: find.byType(type));
+
+/// Pumps [w], then runs the indicator's stagger delays (animationSpeed / 3
+/// and 2/3), so no timer is left pending when the test ends.
+Future<void> _put(WidgetTester tester, Widget w) async {
+  await tester.pumpWidget(w);
+  await tester.pump(const Duration(milliseconds: 700));
+}
+
 void main() {
   group('TypingIndicator', () {
     testWidgets('renders three dots when visible', (WidgetTester tester) async {
-      await tester.pumpWidget(
+      await _put(tester, 
         const MaterialApp(
           home: Scaffold(
             body: TypingIndicator(visible: true),
@@ -14,15 +25,15 @@ void main() {
       );
 
       // Should find 3 Container widgets for the dots
-      final containers = find.byType(Container);
+      final containers = _inIndicator(Container);
       expect(containers, findsWidgets);
 
       // Check that FadeTransition widgets exist for animations
-      expect(find.byType(FadeTransition), findsNWidgets(3));
+      expect(_inIndicator(FadeTransition), findsNWidgets(3));
     });
 
     testWidgets('renders nothing when not visible', (WidgetTester tester) async {
-      await tester.pumpWidget(
+      await _put(tester, 
         const MaterialApp(
           home: Scaffold(
             body: TypingIndicator(visible: false),
@@ -31,17 +42,18 @@ void main() {
       );
 
       // Should find SizedBox.shrink
-      final sizedBox = find.byType(SizedBox);
+      final sizedBox = _inIndicator(SizedBox);
       expect(sizedBox, findsOneWidget);
+      expect(tester.getSize(sizedBox), Size.zero);
 
       // Should not find FadeTransition (dots)
-      expect(find.byType(FadeTransition), findsNothing);
+      expect(_inIndicator(FadeTransition), findsNothing);
     });
 
     testWidgets('uses custom dot color', (WidgetTester tester) async {
       const customColor = Colors.red;
 
-      await tester.pumpWidget(
+      await _put(tester, 
         const MaterialApp(
           home: Scaffold(
             body: TypingIndicator(
@@ -53,7 +65,7 @@ void main() {
       );
 
       // Find containers with BoxDecoration
-      final containers = tester.widgetList<Container>(find.byType(Container));
+      final containers = tester.widgetList<Container>(_inIndicator(Container));
       final dotsWithColor = containers.where((container) {
         final decoration = container.decoration;
         if (decoration is BoxDecoration) {
@@ -68,7 +80,7 @@ void main() {
     testWidgets('uses custom dot size', (WidgetTester tester) async {
       const customSize = 12.0;
 
-      await tester.pumpWidget(
+      await _put(tester, 
         const MaterialApp(
           home: Scaffold(
             body: TypingIndicator(
@@ -80,7 +92,7 @@ void main() {
       );
 
       // Find containers with the custom size
-      final containers = tester.widgetList<Container>(find.byType(Container));
+      final containers = tester.widgetList<Container>(_inIndicator(Container));
       final dotsWithSize = containers.where((container) {
         final constraints = container.constraints;
         if (constraints != null) {
@@ -93,7 +105,7 @@ void main() {
     });
 
     testWidgets('animations are running when visible', (WidgetTester tester) async {
-      await tester.pumpWidget(
+      await _put(tester, 
         const MaterialApp(
           home: Scaffold(
             body: TypingIndicator(visible: true),
@@ -107,11 +119,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       // Should still find the dots
-      expect(find.byType(FadeTransition), findsNWidgets(3));
+      expect(_inIndicator(FadeTransition), findsNWidgets(3));
     });
 
     testWidgets('uses default theme when no theme provided', (WidgetTester tester) async {
-      await tester.pumpWidget(
+      await _put(tester, 
         const MaterialApp(
           home: Scaffold(
             body: TypingIndicator(visible: true),
@@ -119,7 +131,8 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      // The dots repeat for ever: pumpAndSettle would never settle.
+      await tester.pump(const Duration(milliseconds: 100));
 
       // Widget should render without errors using default theme
       expect(find.byType(TypingIndicator), findsOneWidget);
@@ -128,7 +141,7 @@ void main() {
     testWidgets('uses custom theme when provided', (WidgetTester tester) async {
       final customTheme = defaultTheme;
 
-      await tester.pumpWidget(
+      await _put(tester, 
         MaterialApp(
           home: Scaffold(
             body: TypingIndicator(
@@ -143,7 +156,7 @@ void main() {
     });
 
     testWidgets('respects animation speed parameter', (WidgetTester tester) async {
-      await tester.pumpWidget(
+      await _put(tester, 
         const MaterialApp(
           home: Scaffold(
             body: TypingIndicator(
@@ -156,11 +169,11 @@ void main() {
 
       // Widget should render with custom animation speed
       expect(find.byType(TypingIndicator), findsOneWidget);
-      expect(find.byType(FadeTransition), findsNWidgets(3));
+      expect(_inIndicator(FadeTransition), findsNWidgets(3));
     });
 
     testWidgets('properly disposes animation controllers', (WidgetTester tester) async {
-      await tester.pumpWidget(
+      await _put(tester, 
         const MaterialApp(
           home: Scaffold(
             body: TypingIndicator(visible: true),
@@ -169,7 +182,7 @@ void main() {
       );
 
       // Now remove the widget
-      await tester.pumpWidget(
+      await _put(tester, 
         const MaterialApp(
           home: Scaffold(
             body: SizedBox(),
@@ -182,7 +195,7 @@ void main() {
     });
 
     testWidgets('dots are arranged in a row', (WidgetTester tester) async {
-      await tester.pumpWidget(
+      await _put(tester, 
         const MaterialApp(
           home: Scaffold(
             body: TypingIndicator(visible: true),
@@ -191,15 +204,15 @@ void main() {
       );
 
       // Should find a Row widget containing the dots
-      expect(find.byType(Row), findsOneWidget);
+      expect(_inIndicator(Row), findsOneWidget);
 
-      final row = tester.widget<Row>(find.byType(Row));
+      final row = tester.widget<Row>(_inIndicator(Row));
       expect(row.mainAxisSize, equals(MainAxisSize.min));
     });
 
     testWidgets('visibility toggle works correctly', (WidgetTester tester) async {
       // Start visible
-      await tester.pumpWidget(
+      await _put(tester, 
         const MaterialApp(
           home: Scaffold(
             body: TypingIndicator(visible: true),
@@ -207,10 +220,10 @@ void main() {
         ),
       );
 
-      expect(find.byType(FadeTransition), findsNWidgets(3));
+      expect(_inIndicator(FadeTransition), findsNWidgets(3));
 
       // Toggle to not visible
-      await tester.pumpWidget(
+      await _put(tester, 
         const MaterialApp(
           home: Scaffold(
             body: TypingIndicator(visible: false),
@@ -218,7 +231,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(FadeTransition), findsNothing);
+      expect(_inIndicator(FadeTransition), findsNothing);
     });
   });
 }
