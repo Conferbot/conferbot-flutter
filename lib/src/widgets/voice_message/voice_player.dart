@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import '../../core/i18n/i18n.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 
@@ -175,7 +176,7 @@ class _VoicePlayerWidgetState extends State<VoicePlayerWidget>
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Failed to play audio';
+        _errorMessage = t('sdk.media.audioFailed');
       });
       debugPrint('[VoicePlayerWidget] Error playing audio: $e');
     }
