@@ -46,6 +46,9 @@ import '../core/home/home.dart' as rules show homeModel, homePalette;
 import '../core/home/home_extras.dart';
 import '../core/customization/message_sound.dart';
 import '../services/chat_sounds.dart';
+import '../core/delight/delight.dart';
+import '../core/delight/delight_extras.dart';
+import '../core/live_chat/typing_preview.dart';
 
 /// ConferBot provider configuration
 class ConferBotConfig {
@@ -147,6 +150,23 @@ class ConferBotProvider with ChangeNotifier {
   /// under the owner's messageSound / soundPack / launcher sound, and the
   /// visitor's Sound on / off (services/chat_sounds.dart).
   late final ChatSounds sounds;
+
+  /// The human touches: the bot's tapback and the confetti on an answer,
+  /// the waiting nudge, "Edit" under the latest answer
+  /// (core/delight/delight_extras.dart).
+  late final DelightExtras delight;
+
+  /// The visitor's draft to the person in the chat (core/live_chat/typing_preview.dart).
+  late final DraftSender _drafts = DraftSender((draft) {
+    final sid = _chatSessionId;
+    if (sid != null && _socketClient.isConnected) _socketClient.emit('visitor-draft', {'chatSessionId': sid, 'draft': draft});
+  });
+
+  /// The step that said each row of the conversation, by row id.
+  final Map<String, String> _rowNodes = {};
+
+  /// A score answer's text as the web reads it ("4/5"), for the next answer row.
+  ({String nodeId, String text})? _pendingScore;
 
   // The session whose flow has been started (or picked back up): bot data
   // comes again on every reconnect and must not run the flow again.
@@ -349,6 +369,25 @@ class ConferBotProvider with ChangeNotifier {
 
     sounds = ChatSounds(customizations: () => _serverCustomizations);
     sounds.addListener(notifyListeners);
+
+    delight = DelightExtras(
+      customizations: () => _serverCustomizations,
+      engine: () => _flowEngine,
+      rows: () => [
+        for (final r in _record)
+          DelightRow(
+            id: r.id,
+            nodeId: _rowNodes[r.id],
+            visitor: r.type == MessageType.userMessage || r.type == MessageType.userInputResponse,
+            time: r.time,
+          ),
+      ],
+      chatVisible: () => _chatOnScreen,
+      // A person or the AI agent in the conversation, or on their way: no going back.
+      locked: () => _isLiveChatMode || _agentBot != null || !handover.talkToPersonAllowed,
+      cut: _cutRecordFrom,
+    );
+    delight.addListener(notifyListeners);
     // Seen receipts count the chat as visible only on the conversation.
     home.chosen.addListener(() {
       if (_isOpen) liveChat.reportReceipts(chatVisible: _chatOnScreen);
@@ -1540,8 +1579,10 @@ class ConferBotProvider with ChangeNotifier {
           media.containsKey('html') ||
           media.containsKey('imageUrl');
       if (text.isEmpty && media.isEmpty) return;
+      final id = 'bot_${nodeId}_${DateTime.now().millisecondsSinceEpoch}_${_lineSeq++}';
+      if (nodeId.isNotEmpty) _rowNodes[id] = nodeId;
       _addMessageToRecord(BotMessageRecord(
-        id: 'bot_${nodeId}_${DateTime.now().millisecondsSinceEpoch}_${_lineSeq++}',
+        id: id,
         time: DateTime.now(),
         text: mediaOnly ? null : text,
         nodeData: media.isEmpty ? null : {...media, 'nodeId': nodeId},
@@ -1555,11 +1596,22 @@ class ConferBotProvider with ChangeNotifier {
       final text = messageData['text'] as String? ?? '';
       final nodeId = messageData['nodeId'] as String? ?? '';
       if (text.isEmpty) return;
-      _addMessageToRecord(UserInputResponseRecord(
-        id: 'user_${nodeId}_${DateTime.now().millisecondsSinceEpoch}_${_lineSeq++}',
-        time: DateTime.now(),
-        text: text,
-      ));
+      final id = 'user_${nodeId}_${DateTime.now().millisecondsSinceEpoch}_${_lineSeq++}';
+      final now = DateTime.now();
+      _addMessageToRecord(UserInputResponseRecord(id: id, time: now, text: text));
+      if (nodeId.isNotEmpty) {
+        _rowNodes[id] = nodeId;
+        // What the answer answered, for the bot's tapback and "Edit"; a
+        // score as the web reads it ("4/5").
+        final score = _pendingScore;
+        _pendingScore = null;
+        delight.answered(
+          id,
+          AnswerOf(nodeId: nodeId, type: _nodeTypeOf(nodeId), text: score != null && score.nodeId == nodeId ? score.text : text),
+          at: now,
+        );
+      }
+      delight.conversationChanged();
       notifyListeners();
     });
   }
@@ -1583,6 +1635,46 @@ class ConferBotProvider with ChangeNotifier {
   /// Makes line ids unique within a millisecond.
   int _lineSeq = 0;
 
+  /// A step's type, by its id.
+  String _nodeTypeOf(String nodeId) {
+    for (final n in _flowEngine.steps) {
+      if (n['id']?.toString() == nodeId) return (n['type'] ?? '').toString();
+    }
+    return '';
+  }
+
+  /// "Edit": the conversation cut from [index] on (the question's own rows
+  /// and what came after), the engine then asks the question again.
+  void _cutRecordFrom(int index) {
+    if (index < 0 || index >= _record.length) return;
+    final gone = _record.sublist(index);
+    _record.removeRange(index, _record.length);
+    for (final m in gone) {
+      _rowNodes.remove(m.id);
+      _paginationController?.deleteMessage(m.id);
+    }
+    notifyListeners();
+  }
+
+  /// "Edit" under the visitor's latest answer: back to that question.
+  Future<bool> changeAnswer() => delight.changeAnswer();
+
+  /// The composer's text changed: the waiting nudge waits while something is
+  /// typed, and the person in the chat sees the draft (never a secret field;
+  /// web index.ts updateVisitorDraft).
+  void composerChanged(String text, {bool secret = false}) {
+    delight.setComposerValue(text);
+    final person = _isLiveChatMode && handover.personInChat;
+    if (!secret && TypingPreview.draftPreviewOn(_serverCustomizations, person)) {
+      _drafts.update(text);
+    } else {
+      _drafts.clear();
+    }
+  }
+
+  /// Any touch in the chat: the visitor is busy here (the waiting nudge waits).
+  void noteChatActivity() => delight.noteActivity();
+
   /// Handle flow engine state changes
   void _onFlowEngineChange() {
     // Where the visitor stands: asked while the handover waits for a person.
@@ -1597,6 +1689,13 @@ class ConferBotProvider with ChangeNotifier {
       liveChat.stopQueuePoll();
       liveChat.stopWaitTimer();
     }
+    // The nudge's question, and "Edit" once the bot is quiet again.
+    delight.stepChanged(
+      _flowEngine.isWaitingForInput ? _flowEngine.currentNodeId : null,
+      _flowEngine.isWaitingForInput ? _flowEngine.currentNodeType : null,
+      loading: _flowEngine.isProcessing,
+    );
+    delight.conversationChanged();
     notifyListeners();
   }
 
@@ -1632,6 +1731,9 @@ class ConferBotProvider with ChangeNotifier {
           _edges = edgesData.map((e) => Map<String, dynamic>.from(e as Map)).toList();
         }
       }
+
+      // The bot's bookings: a calendar's taken slots (web index.ts setCalendarBookings).
+      _flowEngine.setCalendarBookings(chatbotData['calendarBookings']);
 
       // Parse server customizations (theme colors, bot name, etc.)
       _rawCustomizations = chatbotData['customizations'] as Map<String, dynamic>?;
@@ -2076,6 +2178,14 @@ class ConferBotProvider with ChangeNotifier {
       _attachChoices(nodeId, choices, selected);
     }
 
+    // A score answer as the web reads it ("4/5"), for the bot's tapback.
+    if (uiState is RatingUIState && nodeId != null) {
+      final raw = response is Map ? (response['value'] ?? response['rating']) : response;
+      final v = raw is num ? raw : num.tryParse('$raw');
+      final text = Delight.scoreText(_flowEngine.currentNodeType ?? '', v, uiState.maxValue);
+      _pendingScore = text.isEmpty ? null : (nodeId: nodeId, text: text);
+    }
+
     _flowEngine.submitResponse(response);
     // A name the flow asked for: "Welcome back, <name>" and greet by name.
     final asked = ChatState.instance.userMetadata.name;
@@ -2115,8 +2225,10 @@ class ConferBotProvider with ChangeNotifier {
       return;
     }
 
-    // The pack's send sound.
+    // The pack's send sound; the agent's typing preview goes.
     sounds.play(SoundEvent.send);
+    _drafts.clear();
+    delight.setComposerValue('');
 
     // What they type in a live or agent chat is what they came for, for
     // "Welcome back" (web special.ts _handleHumanHandoverInputSubmit).
@@ -2427,6 +2539,8 @@ class ConferBotProvider with ChangeNotifier {
     home.reset();
     handover.reset();
     waiting.reset();
+    delight.reset();
+    _rowNodes.clear();
     _flowStartedFor = null;
     _talkToPersonRetired = false;
     _record.clear();
@@ -2490,6 +2604,9 @@ class ConferBotProvider with ChangeNotifier {
     home.dispose();
     sounds.removeListener(notifyListeners);
     sounds.dispose();
+    delight.removeListener(notifyListeners);
+    delight.dispose();
+    _drafts.clear();
     _paginationController?.removeListener(_onPaginationChange);
     _analyticsProvider?.removeListener(_onAnalyticsChange);
 
