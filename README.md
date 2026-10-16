@@ -381,7 +381,7 @@ These dashboard settings apply on their own; nothing needs to be added to the ap
 - **Typing preview** (`visitorDraftPreview`, on unless turned off): while a person is chatting with the visitor, the agent sees what is being typed (`visitor-draft`, at most every 300ms, never for a secret field).
 - **Calendar**: slots already booked (the bot's bookings) show greyed out and cannot be picked; a day with every slot taken is not offered.
 - **Waiting for a person**: the wait card says the live estimate in the visitor's language, else the team's usual wait ("Typical wait: a few minutes"), unless the owner chose a fixed text or hid the reply time. Under it the handover step's max wait counts down once a second ("Max wait 1:05"), stopping at 0:00; after a restart it counts from the time the server says is left.
-- Not yet: "Redirect after chat" (`redirectUrl`, #85), which the website widget does not follow either.
+- **Post-chat rating**: when the owner has post-chat feedback on, the rating is offered 1.5 s after the flow reaches its end, as well as when an agent ends the chat; once per conversation, and not again after a restart.
 
 ## Advanced
 
@@ -520,7 +520,7 @@ stop(); // stop listening
 
 ### Redirect after chat
 
-When the owner sets a URL in Customize > Conversations > Post-chat redirect, the SDK follows it as the web widget does: once the conversation ends (the flow reaches its end, or an agent ends the chat) and the post-chat rating is sent or put away, a quiet line reads "Taking you to example.com in 10s" with Cancel, then the URL opens in the system browser (`url_launcher`, outside the app). It stops if the visitor cancels, starts a new chat, closes the chat or the app goes to the background, and it is offered only once per conversation (remembered in `shared_preferences`). Only `http(s)` addresses are followed.
+When the owner sets a URL in Customize > Conversations > Post-chat redirect, the SDK follows it as the web widget does: once the conversation ends (the flow reaches its end, or an agent ends the chat) and the post-chat rating is sent or put away (it is offered 1.5 s after the flow ends when the owner has it on), a quiet line reads "Taking you to example.com in 10s" with Cancel, then the URL opens in the system browser (`url_launcher`, outside the app). It stops if the visitor cancels, starts a new chat, closes the chat or the app goes to the background, and it is offered only once per conversation (remembered in `shared_preferences`). Only `http(s)` addresses are followed.
 
 ```dart
 ConferBotProvider(
