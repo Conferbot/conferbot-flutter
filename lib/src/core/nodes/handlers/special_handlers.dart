@@ -16,6 +16,7 @@
 library;
 
 import '../../agent/agent_handover.dart';
+import '../../flow/i18n_en.dart';
 import '../../flow/inputs.dart';
 import '../../flow/js.dart' show jsIsoString;
 import '../../flow/text.dart';
@@ -65,7 +66,9 @@ class HumanHandoverNodeHandler extends BaseNodeHandler {
 
     // The handover message, after a beat of typing (web: 1000 ms); the wait
     // card shows it. A message cleared in the builder shows nothing.
-    final raw = getString(data, 'handoverMessage', getString(data, 'waitMessage', 'Please wait while we connect you with an agent...'));
+    // The stock English default reads in the visitor's language.
+    final raw = I18n.stockText(
+        getString(data, 'handoverMessage', getString(data, 'waitMessage', t('sdk.flow.handoverWait'))), 'sdk.flow.handoverWait');
     final message = _plain(state, raw);
     if (message.isNotEmpty) {
       await ctx.typing(1000);
