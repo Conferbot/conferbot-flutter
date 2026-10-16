@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+import '../../core/i18n/i18n.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 
@@ -180,7 +181,7 @@ class ImageThumbnail extends StatelessWidget {
           ),
           SizedBox(height: theme.spacing.sm),
           Text(
-            'Failed to load image',
+            t('sdk.media.imageFailed'),
             style: TextStyle(
               fontSize: theme.typography.fontSizeSm,
               color: theme.colors.textSecondary,
@@ -487,7 +488,7 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer>
           ),
           const SizedBox(height: 16),
           Text(
-            'Failed to load image',
+            t('sdk.media.imageFailed'),
             style: TextStyle(
               fontSize: theme.typography.fontSizeMd,
               color: Colors.white54,
