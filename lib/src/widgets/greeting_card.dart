@@ -6,6 +6,14 @@
 /// phone text (the default), a postcard, a sticky note, a typewriter, glass, a
 /// push notification, neon, a voice note or an aurora edge, each with its
 /// reveal. Fonts are the platform's nearest ones (nothing is bundled).
+///
+/// The card and its figure move as the owner chose (mascotMotion, the web's
+/// home/mascotMotion.ts director in widgets/mascot/greeting_motion.dart): it
+/// springs up (lively) or comes in as always, the figure (the owner's mascot
+/// with mascotInGreeting, waving twice, or the avatar) pops, waves, breathes
+/// and settles, the "Online" dot pings, the words fade up; leaving, the
+/// figure hands off toward the launcher or bows as the card collapses or
+/// fades. No hover lean or hop (touch).
 library;
 
 import 'dart:async';
@@ -18,6 +26,8 @@ import 'package:flutter/widgets.dart';
 import '../core/customization/svg_path.dart';
 import '../core/customization/widget_theme.dart';
 import 'greeting_controller.dart';
+import 'mascot/greeting_motion.dart';
+import 'mascot/mascot_view.dart';
 
 /// The platform's nearest fonts to the web's (spec 0.4).
 class _Fonts {
@@ -249,6 +259,15 @@ class GreetingCard extends StatefulWidget {
   /// Overrides the phone's reduce-motion setting (tests).
   final bool? reduceMotion;
 
+  /// The launcher under the card (the figure hands off toward its centre).
+  final Size? launcher;
+
+  /// The card is going: "open" (opened from it, or the chat opened) or "close" (its x).
+  final String? leaving;
+
+  /// It has gone (its leaving moves are over).
+  final VoidCallback? onGone;
+
   const GreetingCard({
     super.key,
     required this.data,
@@ -257,6 +276,9 @@ class GreetingCard extends StatefulWidget {
     required this.onStarter,
     this.alignLeft = false,
     this.reduceMotion,
+    this.launcher,
+    this.leaving,
+    this.onGone,
   });
 
   static double widthOf(String style) => _widths[style] ?? 296;
@@ -265,8 +287,9 @@ class GreetingCard extends StatefulWidget {
   State<GreetingCard> createState() => _GreetingCardState();
 }
 
-class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMixin {
+class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _enter;
+  GreetingMotion? _motion;
   AnimationController? _reveal, _loop, _bars, _spin;
   Timer? _typeTimer;
   String _typed = '';
@@ -281,6 +304,35 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
     super.initState();
     _enter = AnimationController(vsync: this, duration: Duration(milliseconds: style == 'neon' ? 900 : (style == 'notification' ? 500 : 620)));
     _typed = d.text;
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) => _motion?.pageHidden(state != AppLifecycleState.resumed);
+
+  @override
+  void didUpdateWidget(GreetingCard old) {
+    super.didUpdateWidget(old);
+    if (widget.leaving != null && old.leaving == null) _leave();
+  }
+
+  void _leave() => _motion?.leave(widget.leaving!, () {
+        if (mounted) widget.onGone?.call();
+      });
+
+  bool get _withMascot => d.mascot != null;
+  double get _figureSize => _withMascot ? 40 : 32;
+
+  /// Where the launcher's centre is from the figure's: the figure sits at the card's top left (16, 14 in), the launcher 12 below the card, its outer edge in line.
+  (double, double)? _toward() {
+    final l = widget.launcher;
+    if (l == null) return null;
+    final w = GreetingCard.widthOf(style);
+    final fx = 16 + _figureSize / 2, fy = 14 + _figureSize / 2;
+    final lx = widget.alignLeft ? l.width / 2 : w - l.width / 2;
+    final box = context.findRenderObject() as RenderBox?;
+    final h = box != null && box.hasSize ? box.size.height : 120.0;
+    return (lx - fx, h + 12 + l.height / 2 - fy);
   }
 
   @override
@@ -289,6 +341,21 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
     if (_started) return;
     _started = true;
     _reduced = widget.reduceMotion ?? MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    // The card and its figure alive (core/customization/mascot_motion.dart).
+    _motion = GreetingMotion(
+      vsync: this,
+      mode: d.motion,
+      style: style,
+      text: d.text,
+      figure: _withMascot ? 'mascot' : (d.head.avatar != null && style != 'imessage' ? 'avatar' : null),
+      figureSize: _figureSize,
+      reduced: _reduced,
+      toward: _toward,
+      onFrame: () {
+        if (mounted) setState(() {});
+      },
+    )..start();
+    if (widget.leaving != null) _leave();
     if (_reduced) {
       _enter.value = 1;
       return;
@@ -327,6 +394,8 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _motion?.dispose();
     _typeTimer?.cancel();
     _enter.dispose();
     _reveal?.dispose();
@@ -374,7 +443,12 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
         ),
       );
 
-  /// The head: avatar, name, "Online".
+  Widget _onlineDot() => Container(decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle));
+
+  /// The figure breathing, gesturing and talking about its feet.
+  Widget _figure(Widget child) => _motion == null ? child : _motion!.figureBox(child);
+
+  /// The head: the mascot or avatar, name, "Online".
   Widget _head({TextStyle name = const TextStyle(), TextStyle status = const TextStyle(), double avatar = 32, double? avatarRadius, bool showAvatar = true, String? statusText, bool dot = true, bool row = false, double padRight = 22, bool upper = false}) {
     final nameText = Text(upper ? d.head.name.toUpperCase() : d.head.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: _base.copyWith(fontSize: 13.5, fontWeight: FontWeight.w700, height: 1.25).merge(name));
     final showStatus = statusText != null || d.head.online;
@@ -382,7 +456,15 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
       padding: EdgeInsets.only(right: row ? 18 : 0),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (dot && statusText == null) ...[
-          Container(width: 7, height: 7, decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle)),
+          // The "Online" ping: the dot swells once and one soft ring goes out.
+          SizedBox(
+            width: 7,
+            height: 7,
+            child: Stack(clipBehavior: Clip.none, children: [
+              if (_motion?.pingRing != null) Positioned.fill(child: IgnorePointer(child: fxBox(_motion!.pingRing, _onlineDot()))),
+              Positioned.fill(child: fxBox(_motion?.pingDot, _onlineDot())),
+            ]),
+          ),
           const SizedBox(width: 5),
         ],
         Flexible(
@@ -393,7 +475,31 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
     return Padding(
       padding: EdgeInsets.only(right: padRight),
       child: Row(children: [
-        if (showAvatar && d.head.avatar != null) ...[_avatar(avatar, avatarRadius ?? avatar / 2), const SizedBox(width: 10)],
+        if (_withMascot) ...[
+          // The mascot (polish-home.css .cb-greet__mascot): 40 x 40, margins -6 / -4 / -2, blinking, waving twice as the card appears.
+          SizedBox(
+            width: 38,
+            height: 30,
+            child: OverflowBox(
+              minWidth: 40,
+              maxWidth: 40,
+              minHeight: 40,
+              maxHeight: 40,
+              alignment: const Alignment(1, 0.2),
+              child: _figure(Mascot(
+                key: const ValueKey('cb-greet-mascot'),
+                look: d.mascot!.look,
+                accent: d.mascot!.accent,
+                size: 40,
+                mood: 'wave',
+                arm: 'wave',
+                waveCount: 2,
+                reduceMotion: _reduced,
+              )),
+            ),
+          ),
+          const SizedBox(width: 10),
+        ] else if (showAvatar && d.head.avatar != null) ...[_figure(_avatar(avatar, avatarRadius ?? avatar / 2)), const SizedBox(width: 10)],
         Expanded(
           child: row
               ? Row(children: [Flexible(child: nameText), const Spacer(), if (showStatus) statusRow])
@@ -427,6 +533,25 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
         maxLines: lines,
         overflow: TextOverflow.ellipsis,
         style: style0,
+      );
+    }
+    // The words fading up one by one (lively): each its own text, laid out as the line would wrap.
+    final words = _motion?.wordParts;
+    if (words != null) {
+      final lh = (style0.fontSize ?? 14) * (style0.height ?? 1.45);
+      return Semantics(
+        label: d.text,
+        child: ExcludeSemantics(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: lh * lines),
+            child: ClipRect(
+              child: Wrap(children: [
+                for (var i = 0; i < words.$1.length; i++)
+                  fxBox(words.$2[i], Text(i < words.$1.length - 1 ? '${words.$1[i]} ' : words.$1[i], style: style0)),
+              ]),
+            ),
+          ),
+        ),
       );
     }
     return Text(d.text, maxLines: lines, overflow: TextOverflow.ellipsis, style: style0);
@@ -1071,19 +1196,24 @@ class _GreetingCardState extends State<GreetingCard> with TickerProviderStateMix
         );
         // ---- Entrance (cb-greet-spring 620ms; notification slides down; neon flickers) ----
         final v = _enter.value;
+        // Leaving: the card collapses toward the launcher or fades down (about its centre), taps no longer land.
+        if (_motion?.leaving == true) card = IgnorePointer(child: fxBox(_motion!.leavePart, card));
         if (style == 'neon') {
           // Hard steps: 0, 1, .3, 1, .55, 1 at 0/90/144/216/270/342ms.
           final ms = v * 900;
           final o = ms < 90 ? 0.0 : ms < 144 ? 1.0 : ms < 216 ? 0.3 : ms < 270 ? 1.0 : ms < 342 ? 0.55 : 1.0;
           return Opacity(opacity: _reduced ? 1 : o, child: card);
         }
-        final notif = style == 'notification';
-        final e = (notif ? const Cubic(0.2, 1.2, 0.3, 1) : const Cubic(0.2, 0.9, 0.3, 1)).transform(v).clamp(0.0, 1.0);
-        final opacity = _keys(e, const [0, 0.55, 1], const [0, 1, 1]);
-        final dy = _keys(e, const [0, 0.55, 0.78, 1], notif ? const [-14, -1, 0, 0] : const [14, -3, 1, 0]);
-        final scale = _keys(e, const [0, 0.55, 0.78, 1], notif ? const [0.96, 1.005, 1, 1] : const [0.94, 1.01, 0.998, 1]);
-        card = Transform.scale(scale: scale, alignment: widget.alignLeft ? Alignment.bottomLeft : Alignment.bottomRight, child: card);
-        return Opacity(opacity: opacity.clamp(0.0, 1.0), child: Transform.translate(offset: Offset(0, dy), child: card));
+        if (style == 'notification') {
+          final e = const Cubic(0.2, 1.2, 0.3, 1).transform(v).clamp(0.0, 1.0);
+          final opacity = _keys(e, const [0, 0.55, 1], const [0, 1, 1]);
+          final dy = _keys(e, const [0, 0.55, 0.78, 1], const [-14, -1, 0, 0]);
+          final scale = _keys(e, const [0, 0.55, 0.78, 1], const [0.96, 1.005, 1, 1]);
+          card = Transform.scale(scale: scale, alignment: widget.alignLeft ? Alignment.bottomLeft : Alignment.bottomRight, child: card);
+          return Opacity(opacity: opacity.clamp(0.0, 1.0), child: Transform.translate(offset: Offset(0, dy), child: card));
+        }
+        // The spring (lively) or the plain entrance (cb-greet-in), about the card's centre; none with animations off.
+        return fxBox(_motion?.enterPart, card);
       },
     );
   }
