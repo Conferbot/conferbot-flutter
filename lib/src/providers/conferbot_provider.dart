@@ -34,6 +34,8 @@ import '../core/waiting/games_card.dart';
 import '../core/waiting/wait_articles.dart';
 import '../core/waiting/waiting_extras.dart';
 import '../core/live_chat/handover_state.dart';
+import '../core/requests/requests.dart';
+import '../core/requests/requests_extras.dart';
 import '../core/live_chat/reply_time.dart';
 import '../core/customization/customizations.dart';
 import '../core/customization/widget_theme.dart';
@@ -113,6 +115,11 @@ class ConferBotProvider with ChangeNotifier {
   /// 2.5s after the waiting signal, "play" typed while waiting
   /// (core/waiting/waiting_extras.dart). Its cards are never saved.
   late final WaitingExtras waiting;
+
+  /// "Your requests": the visitor's conversations with the team, the chat
+  /// menu's item, the unread count and the portal's screens
+  /// (core/requests/requests_extras.dart).
+  late final RequestsExtras requests;
 
   // The session whose flow has been started (or picked back up): bot data
   // comes again on every reconnect and must not run the flow again.
@@ -261,6 +268,28 @@ class ConferBotProvider with ChangeNotifier {
     );
     waiting.bind(handover.onSignal);
     waiting.addListener(notifyListeners);
+
+    requests = RequestsExtras(
+      botId: () => botId,
+      socket: () => SocketClientRequestsSocket(_socketClient),
+      connected: () => _socketClient.isConnected,
+      // The visitor id the records carry, else the handshake's.
+      visitorId: () {
+        final v = ChatState.instance.visitorId;
+        return v != null && v.isNotEmpty ? v : (_visitorId ?? _socketClient.visitorId);
+      },
+      user: () => user,
+      store: () => const SharedPreferencesRequestsStore(),
+      chatSessionId: () => _chatSessionId,
+      chatEnded: () => LiveEvents.endedSinceLastLive(ChatState.instance.getRecordForServer()),
+      // The portal sits over the chat: closing it shows that chat.
+      openChat: () {
+        if (!_isOpen) openChat();
+      },
+    );
+    requests.addListener(notifyListeners);
+    // A chat the visitor wrote in may become a request (web _sendResponse).
+    _socketClient.onResponseRecord = (sessionId, record) => requests.onRecord(sessionId, record is List ? record : null);
 
     if (config.autoConnect) {
       // Done even when start-up fails, so openChat never waits forever.
@@ -432,6 +461,23 @@ class ConferBotProvider with ChangeNotifier {
   /// Email the transcript to this address; on success the address is kept
   /// as the visitor's. Only the server sends it, and only there.
   Future<TranscriptEmailResult> emailTranscript(String email) => liveChat.emailTranscript(email);
+
+  // ---- Your requests (core/requests) ----
+
+  /// The visitor's requests (newest replies first), null until read.
+  List<RequestSummary>? get myRequests => requests.list;
+
+  /// Requests with a team reply not read on this device: the app's badge.
+  int get requestsUnread => requests.unread;
+
+  /// The requests portal is up.
+  bool get requestsOpen => requests.isOpen;
+
+  /// Open "Your requests": the list, or one request by its id.
+  Future<void> openRequests([String? requestId]) => requests.open(requestId);
+
+  /// Leave "Your requests".
+  void closeRequests() => requests.close();
 
   /// Bot name from server customizations
   String? get botName {
@@ -606,6 +652,8 @@ class ConferBotProvider with ChangeNotifier {
     // (handles race condition where connect event fires before listeners are registered)
     if (_socketClient.isConnected) {
       _socketClient.getChatbotData();
+      // Connected before the listeners: the visitor's requests now.
+      requests.onConnected();
     }
 
     // Initialize pagination if enabled
@@ -718,9 +766,12 @@ class ConferBotProvider with ChangeNotifier {
     liveChat.setupListeners();
     handover.setupListeners();
     waiting.setupListeners();
+    requests.attach();
     // Connection events
     _socketClient.on(SocketEvents.connect, (_) {
       _isConnected = true;
+      // Every connect: the visitor's requests read again.
+      requests.onConnected();
 
       // Update analytics online status
       _analyticsProvider?.setOnlineStatus(true);
@@ -1698,6 +1749,8 @@ class ConferBotProvider with ChangeNotifier {
     // Not before start-up is done: a session being restored would be
     // replaced by a new one (and its handover ticket left behind).
     if (config.autoConnect && !_started.isCompleted) await _started.future;
+    // The chat opening: the visitor's requests again, at most every 15s.
+    requests.onChatShown();
     // Check if we have a restored session that we can resume
     if (_sessionRestored && _chatSessionId != null) {
       _logger.info('Resuming restored session: $_chatSessionId');
@@ -1835,6 +1888,7 @@ class ConferBotProvider with ChangeNotifier {
   /// Close chat
   void closeChat() {
     _isOpen = false;
+    requests.onChatShown();
 
     // Track potential drop-off when closing chat mid-flow
     if (!_flowEngine.isFlowComplete && _analyticsProvider != null) {
@@ -2213,6 +2267,7 @@ class ConferBotProvider with ChangeNotifier {
 
     _flowEngine.reset();
     liveChat.reset();
+    requests.reset();
     handover.reset();
     waiting.reset();
     _flowStartedFor = null;
@@ -2271,6 +2326,9 @@ class ConferBotProvider with ChangeNotifier {
     handover.dispose();
     waiting.removeListener(notifyListeners);
     waiting.dispose();
+    _socketClient.onResponseRecord = null;
+    requests.removeListener(notifyListeners);
+    requests.dispose();
     _paginationController?.removeListener(_onPaginationChange);
     _analyticsProvider?.removeListener(_onAnalyticsChange);
 
