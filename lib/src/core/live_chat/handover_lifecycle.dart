@@ -19,6 +19,7 @@ import '../../services/socket_client.dart';
 import '../state/chat_state.dart';
 import 'handover_state.dart';
 import 'handover_waiting.dart';
+import 'live_events.dart';
 
 /// The flow, as the lifecycle needs it (NodeFlowEngine in the provider).
 abstract class HandoverFlow {
@@ -37,6 +38,9 @@ abstract class HandoverFlow {
 
   /// Run the step again (its request never went out).
   void resumeFrom(String nodeId);
+
+  /// The flow is over for good (the visitor was blocked): no step, no card.
+  void stop();
 }
 
 class HandoverLifecycle {
@@ -49,6 +53,7 @@ class HandoverLifecycle {
     required HandoverFlow flow,
     void Function(bool live)? setLive,
     void Function(RestoredAgent agent)? setAgent,
+    void Function()? clearAgent,
     ChatState? state,
     SetTimer? setTimer,
     ClearTimer? clearTimer,
@@ -60,6 +65,7 @@ class HandoverLifecycle {
         _flow = flow,
         _setLive = setLive ?? ((_) {}),
         _setAgent = setAgent ?? ((_) {}),
+        _clearAgent = clearAgent ?? (() {}),
         _state = state {
     connecting = ConnectingSignal(
       () => bus.emit(WidgetSignals.waitingForHuman, WidgetSignals.waitingDetail({'offline': false, 'reason': 'busy'})),
@@ -77,6 +83,7 @@ class HandoverLifecycle {
   final HandoverFlow _flow;
   final void Function(bool live) _setLive;
   final void Function(RestoredAgent agent) _setAgent;
+  final void Function() _clearAgent;
   final ChatState? _state;
 
   final WidgetSignalBus bus = WidgetSignalBus();
@@ -278,11 +285,59 @@ class HandoverLifecycle {
 
     s.on('chat-ended', ended);
     s.on('ai-agent-inactive-close', ended);
+    // The agent left and nobody else owns the chat: back in the queue (web
+    // liveTakeover.ts). "Connecting you to another agent..." (or the team it
+    // went to), and a flow at its handover step waits again.
+    s.on(LiveEventNames.requeued, (data) {
+      if (!_own(data)) return;
+      onRequeued(data);
+    });
+    // A transfer the server wrote into the record: kept in this copy too, so
+    // the next write keeps it. Not drawn (as on the web): the requeued line or
+    // the next agent's join tells the visitor.
+    s.on(LiveEventNames.transferred, (data) {
+      if (!_own(data)) return;
+      final entry = LiveEvents.transferEntry(data);
+      if (entry != null) state.addRecord(entry);
+    });
+    // Blocked by the workspace (web closedState.ts): a Connecting line stops
+    // its dots, the wait and the flow are over.
+    s.on(LiveEventNames.blocked, (data) {
+      if (!_own(data)) return;
+      onBlocked();
+    });
     // Left the queue from another device of this chat.
     s.on('queue-left', (data) {
       if (!_own(data) || data is! Map || data['reason'] != 'self_service') return;
       if (_flow.atHandover && _waitingForPerson) _leftQueue();
     });
+  }
+
+  /// live-chat-requeued: the line (in the record and on screen), nobody in
+  /// the chat any more, and a flow on its handover step waits again.
+  void onRequeued(dynamic data) {
+    final entry = LiveEvents.requeuedEntry(data);
+    final id = entry['id'] as String;
+    final text = entry['text'] as String;
+    state.addRecord(entry);
+    _addLine(SystemMessageRecord(id: id, time: DateTime.now(), text: text, kind: 'live-chat-requeued'));
+    state.addToTranscript('bot', text);
+    _clearAgent();
+    final nodeId = state.currentNodeId;
+    if (_flow.atHandover && nodeId != null) {
+      _setLive(false);
+      if (_flow.waitAt(nodeId, waiting: true)) _waitingForPerson = true;
+    }
+    connecting.start();
+  }
+
+  /// visitor-blocked: the wait and the flow are over, nobody is coming.
+  void onBlocked() {
+    connecting.end();
+    settle(HandoverOutcome.ended);
+    _waitingForPerson = false;
+    _flow.stop();
+    _setLive(false);
   }
 
   /// Before a restored record is drawn: lines whose outcome the record knows
