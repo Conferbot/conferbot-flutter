@@ -436,6 +436,23 @@ As on the web widget:
 - The handover step's wait card has **Leave queue** (`provider.leaveQueue()`). It sends `queue-self-resolve`, so the team stops seeing the visitor waiting, and the flow carries on. It returns `false` when a person has already picked the chat up; the visitor then stays.
 - An AI agent bot offers "Talk to a person" (when the owner turned it on) only while no handover is under way and nobody is here; it goes once tapped.
 - The handover request carries the step's settings: `enableHandoverEmail` (false keeps the team's email off), the sound settings, and `assignmentMethod` / `requiredSkills`.
+- When the agent leaves and the chat goes back to the queue (`live-chat-requeued`), "Connecting you to another agent..." (or "Connecting you to Sales..." after a team transfer) is drawn, and a flow at its handover step waits again. A transfer (`live-chat-transferred`) is kept in the conversation's record, not drawn.
+- The same end twice (an agent's double click) draws one "Chat has ended" line and one survey; each end has its own record id. Once the chat has ended and nothing is going on, the composer turns off and **Start a new chat** (`provider.startNewChat()`) starts a fresh conversation.
+- A visitor the workspace blocked sees "This conversation has been closed." (mid-chat, or at connect: the visitor id goes with the socket handshake) and can't type or start a new chat. `provider.visitorBlocked` and `provider.closedState` say so.
+- When the live chat ends, the handover step's post-chat survey questions are asked if the builder turned on `enablePostChatSurveyQuestions`.
+
+### AI answers
+
+As on the web widget:
+
+- Replies draw tables (they scroll sideways), headings (`#` and `##` as level 4, `###` a little larger), quotes, code blocks and strikethrough, from an AI's markdown or a person's HTML.
+- **Helpful?** under the newest AI answer: a No is sent at once (`ai-answer-feedback`), then the reasons, an optional comment, "Talk to a person" (only while nobody is coming or here) and "Ask another way" (the cursor goes to the composer). The rated line's thumbs change the vote; the vote is kept on the answer's record entry. The owner's `hideAnswerFeedback` turns it off.
+- When the AI has not answered after 45 seconds, the dots give way to "That took too long. Try again, or ask for a human." A reply the server sent because the AI failed (`isFallback`) is italic at 85%.
+- Every response record carries the phone's preferred language as `visitorInsights.language.browser` (BCP 47, e.g. "de-DE"), so the AI answers short messages in it.
+
+### Email me this chat
+
+The chat menu (the header's ⋮) has **Email me this chat**. One card asks for the address (filled in when the visitor gave one), the server sends the whole conversation there (`POST {apiBaseUrl}/chat/transcript-email` with `{chatSessionId, email}`; the bot is the `X-Bot-ID` header's), and the card says "Sent! Check your inbox at ...". The server's own reason shows when it does not go (for example its limit of 5 per 15 minutes). Once sent, the address is kept as the visitor's. Headless: `provider.openEmailTranscript()`, `provider.emailTranscript(email)` (`TranscriptEmailResult {ok, message}`).
 
 The web's waiting signals, for your own UI (for example a "we'll email you" prompt):
 
@@ -553,6 +570,11 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 | `leaveQueue` | `Future<bool> leaveQueue()` | Leave the handover queue (`queue-self-resolve`); false when a person already has the chat |
 | `onWidgetSignal` | `void Function() onWidgetSignal(String name, void Function(Map<String, dynamic>) listener)` | Listen to `WidgetSignals.waitingForHuman` / `humanJoined` / `waitOver`; returns a stop function |
 | `talkToPerson` | `Future<void> talkToPerson()` | The quick action: asks the AI for a person and retires the button |
+| `sendAnswerFeedback` | `void sendAnswerFeedback(String agentMessageId, AnswerFeedback feedback)` | Send a "Helpful?" vote (`AnswerFeedback(helpful, [reason, comment])`) and keep it on the answer |
+| `openEmailTranscript` / `closeEmailTranscript` | `void openEmailTranscript()` / `void closeEmailTranscript()` | Show / hide the "Email me this chat" card |
+| `emailTranscript` | `Future<TranscriptEmailResult> emailTranscript(String email)` | Email the transcript to this address; on success the address is kept as the visitor's |
+| `startNewChat` | `Future<void> startNewChat()` | A fresh conversation after a chat ended (not for a blocked visitor) |
+| `focusComposer` | `void focusComposer()` | Put the cursor in the chat's composer |
 | `sendTypingStatus` | `void sendTypingStatus(bool isTyping)` | Visitor typing indicator |
 | `sendLiveChatTyping` | `void sendLiveChatTyping(bool isTyping)` | Typing indicator during live chat only |
 | `registerPushToken` | `Future<void> registerPushToken(String token)` | Register device push token |
@@ -573,7 +595,7 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 
 ### Key getters
 
-`record` (`List<RecordItem>`), `paginatedMessages`, `hasMoreMessages`, `isConnected`, `isInitialized`, `isOpen`, `unreadCount`, `currentAgent` (`Agent?`), `agentTyping`, `isLiveChatMode`, `currentUIState`, `isProcessing`, `isFlowComplete`, `errorMessage`, `serverCustomizations` (`Map<String, dynamic>?`), `serverTheme` (`ConferBotTheme`), `botName`, `botAvatarUrl`, `sessionRestored`, `visitorId`, `chatSessionId` / `chatId`, `sessionAnalytics`, `headerStatus` (the line under the bot name), `personInChat`, `talkToPersonAllowed`, `offerTalkToPerson`.
+`record` (`List<RecordItem>`), `paginatedMessages`, `hasMoreMessages`, `isConnected`, `isInitialized`, `isOpen`, `unreadCount`, `currentAgent` (`Agent?`), `agentTyping`, `isLiveChatMode`, `currentUIState`, `isProcessing`, `isFlowComplete`, `errorMessage`, `serverCustomizations` (`Map<String, dynamic>?`), `serverTheme` (`ConferBotTheme`), `botName`, `botAvatarUrl`, `sessionRestored`, `visitorId`, `chatSessionId` / `chatId`, `sessionAnalytics`, `headerStatus` (the line under the bot name), `personInChat`, `talkToPersonAllowed`, `offerTalkToPerson`, `visitorBlocked` (the closed line when the workspace blocked this visitor, else `null`), `closedState` (`ClosedState?`: blocked, or ended with a new chat), `emailTranscriptOpen`, `emailTranscriptSentTo`, `awaitingReply`.
 
 ### Theming
 
