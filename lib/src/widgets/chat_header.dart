@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/i18n/i18n.dart';
 import '../models/agent.dart';
 import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
@@ -27,7 +28,7 @@ class ChatHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveTheme = theme ?? defaultTheme;
-    final displayTitle = agent?.name ?? title ?? 'Chat';
+    final displayTitle = agent?.name ?? title ?? t('sdk.header.chat');
     final displaySubtitle = agent?.email ?? subtitle;
 
     return Container(
