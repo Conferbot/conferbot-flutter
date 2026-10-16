@@ -358,6 +358,10 @@ class NodeFlowEngine extends ChangeNotifier {
   /// Why the visitor's last answer was refused (the step still waits).
   String? get validationMessage => _validationMessage;
 
+  /// The visit the flow is on: one more each time a step is entered. The
+  /// chat keeps a card's draft while the same visit asks again.
+  int get stepVisit => _visits.length;
+
   /// Question text of the waiting step, if any.
   String? get currentQuestionText {
     final ui = _currentUIState;
