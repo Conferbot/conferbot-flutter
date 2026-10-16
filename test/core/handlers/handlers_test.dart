@@ -221,4 +221,28 @@ void main() {
     final r = await h.handleResponse('I paid, honest', node, state)!;
     expect(r, isNot(isA<ProceedResult>()));
   });
+
+  group('a live chat ends: the post-chat survey (#74)', () {
+    HumanHandoverNodeHandler handover() => _handler('human-handover-node') as HumanHandoverNodeHandler;
+    const questions = [
+      {'id': 'q1', 'questionText': 'How did we do?', 'answerVariable': 'text'},
+    ];
+
+    test('asked when the builder switched enablePostChatSurveyQuestions on', () {
+      final r = handover().onChatEnded('n1', {'enablePostChatSurveyQuestions': true, 'postChatSurveyQuestions': questions});
+      final ui = (r as DisplayUIResult).uiState as HumanHandoverUIState;
+      expect(ui.state, HandoverState.postChatSurvey);
+      expect(ui.preChatQuestions!.single.questionText, 'How did we do?');
+    });
+
+    test('the older enablePostChatSurvey still counts, as in the Android SDK', () {
+      expect(handover().onChatEnded('n1', {'enablePostChatSurvey': true, 'postChatSurveyQuestions': questions}), isA<DisplayUIResult>());
+    });
+
+    test('not asked when it is off, or with no questions', () {
+      expect(handover().onChatEnded('n1', {'enablePostChatSurveyQuestions': false, 'postChatSurveyQuestions': questions}),
+          isA<ProceedResult>());
+      expect(handover().onChatEnded('n1', {'enablePostChatSurveyQuestions': true, 'postChatSurveyQuestions': []}), isA<ProceedResult>());
+    });
+  });
 }
