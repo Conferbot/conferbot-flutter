@@ -6,6 +6,7 @@ import '../config/constants.dart';
 import '../models/chat_session.dart';
 import '../core/errors/conferbot_exceptions.dart';
 import '../core/errors/error_handler.dart';
+import '../core/live_chat/email_transcript.dart';
 
 // ============================================
 // API RESPONSE WRAPPER
@@ -201,6 +202,33 @@ class ApiClient {
       },
       parser: (data) => data,
     );
+  }
+
+  // ========== Transcript Email ==========
+
+  /// "Email me this chat": the server sends the conversation to this address
+  /// only (embed-server POST /api/v1/mobile/chat/transcript-email; the bot is
+  /// the X-Bot-ID header's). Never retried and never throws: a failure reads
+  /// as not sent, with the server's reason when it gave one.
+  Future<TranscriptEmailResult> sendTranscriptEmail(String chatSessionId, String email) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl${EmailTranscript.path}'),
+            headers: _headers,
+            body: jsonEncode(EmailTranscript.body(chatSessionId, email)),
+          )
+          .timeout(Duration(milliseconds: config.connectionTimeout));
+      dynamic data;
+      try {
+        data = response.body.isEmpty ? null : jsonDecode(response.body);
+      } catch (_) {
+        data = null;
+      }
+      return EmailTranscript.resultOf(response.statusCode, data);
+    } catch (_) {
+      return TranscriptEmailResult.notSent;
+    }
   }
 
   /// Register push notification token
