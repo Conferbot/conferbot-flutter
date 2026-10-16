@@ -24,6 +24,12 @@ export 'src/core/waiting/wait_articles.dart' show HelpItem, HelpCardState;
 export 'src/core/waiting/games_card.dart' show GamesCard, GamesCardState;
 export 'src/widgets/waiting/wait_help_card.dart' show WaitHelpCard;
 export 'src/widgets/waiting/games_card_view.dart' show GamesCardView;
+// "Your requests": the visitor's conversations with the team (ConferBotProvider.requests, openRequests, requestsUnread).
+export 'src/core/requests/requests.dart'
+    show RequestSummary, RequestDetail, RequestMessage, RequestState, RequestsText, RequestMemory, ReplyResult, stateOf, isNewReply, rowLine, unreadCount, requestsAccent;
+export 'src/core/requests/requests_portal.dart' show RequestsPortal, RequestsPortalState, RequestsScreen, PendingReply, PendingStatus;
+export 'src/core/requests/requests_extras.dart' show RequestsExtras, RequestsStore, SharedPreferencesRequestsStore;
+export 'src/widgets/requests/requests_portal_view.dart' show RequestsPortalView, requestsColorOf;
 export 'src/core/node_flow_engine.dart';
 export 'src/core/nodes/node_types.dart';
 export 'src/core/nodes/node_result.dart';
