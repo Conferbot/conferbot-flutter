@@ -245,10 +245,14 @@ class MarkdownLinkHandler {
     if (cc != null && cc.isNotEmpty) params['cc'] = cc.join(',');
     if (bcc != null && bcc.isNotEmpty) params['bcc'] = bcc.join(',');
 
+    // Percent-encoded (RFC 6068): mail apps read a form-encoded '+' as a
+    // plus sign, not a space.
     final uri = Uri(
       scheme: 'mailto',
       path: email,
-      queryParameters: params.isNotEmpty ? params : null,
+      query: params.isNotEmpty
+          ? params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')
+          : null,
     );
     return uri.toString();
   }
