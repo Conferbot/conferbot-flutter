@@ -6,8 +6,10 @@ import 'agent_reply.dart';
 import 'media/audio_player_widget.dart';
 import 'media/video_player_widget.dart';
 import 'package:flutter_html/flutter_html.dart';
+import '../core/live_chat/handover_state.dart' show HandoverRecord;
 import '../core/live_chat/live_chat.dart';
 import '../core/customization/customizations.dart';
+import '../core/i18n/i18n.dart';
 import 'bubble_outline.dart';
 import '../config/constants.dart';
 import '../models/message.dart';
@@ -233,7 +235,7 @@ class MessageBubble extends StatelessWidget {
                         if (isAgent && message is AgentMessageRecord) ...[
                           Text(
                             (message as AgentMessageRecord).edited
-                                ? '${(message as AgentMessageRecord).agentDetails.name} \u00b7 Edited'
+                                ? t('sdk.message.nameEdited', {'name': (message as AgentMessageRecord).agentDetails.name})
                                 : (message as AgentMessageRecord).agentDetails.name,
                             style: TextStyle(
                               fontSize: effectiveTheme.typography.fontSizeXs,
@@ -497,7 +499,7 @@ class MessageBubble extends StatelessWidget {
 
       case MessageDeliveryStatus.queued:
         return Tooltip(
-          message: 'Waiting to send',
+          message: t('connection.waitingToSend'),
           child: Icon(
             Icons.schedule,
             size: 14,
@@ -533,7 +535,7 @@ class MessageBubble extends StatelessWidget {
               if (onRetry != null) ...[
                 SizedBox(width: theme.spacing.xs / 2),
                 Text(
-                  'Retry',
+                  t('sdk.common.retry'),
                   style: TextStyle(
                     fontSize: theme.typography.fontSizeXs,
                     color: theme.colors.error,
@@ -585,7 +587,7 @@ class MessageBubble extends StatelessWidget {
     final look = _look(context);
     return ConferBotAvatar(
       imageUrl: imageUrl,
-      name: name ?? 'Bot',
+      name: name ?? t('sdk.message.botName'),
       size: look?.avatarSize ?? theme.layout.avatarSize,
       shape: switch (look?.avatarShape) {
         'square' => AvatarShape.square,
@@ -619,7 +621,7 @@ class MessageBubble extends StatelessWidget {
       final agentMessage = message as AgentMessageRecord;
       if (agentMessage.deleted) {
         return Text(
-          'This message was deleted',
+          t('sdk.message.deleted'),
           style: TextStyle(
             fontSize: theme.typography.messageSize,
             fontStyle: FontStyle.italic,
@@ -778,13 +780,14 @@ class MessageBubble extends StatelessWidget {
   }
 
   String _formatTime(DateTime time) {
+    I18n.ensureDateFormatting();
     final now = DateTime.now();
     if (time.year == now.year &&
         time.month == now.month &&
         time.day == now.day) {
-      return DateFormat.jm().format(time);
+      return DateFormat.jm(I18n.intlLocale).format(time);
     }
-    return DateFormat.MMMd().add_jm().format(time);
+    return DateFormat.MMMd(I18n.intlLocale).add_jm().format(time);
   }
 }
 
@@ -1027,7 +1030,7 @@ class LiveChatLine extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(
-                    line.note!,
+                    HandoverRecord.handedOverNoteText(line.note!),
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 11.5, color: color.withOpacity(0.8)),
                   ),
