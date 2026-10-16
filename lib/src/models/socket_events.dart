@@ -47,6 +47,13 @@ class SocketEvents {
   static const String destroyNotification = 'destroy-notification';
   static const String noAgentsAvailable = 'no-agents-available';
 
+  // The chat back in the queue, a transfer written into the record, and the
+  // workspace blocking this visitor (core/live_chat/live_events.dart). A
+  // handshake refused for a blocked visitor is told as visitor-blocked too.
+  static const String liveChatRequeued = 'live-chat-requeued';
+  static const String liveChatTransferred = 'live-chat-transferred';
+  static const String visitorBlocked = 'visitor-blocked';
+
   // Connection events
   static const String connect = 'connect';
   static const String disconnect = 'disconnect';
