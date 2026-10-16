@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' as services show TextInputType;
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/nodes/node_ui_state.dart';
 
 /// Main widget that renders any NodeUIState for choice-based interactions
@@ -300,7 +301,7 @@ class _MultipleChoiceWidgetState extends State<MultipleChoiceWidget> {
               disabledBackgroundColor: theme.colors.primary.withOpacity(0.5),
             ),
             child: Text(
-              'Submit',
+              t('common.submit'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeMd,
                 fontWeight: theme.typography.fontWeightMedium,
@@ -519,7 +520,7 @@ class _DropdownWidgetState extends State<DropdownWidget> {
             child: DropdownButton<SelectOption>(
               value: _selectedOption,
               hint: Text(
-                'Select an option',
+                t('sdk.select.placeholder'),
                 style: TextStyle(
                   color: theme.colors.textSecondary,
                   fontSize: theme.typography.fontSizeMd,
@@ -895,7 +896,7 @@ class _RangeSliderWidgetState extends State<RangeSliderWidget> {
         ),
         Center(
           child: Text(
-            'Selected: ${_value.toInt()}',
+            t('sdk.slider.selected', {'n': _value.toInt()}),
             style: TextStyle(
               fontSize: theme.typography.fontSizeLg,
               fontWeight: theme.typography.fontWeightMedium,
@@ -925,7 +926,7 @@ class _RangeSliderWidgetState extends State<RangeSliderWidget> {
               disabledBackgroundColor: theme.colors.primary.withOpacity(0.5),
             ),
             child: Text(
-              'Submit',
+              t('common.submit'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeMd,
                 fontWeight: theme.typography.fontWeightMedium,
@@ -989,7 +990,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Select Date',
+                t('booking.selectDate'),
                 style: TextStyle(
                   fontSize: theme.typography.fontSizeMd,
                   fontWeight: theme.typography.fontWeightMedium,
@@ -1034,7 +1035,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
               if (widget.state.showTimeSelection) ...[
                 SizedBox(height: theme.spacing.md),
                 Text(
-                  'Select Time',
+                  t('booking.selectTime'),
                   style: TextStyle(
                     fontSize: theme.typography.fontSizeMd,
                     fontWeight: theme.typography.fontWeightMedium,
@@ -1108,7 +1109,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
               disabledBackgroundColor: theme.colors.primary.withOpacity(0.5),
             ),
             child: Text(
-              'Confirm',
+              t('action.confirm'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeMd,
                 fontWeight: theme.typography.fontWeightMedium,
@@ -1382,7 +1383,7 @@ class _PreChatQuestionsStateState extends State<_PreChatQuestionsState> {
         TextField(
           controller: _controller,
           decoration: InputDecoration(
-            hintText: 'Type your answer...',
+            hintText: t('composer.answer'),
             hintStyle: TextStyle(color: theme.colors.textSecondary),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(theme.borderRadius.lg),
@@ -1418,7 +1419,7 @@ class _PreChatQuestionsStateState extends State<_PreChatQuestionsState> {
               ),
             ),
             child: Text(
-              'Submit',
+              t('common.submit'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeMd,
                 fontWeight: theme.typography.fontWeightMedium,
@@ -1467,7 +1468,7 @@ class _WaitingForAgentState extends StatelessWidget {
           ),
           SizedBox(height: theme.spacing.md),
           Text(
-            state.handoverMessage ?? 'Connecting you to an agent...',
+            state.handoverMessage ?? t('sdk.wait.connecting'),
             style: TextStyle(
               fontSize: theme.typography.fontSizeMd,
               color: theme.colors.text,
@@ -1477,7 +1478,7 @@ class _WaitingForAgentState extends StatelessWidget {
           if (state.maxWaitTime != null) ...[
             SizedBox(height: theme.spacing.sm),
             Text(
-              'Estimated wait: ${state.maxWaitTime} minutes',
+              t('sdk.notify.estimatedWait', {'n': state.maxWaitTime}),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeSm,
                 color: theme.colors.textSecondary,
@@ -1519,7 +1520,7 @@ class _AgentConnectedState extends StatelessWidget {
           SizedBox(width: theme.spacing.md),
           Expanded(
             child: Text(
-              '${state.agentName ?? "Agent"} has joined the chat',
+              t('system.hasJoined', {'name': state.agentName ?? t('agent.agent')}),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeMd,
                 color: theme.colors.text,
@@ -1560,7 +1561,7 @@ class _NoAgentsAvailableState extends StatelessWidget {
           ),
           SizedBox(height: theme.spacing.sm),
           Text(
-            state.handoverMessage ?? 'No agents available',
+            state.handoverMessage ?? t('sdk.handover.noAgentsTitle'),
             style: TextStyle(
               fontSize: theme.typography.fontSizeMd,
               color: theme.colors.text,
@@ -1620,7 +1621,7 @@ class _PostChatSurveyStateState extends State<_PostChatSurveyState> {
         TextField(
           controller: _controller,
           decoration: InputDecoration(
-            hintText: 'Type your feedback...',
+            hintText: t('sdk.survey.shareFeedback'),
             hintStyle: TextStyle(color: theme.colors.textSecondary),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(theme.borderRadius.lg),
@@ -1654,7 +1655,7 @@ class _PostChatSurveyStateState extends State<_PostChatSurveyState> {
               ),
             ),
             child: Text(
-              'Submit',
+              t('common.submit'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeMd,
                 fontWeight: theme.typography.fontWeightMedium,
@@ -1693,7 +1694,7 @@ class PaymentWidget extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            'Payment',
+            t('pay.payment'),
             style: TextStyle(
               fontSize: theme.typography.fontSizeLg,
               fontWeight: theme.typography.fontWeightMedium,
@@ -1743,7 +1744,7 @@ class PaymentWidget extends StatelessWidget {
                   const Icon(Icons.credit_card, size: 20),
                   SizedBox(width: theme.spacing.sm),
                   Text(
-                    'Pay Now',
+                    t('pay.now'),
                     style: TextStyle(
                       fontSize: theme.typography.fontSizeMd,
                       fontWeight: theme.typography.fontWeightMedium,
