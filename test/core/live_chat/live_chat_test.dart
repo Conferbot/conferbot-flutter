@@ -12,6 +12,33 @@ void main() {
     );
   });
 
+  test('keeps the estimate bucket and the team\'s usual wait (web queueCard.ts)', () {
+    final q = LiveChat.queueStatusOf({
+      'status': 'waiting',
+      'position': 2,
+      'estimate': {'label': '2 min', 'bucket': 'about_2'},
+      'typical': {'bucket': 'few_minutes'},
+    })!;
+    expect(q.estimateBucket, 'about_2');
+    expect(q.typical, {'bucket': 'few_minutes'});
+    expect(LiveChat.queueStatusOf({'status': 'waiting', 'estimate': {'label': '2 min'}})!.estimateBucket, isNull);
+  });
+
+  test('words the wait card as the web: the estimate, else the usual wait, else a calm promise', () {
+    final live = LiveChat.queueStatusOf({'status': 'waiting', 'position': 2, 'estimate': {'label': '2 min', 'bucket': 'about_2'}});
+    // The server's bucket in the visitor's words, the usual wait under it.
+    final a = LiveChat.waitCardLines(live, 'Typical wait: a few minutes');
+    expect([a.estimate, a.typical], ['About 2 min', 'Typical wait: a few minutes']);
+    // An unknown bucket keeps the server's label.
+    final b = LiveChat.waitCardLines(LiveChat.queueStatusOf({'status': 'waiting', 'estimate': {'label': '7 min', 'bucket': 'new'}}), null);
+    expect([b.estimate, b.typical], ['7 min', '']);
+    // No estimate: the usual wait takes its place, shown once.
+    final c = LiveChat.waitCardLines(LiveChat.queueStatusOf({'status': 'waiting', 'position': 1}), 'Typical wait: a few minutes');
+    expect([c.estimate, c.typical], ['Typical wait: a few minutes', '']);
+    // Nothing known: the calm promise.
+    expect(LiveChat.waitCardLines(null, null).estimate, 'Our team will be with you soon');
+  });
+
   test('says where the visitor stands', () {
     expect(LiveChat.queueLine(const QueueStatus(status: 'waiting', position: 1)), "You're next in line");
     expect(LiveChat.queueLine(const QueueStatus(status: 'waiting', position: 3)), "You're 3rd in line");
