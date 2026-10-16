@@ -22,6 +22,7 @@
 library;
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -31,6 +32,7 @@ import '../models/analytics.dart';
 import '../providers/analytics_provider.dart';
 import '../services/socket_client.dart';
 import '../utils/logger.dart';
+import 'delight/delight.dart';
 import 'errors/conferbot_exceptions.dart';
 import 'flow/flow_context.dart';
 import 'flow/flow_control.dart';
@@ -88,6 +90,10 @@ class NodeFlowEngineConfig {
   /// The visitor's IANA time zone (default: the device's).
   final String? visitorTimeZone;
 
+  /// The bot's bookings (the bot data's calendarBookings): a calendar's
+  /// taken slots. [NodeFlowEngine.setCalendarBookings] sets them later.
+  final List<dynamic>? calendarBookings;
+
   /// The random source (random-flow).
   final double Function()? random;
 
@@ -106,6 +112,7 @@ class NodeFlowEngineConfig {
     this.httpClient,
     this.page,
     this.visitorTimeZone,
+    this.calendarBookings,
     this.random,
     this.now,
     this.onTrace,
@@ -319,6 +326,13 @@ class NodeFlowEngine extends ChangeNotifier {
   final Map<String, void Function()> _mediaWaiters = {};
   FlowControlState _flowControl = emptyFlowControl();
   int _nodesProcessedInCycle = 0;
+
+  /// Questions asked, newest last, for "Edit" (only the recent past).
+  List<QuestionPoint> _points = [];
+  int _pointSeq = 0;
+
+  /// The bot's bookings, from the bot data (a calendar greys out taken slots).
+  late List<dynamic> _calendarBookings = _config.calendarBookings ?? const [];
   StreamSubscription<TranscriptEntry>? _linesSub;
 
   /// Current UI state to render (null while nothing waits for the visitor).
@@ -500,6 +514,7 @@ class NodeFlowEngine extends ChangeNotifier {
   /// Resets per-run state when starting a new flow.
   void resetFlow() {
     _visits.clear();
+    _points = [];
     _ended = false;
     _nodesProcessedInCycle = 0;
     _flowControl = emptyFlowControl();
@@ -528,6 +543,8 @@ class NodeFlowEngine extends ChangeNotifier {
 
     final id = _id(node);
     final type = _type(node);
+    // A question: what "Edit" goes back to, before it is drawn.
+    if (Delight.waitsForAnswer(type)) _notePoint(node);
     final token = ++_moveToken;
     _currentNodeId = id;
     _isWaitingForInput = false;
@@ -597,6 +614,64 @@ class NodeFlowEngine extends ChangeNotifier {
     if (token != _moveToken || _ended) return;
     await _handleNodeResult(result, node, token);
   }
+
+  void _notePoint(Map<String, dynamic> node) {
+    _points.add(QuestionPoint._(
+      id: ++_pointSeq,
+      nodeId: _id(node),
+      type: _type(node),
+      stepsLen: _visits.length,
+      recordLen: _chatState.record.length,
+      snap: _chatState.snapshot(),
+      flowControl: restoreFlowControl(_flowControl.toJson()),
+    ));
+    if (_points.length > Delight.maxQuestionPoints) _points = _points.sublist(_points.length - Delight.maxQuestionPoints);
+  }
+
+  /// The questions asked so far that can still be gone back to, oldest first.
+  List<QuestionPoint> get questionPoints => List.unmodifiable(_points);
+
+  /// The step types run since a question (it excluded); "agent" when a
+  /// person or the AI agent has been in the conversation since (what they
+  /// saw stays). Web index.ts typesSince.
+  List<String> typesSince(QuestionPoint point) {
+    final types = [
+      for (final n in _visits.skip(point.stepsLen + 1)) _type(n),
+    ];
+    final record = _chatState.record;
+    final agent = record.skip(math.min(point.recordLen, record.length)).any((r) {
+      final kind = r.type ?? r.shape;
+      return kind.startsWith('agent') || r.shape.startsWith('agent');
+    });
+    return agent ? [...types, 'agent'] : types;
+  }
+
+  /// "Edit": the conversation as it was when the question was asked, and the
+  /// question asked again exactly as the forward path asks it (web index.ts
+  /// _rewindToQuestion). False when the point is gone or the chat ended.
+  Future<bool> rewindTo(int pointId) async {
+    final i = _points.indexWhere((p) => p.id == pointId);
+    if (i < 0) return false;
+    final point = _points[i];
+    final node = _nodes[point.nodeId];
+    if (node == null || _ended) return false;
+    _moveToken++;
+    _chatState.restore(point.snap);
+    if (_visits.length > point.stepsLen) _visits.removeRange(point.stepsLen, _visits.length);
+    _flowControl = restoreFlowControl(point.flowControl.toJson());
+    _points = _points.sublist(0, i);
+    _mediaWaiters.clear();
+    _ended = false;
+    _isWaitingForInput = false;
+    _validationMessage = null;
+    _nodesProcessedInCycle = 0;
+    _sendResponseToServer();
+    await _enter(node, 'rewind');
+    return true;
+  }
+
+  /// The bot's bookings, from the bot data (a calendar's taken slots).
+  void setCalendarBookings(dynamic bookings) => _calendarBookings = bookings is List ? List.of(bookings) : const [];
 
   /// A question step registers {nodeId, key, value: null} when shown.
   void _registerAnswerVariables(Map<String, dynamic> node) {
@@ -670,6 +745,7 @@ class NodeFlowEngine extends ChangeNotifier {
       now: _now,
       customizations: _customizations,
       page: _config.page,
+      calendarBookings: _calendarBookings,
       visitorTimeZone: _config.visitorTimeZone ?? deviceTimeZone(),
       respond: (response) {
         if (_currentNodeId == id && _isWaitingForInput) submitResponse(response);
@@ -1267,4 +1343,32 @@ class SocketClientFlowSocket implements FlowSocket {
       extra: responseData,
     );
   }
+}
+
+/// A question the visitor may go back to (web index.ts _noteQuestionPoint):
+/// kept each time a step that waits for an answer is entered, before it is
+/// drawn, with a copy of the conversation's state as it was.
+class QuestionPoint {
+  /// Unique per point (a step asked twice has two).
+  final int id;
+  final String nodeId;
+  final String type;
+
+  /// Steps entered before this question.
+  final int stepsLen;
+
+  /// The record's length before the question.
+  final int recordLen;
+  final ChatSnapshot snap;
+  final FlowControlState flowControl;
+
+  const QuestionPoint._({
+    required this.id,
+    required this.nodeId,
+    required this.type,
+    required this.stepsLen,
+    required this.recordLen,
+    required this.snap,
+    required this.flowControl,
+  });
 }
