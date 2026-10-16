@@ -36,6 +36,7 @@ export 'src/core/home/home.dart'
     show
         HomeView,
         HomeModel,
+        HomeMascot,
         HomeSection,
         HomeText,
         HomeAgent,
@@ -51,6 +52,15 @@ export 'src/core/home/view_transition.dart' show viewMotion, ViewMotion, NoMotio
 export 'src/core/customization/personalize.dart' show personalize, personalizeCustomizations, visitorVars;
 export 'src/widgets/home/home_screen_view.dart' show HomeScreenView;
 export 'src/widgets/home/view_switch.dart' show ViewSwitch;
+// The owner's mascot (art, moods, the greeting card's motion) and <Mascot>
+// for an app's own screens (the home's mascotBuilder, say).
+export 'src/core/customization/mascot_art.dart'
+    show MascotLook, MascotLayers, MascotJoints, mascotLookOf, mascotScaleOf, mascotColorOf, mascotLayers, mascotOrigins, mascotPoint, mascotUnit, mixColor, mascotShapes, mascotEyes, mascotAccessories, mascotArms, mascotDefaultNames, mascotLayerOrder;
+export 'src/core/customization/mascot_moods.dart' show moodPlan, MoodPlan, mascotMoods, typingLabel;
+export 'src/core/customization/mascot_motion.dart' show normalizeMascotMotion, mascotMotions, MascotDirector, MascotStage, MascotTimers, gestureTrack, cardEnterTrack, cardLeaveTrack, wordFade, figureAmp;
+export 'src/widgets/mascot/mascot_view.dart' show Mascot, MascotPose, MascotPart, paintMascot;
+export 'src/widgets/mascot/typing_mascot.dart' show TypingMascot, TypingPencil;
+export 'src/widgets/mascot/launcher_mascot.dart' show LauncherMascot;
 export 'src/core/node_flow_engine.dart';
 export 'src/core/nodes/node_types.dart';
 export 'src/core/nodes/node_result.dart';
