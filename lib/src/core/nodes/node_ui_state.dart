@@ -338,6 +338,9 @@ class CalendarUIState extends NodeUIState {
   /// The bookable times per day ("YYYY-MM-DD" -> ["09:30", ...]).
   final Map<String, List<String>>? availableSlots;
 
+  /// Of [availableSlots], the times already booked per day (shown, not pickable).
+  final Map<String, List<String>>? bookedSlots;
+
   const CalendarUIState({
     this.questionText,
     this.showTimeSelection = false,
@@ -348,6 +351,7 @@ class CalendarUIState extends NodeUIState {
     this.answerKey,
     this.mode = 'date',
     this.availableSlots,
+    this.bookedSlots,
     required super.nodeId,
     super.extra,
   });
