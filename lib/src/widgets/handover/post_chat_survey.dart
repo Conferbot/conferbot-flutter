@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../models/agent.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
@@ -62,14 +63,14 @@ class PostChatSurveyWidget extends StatefulWidget {
   /// Custom subtitle
   final String? subtitle;
 
-  /// Submit button text
-  final String submitButtonText;
+  /// Submit button text (default: "Submit" in the active language)
+  final String? submitButtonText;
 
-  /// Skip button text
-  final String skipButtonText;
+  /// Skip button text (default: "Skip" in the active language)
+  final String? skipButtonText;
 
-  /// Feedback placeholder text
-  final String feedbackPlaceholder;
+  /// Feedback placeholder text (default in the active language)
+  final String? feedbackPlaceholder;
 
   /// Whether to show skip button
   final bool showSkipButton;
@@ -98,9 +99,9 @@ class PostChatSurveyWidget extends StatefulWidget {
     this.theme,
     this.title,
     this.subtitle,
-    this.submitButtonText = 'Submit',
-    this.skipButtonText = 'Skip',
-    this.feedbackPlaceholder = 'Tell us more about your experience...',
+    this.submitButtonText,
+    this.skipButtonText,
+    this.feedbackPlaceholder,
     this.showSkipButton = true,
     this.requireFeedbackForLowRating = true,
     this.lowRatingThreshold = 3,
@@ -145,11 +146,11 @@ class _PostChatSurveyWidgetState extends State<PostChatSurveyWidget>
 
   String _getRatingLabel(int rating) {
     return switch (rating) {
-      1 => 'Very Poor',
-      2 => 'Poor',
-      3 => 'Okay',
-      4 => 'Good',
-      5 => 'Excellent',
+      1 => t('sdk.survey.veryPoor'),
+      2 => t('rating.poor'),
+      3 => t('rating.okay'),
+      4 => t('rating.good'),
+      5 => t('rating.excellent'),
       _ => '',
     };
   }
@@ -185,7 +186,7 @@ class _PostChatSurveyWidgetState extends State<PostChatSurveyWidget>
         _selectedRating <= widget.lowRatingThreshold &&
         _feedbackController.text.trim().isEmpty) {
       setState(() {
-        _feedbackError = 'Please tell us how we can improve';
+        _feedbackError = t('sdk.survey.improve');
       });
       return;
     }
@@ -278,7 +279,7 @@ class _PostChatSurveyWidgetState extends State<PostChatSurveyWidget>
 
           // Title
           Text(
-            widget.title ?? 'How was your experience?',
+            widget.title ?? t('csat.title'),
             style: TextStyle(
               fontSize: theme.typography.fontSizeLg,
               fontWeight: theme.typography.fontWeightSemiBold,
@@ -293,7 +294,7 @@ class _PostChatSurveyWidgetState extends State<PostChatSurveyWidget>
             SizedBox(height: theme.spacing.xs),
             Text(
               widget.subtitle ??
-                  'Rate your chat with ${widget.agent!.name}',
+                  t('sdk.survey.rateWith', {'name': widget.agent!.name}),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeSm,
                 color: theme.colors.textSecondary,
@@ -440,7 +441,7 @@ class _PostChatSurveyWidgetState extends State<PostChatSurveyWidget>
         Row(
           children: [
             Text(
-              'Additional feedback',
+              t('sdk.survey.additional'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeSm,
                 fontWeight: theme.typography.fontWeightMedium,
@@ -460,7 +461,7 @@ class _PostChatSurveyWidgetState extends State<PostChatSurveyWidget>
             if (!isRequired) ...[
               SizedBox(width: theme.spacing.xs),
               Text(
-                '(optional)',
+                t('common.optional'),
                 style: TextStyle(
                   fontSize: theme.typography.fontSizeXs,
                   color: theme.colors.textSecondary,
@@ -474,6 +475,12 @@ class _PostChatSurveyWidgetState extends State<PostChatSurveyWidget>
           controller: _feedbackController,
           maxLines: 4,
           maxLength: widget.maxFeedbackLength,
+          // The count drawn as before ("0/500"); the framework's own counter
+          // reads "500 characters remaining" in the app's language, not the widget's.
+          buildCounter: (context, {required currentLength, required isFocused, maxLength}) => Text(
+            '$currentLength/$maxLength',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           enabled: !_isSubmitting && !widget.isLoading,
           onChanged: (_) {
             if (_feedbackError != null) {
@@ -481,7 +488,7 @@ class _PostChatSurveyWidgetState extends State<PostChatSurveyWidget>
             }
           },
           decoration: InputDecoration(
-            hintText: widget.feedbackPlaceholder,
+            hintText: widget.feedbackPlaceholder ?? t('sdk.survey.feedbackPlaceholder'),
             hintStyle: TextStyle(
               color: theme.colors.textSecondary.withOpacity(0.7),
             ),
@@ -565,7 +572,7 @@ class _PostChatSurveyWidgetState extends State<PostChatSurveyWidget>
                     ),
                   )
                 : Text(
-                    widget.submitButtonText,
+                    widget.submitButtonText ?? t('common.submit'),
                     style: TextStyle(
                       fontWeight: theme.typography.fontWeightSemiBold,
                     ),
@@ -586,7 +593,7 @@ class _PostChatSurveyWidgetState extends State<PostChatSurveyWidget>
               ),
             ),
             child: Text(
-              widget.skipButtonText,
+              widget.skipButtonText ?? t('common.skip'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeSm,
               ),
@@ -604,7 +611,9 @@ class CompactPostChatSurvey extends StatefulWidget {
   final VoidCallback? onExpand;
   final Color primaryColor;
   final ConferBotTheme? theme;
-  final String title;
+
+  /// Default: "Rate this conversation" in the active language.
+  final String? title;
 
   const CompactPostChatSurvey({
     super.key,
@@ -612,7 +621,7 @@ class CompactPostChatSurvey extends StatefulWidget {
     this.onExpand,
     required this.primaryColor,
     this.theme,
-    this.title = 'Rate this conversation',
+    this.title,
   });
 
   @override
@@ -637,7 +646,7 @@ class _CompactPostChatSurveyState extends State<CompactPostChatSurvey> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            widget.title,
+            widget.title ?? t('sdk.survey.rateThis'),
             style: TextStyle(
               fontSize: effectiveTheme.typography.fontSizeSm,
               fontWeight: effectiveTheme.typography.fontWeightMedium,
@@ -686,7 +695,7 @@ class _CompactPostChatSurveyState extends State<CompactPostChatSurvey> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Add feedback',
+                    t('sdk.survey.addFeedback'),
                     style: TextStyle(
                       fontSize: effectiveTheme.typography.fontSizeSm,
                     ),
@@ -707,16 +716,19 @@ class _CompactPostChatSurveyState extends State<CompactPostChatSurvey> {
 class SurveyThankYouWidget extends StatefulWidget {
   final Color primaryColor;
   final ConferBotTheme? theme;
-  final String title;
-  final String subtitle;
+
+  /// Defaults: "Thank you!" and "Your feedback helps us improve." in the
+  /// active language.
+  final String? title;
+  final String? subtitle;
   final VoidCallback? onDismiss;
 
   const SurveyThankYouWidget({
     super.key,
     required this.primaryColor,
     this.theme,
-    this.title = 'Thank you!',
-    this.subtitle = 'Your feedback helps us improve.',
+    this.title,
+    this.subtitle,
     this.onDismiss,
   });
 
@@ -819,7 +831,7 @@ class _SurveyThankYouWidgetState extends State<SurveyThankYouWidget>
 
             // Title
             Text(
-              widget.title,
+              widget.title ?? t('sdk.survey.thanksTitle'),
               style: TextStyle(
                 fontSize: effectiveTheme.typography.fontSizeXl,
                 fontWeight: effectiveTheme.typography.fontWeightSemiBold,
@@ -830,7 +842,7 @@ class _SurveyThankYouWidgetState extends State<SurveyThankYouWidget>
 
             // Subtitle
             Text(
-              widget.subtitle,
+              widget.subtitle ?? t('csat.subtitle'),
               style: TextStyle(
                 fontSize: effectiveTheme.typography.fontSizeMd,
                 color: effectiveTheme.colors.textSecondary,
@@ -846,7 +858,7 @@ class _SurveyThankYouWidgetState extends State<SurveyThankYouWidget>
                 style: TextButton.styleFrom(
                   foregroundColor: widget.primaryColor,
                 ),
-                child: const Text('Close'),
+                child: Text(t('common.close')),
               ),
             ],
           ],
