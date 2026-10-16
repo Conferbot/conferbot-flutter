@@ -169,10 +169,20 @@ void main() {
       expect(ChatMarkdown.parseInline('[x](javascript:1)'), const [ChatInline(InlineKind.plain, 'x')]);
     });
 
-    test('parses lists and paragraphs', () {
-      final blocks = ChatMarkdown.parse('## Plans\nWe have:\n- Pro\n2. Team\n\nBye');
-      expect(blocks.map((b) => b.kind).toList(), [BlockKind.paragraph, BlockKind.bullet, BlockKind.numbered, BlockKind.paragraph]);
-      expect(ChatMarkdown.plainText(blocks), 'Plans\nWe have:\n• Pro\n2. Team\nBye');
+    test('parses lists, headings and paragraphs (#52: a heading is its own block)', () {
+      final blocks = ChatMarkdown.parse('## Plans\nWe have:\n- Pro\n+ Plus\n2. Team\n\nBye');
+      expect(blocks.map((b) => b.kind).toList(),
+          [BlockKind.heading, BlockKind.paragraph, BlockKind.bullet, BlockKind.bullet, BlockKind.numbered, BlockKind.paragraph]);
+      expect(ChatMarkdown.plainText(blocks), 'Plans\nWe have:\n• Pro\n• Plus\n2. Team\nBye');
+    });
+  });
+
+  group('the AI reply wait (#52)', () {
+    test('45s, then the web\'s took-too-long notice, on screen only', () {
+      expect(AgentBotParser.awaitReply, const Duration(seconds: 45));
+      final n = AgentBotParser.replyTimeoutNotice(DateTime.fromMillisecondsSinceEpoch(1000));
+      expect(n.id, 'reply-timeout-1000');
+      expect(n.text, 'That took too long. Try again, or ask for a human.');
     });
   });
 }
