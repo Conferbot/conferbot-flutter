@@ -38,6 +38,10 @@ class ChatBottomBar extends StatefulWidget {
   /// The bot's look: the widget theme's field and radius, the palette's send colours.
   final ResolvedCustomizations? look;
 
+  /// The field's focus, so the chat can put the cursor there ("Ask another
+  /// way" under an AI answer).
+  final FocusNode? focusNode;
+
   const ChatBottomBar({
     super.key,
     required this.onSend,
@@ -53,6 +57,7 @@ class ChatBottomBar extends StatefulWidget {
     this.customBrand,
     this.theme,
     this.look,
+    this.focusNode,
   });
 
   @override
@@ -154,6 +159,7 @@ class _ChatBottomBarState extends State<ChatBottomBar> {
                           Expanded(
                             child: TextField(
                               controller: _controller,
+                              focusNode: widget.focusNode,
                               enabled: !widget.disabled,
                               maxLength: widget.maxLength ??
                                   ConferBotConstants.maxMessageLength,
