@@ -24,6 +24,7 @@ import 'knowledge_base/knowledge_base_screen.dart';
 import 'handover/handover.dart';
 import 'live_chat_cards.dart';
 import '../core/customization/customizations.dart';
+import '../core/i18n/i18n.dart';
 import '../core/customization/chat_background.dart';
 import 'chat_background.dart';
 import '../core/live_chat/live_chat.dart';
@@ -321,7 +322,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     final provider = context.read<ConferBotProvider>();
 
     // Send article reference as a message
-    final articleText = 'I found this helpful article: "${article.title}"';
+    final articleText = t('sdk.kb.foundArticle', {'title': article.title});
     provider.sendMessage(articleText);
 
     // Call custom callback if provided
@@ -448,7 +449,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       HomeView.help => ChangeNotifierProvider.value(
           value: _kbProvider!,
           child: KnowledgeBaseScreen(
-            title: 'Help Center',
+            title: t('home.helpCentre'),
             onClose: _closeKnowledgeBase,
             onArticleInsertToChat: _handleArticleInsert,
             theme: effectiveTheme,
@@ -541,7 +542,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     // "Online" or the team's reply time under its name, plain "Online" once
     // a person is in the chat (core/live_chat/reply_time.dart).
     return ChatHeaderWithKB(
-      title: provider.botName ?? widget.title ?? 'Support Chat',
+      title: provider.botName ?? widget.title ?? t('sdk.header.supportChat'),
       look: provider.serverCustomizations != null ? provider.customizations : null,
       subtitle: _getSubtitle(provider),
       statusText: provider.headerStatus,
@@ -925,8 +926,8 @@ class _ChatWidgetState extends State<ChatWidget> {
     // Show offline state in input placeholder
     final isOffline = !_connectivity.isOnline;
     final placeholder = isOffline
-        ? 'Offline - messages will be queued'
-        : widget.placeholder ?? 'Type a message...';
+        ? t('sdk.chat.offlineWillQueue')
+        : widget.placeholder ?? t('chat.composer.placeholder');
 
     // A live chat: locked or replies off, and a file for the agent; a closed
     // chat (blocked, or ended with nothing going on) takes no more input.
@@ -948,7 +949,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       placeholder: closed?.inputOff == true
           ? closed!.text
           : repliesOff
-              ? 'Replies are turned off for now'
+              ? t('sdk.chat.repliesOff')
               : placeholder,
       disabled: provider.isProcessing || repliesOff,
       focusNode: _composerFocus,
@@ -1003,13 +1004,13 @@ class _ChatWidgetState extends State<ChatWidget> {
   /// conversation being over. Never the agent (the web keeps the bot).
   String? _getSubtitle(ConferBotProvider provider) {
     if (!_connectivity.isOnline) {
-      return 'Offline - messages queued';
+      return t('sdk.chat.offlineQueued');
     }
     if (!provider.isConnected) {
-      return 'Reconnecting...';
+      return t('sdk.chat.reconnecting');
     }
     if (provider.isFlowComplete) {
-      return 'Conversation complete';
+      return t('sdk.chat.complete');
     }
     return null;
   }
@@ -1069,10 +1070,13 @@ class ChatHeaderWithKB extends StatelessWidget {
     this.requestsUnread = 0,
   });
 
+  // The stock "Online" in the active language; any other status as given.
+  static String _status(String s) => s == 'Online' ? I18n.t('status.online') : s;
+
   @override
   Widget build(BuildContext context) {
     final t = theme ?? defaultTheme;
-    final displayTitle = agent?.name ?? look?.title ?? title ?? 'Chat';
+    final displayTitle = agent?.name ?? look?.title ?? title ?? I18n.t('sdk.header.chat');
     final displaySubtitle = agent?.email ?? subtitle;
 
     return Container(
@@ -1097,7 +1101,7 @@ class ChatHeaderWithKB extends StatelessWidget {
             if (onBack != null) ...[
               Semantics(
                 button: true,
-                label: 'Back',
+                label: I18n.t('common.back'),
                 excludeSemantics: true,
                 child: InkWell(
                   key: const ValueKey('cb-header-back'),
@@ -1152,7 +1156,7 @@ class ChatHeaderWithKB extends StatelessWidget {
                         ],
                         Flexible(
                           child: Text(
-                            look!.tagline ?? statusText!,
+                            look!.tagline ?? _status(statusText!),
                             style: TextStyle(fontSize: 12, color: t.colors.headerText.withOpacity(0.85)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1185,7 +1189,7 @@ class ChatHeaderWithKB extends StatelessWidget {
               IconButton(
                 onPressed: onKnowledgeBaseTap,
                 icon: Icon(Icons.help_outline, color: t.colors.headerText),
-                tooltip: 'Help Center',
+                tooltip: I18n.t('home.helpCentre'),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -1195,7 +1199,7 @@ class ChatHeaderWithKB extends StatelessWidget {
               PopupMenuButton<String>(
                 key: const ValueKey('cb-chat-menu'),
                 icon: Icon(Icons.more_vert, color: t.colors.headerText),
-                tooltip: 'Chat menu',
+                tooltip: I18n.t('sdk.chat.menu'),
                 padding: EdgeInsets.zero,
                 onSelected: (id) {
                   if (id == 'email-transcript') onEmailTranscript?.call();
@@ -1215,10 +1219,10 @@ class ChatHeaderWithKB extends StatelessWidget {
                       ),
                     ),
                   if (onEmailTranscript != null)
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'email-transcript',
                       child: Row(
-                        children: [Icon(Icons.mail_outline, size: 18), SizedBox(width: 10), Text(EmailTranscript.menu)],
+                        children: [const Icon(Icons.mail_outline, size: 18), const SizedBox(width: 10), Text(EmailTranscript.menuLabel)],
                       ),
                     ),
                 ],
@@ -1361,7 +1365,7 @@ class _ChatInputWithKBState extends State<ChatInputWithKB> {
                       ? effectiveTheme.colors.textDisabled
                       : effectiveTheme.colors.primary,
                 ),
-                tooltip: 'Browse Help Articles',
+                tooltip: t('sdk.kb.browseTitle'),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(
                   minWidth: 40,
@@ -1424,7 +1428,7 @@ class _ChatInputWithKBState extends State<ChatInputWithKB> {
                         onSubmitted: (_) => _handleSend(),
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
-                          hintText: widget.placeholder ?? 'Type a message...',
+                          hintText: widget.placeholder ?? t('chat.composer.placeholder'),
                           hintStyle: TextStyle(
                             color: widget.showOfflineIndicator
                                 ? effectiveTheme.colors.warning
