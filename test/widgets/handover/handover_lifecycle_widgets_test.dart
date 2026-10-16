@@ -7,6 +7,7 @@ import 'package:conferbot_flutter/src/core/customization/customizations.dart';
 import 'package:conferbot_flutter/src/core/live_chat/handover_state.dart';
 import 'package:conferbot_flutter/src/widgets/live_chat_cards.dart';
 import 'package:flutter/material.dart';
+import 'package:conferbot_flutter/src/core/live_chat/live_chat.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget host(Widget child) => MaterialApp(home: Scaffold(body: child));
@@ -113,6 +114,21 @@ void main() {
     expect(left, 1);
     await tester.pumpWidget(host(HandoverWaitCard(liveChat: provider.liveChat, theme: defaultTheme)));
     expect(find.text('Leave queue'), findsNothing);
+  });
+
+  testWidgets('the wait card says the usual wait, under a live estimate too (web queueCard.ts)', (tester) async {
+    final provider = ConferBotProvider(apiKey: 'k', botId: 'b1', config: const ConferBotConfig(autoConnect: false, enablePersistence: false));
+    const rt = {'mode': 'auto', 'handover': true, 'state': 'online', 'bucket': 'few_minutes'};
+    await tester.pumpWidget(host(HandoverWaitCard(liveChat: provider.liveChat, theme: defaultTheme, replyTime: rt)));
+    expect(find.text('Typical wait: a few minutes'), findsOneWidget);
+    expect(find.text('Our team will be with you soon'), findsNothing);
+    provider.liveChat.queue = LiveChat.queueStatusOf({'status': 'waiting', 'position': 2, 'estimate': {'label': '2 min', 'bucket': 'about_2'}});
+    await tester.pumpWidget(host(HandoverWaitCard(liveChat: provider.liveChat, theme: defaultTheme, replyTime: rt)));
+    expect(find.text('About 2 min'), findsOneWidget);
+    expect(find.byKey(const ValueKey('cb-wait-typical')), findsOneWidget);
+    // Fixed or Hide: no usual wait.
+    await tester.pumpWidget(host(HandoverWaitCard(liveChat: provider.liveChat, theme: defaultTheme, replyTime: const {'mode': 'hide'})));
+    expect(find.byKey(const ValueKey('cb-wait-typical')), findsNothing);
   });
 
   group('Talk to a person (web quickActions.ts)', () {
