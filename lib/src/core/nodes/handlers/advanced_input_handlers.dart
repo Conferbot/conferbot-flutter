@@ -120,7 +120,7 @@ class CalendarHandler extends BaseNodeHandler {
       final botDate = noonInZone(dateString, botZone);
       final visitorDate = noonInZone(dateString, visitorZone);
       final date = longDate(botDate, botZone);
-      final localDate = longDate(visitorDate, visitorZone);
+      final localDate = longDate(visitorDate, visitorZone, visitorLocale());
       final shown = localDate.isNotEmpty ? localDate : date;
       record = {
         'date': shown,
@@ -144,7 +144,7 @@ class CalendarHandler extends BaseNodeHandler {
       final botDate = noonInZone(dateString, botZone);
       final visitorDate = noonInZone(dayKeyInZone(botDate, botZone), visitorZone);
       final date = longDate(botDate, botZone);
-      final localDate = longDate(visitorDate, visitorZone);
+      final localDate = longDate(visitorDate, visitorZone, visitorLocale());
       final visitorStart = hhmmInZone(wallTimeInZone(dateString, slot.start, botZone), visitorZone);
       final visitorEnd = hhmmInZone(wallTimeInZone(dateString, slot.end, botZone), visitorZone);
       final timeSlotSelected = slotLabel(slot);
