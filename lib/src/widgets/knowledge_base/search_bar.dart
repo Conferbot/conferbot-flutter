@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 
@@ -126,7 +127,7 @@ class _KBSearchBarState extends State<KBSearchBar> {
                 color: effectiveTheme.colors.text,
               ),
               decoration: InputDecoration(
-                hintText: widget.placeholder ?? 'Search articles...',
+                hintText: widget.placeholder ?? t('sdk.kb.searchArticles'),
                 hintStyle: TextStyle(
                   color: effectiveTheme.colors.textSecondary,
                   fontSize: effectiveTheme.typography.fontSizeMd,
