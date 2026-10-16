@@ -477,6 +477,8 @@ class _ChatWidgetState extends State<ChatWidget> {
           },
           theme: theme,
           primaryColor: theme.colors.primary,
+          stepKey: provider.stepVisit,
+          error: provider.stepError,
         ),
       );
     }
@@ -638,6 +640,8 @@ class _ChatWidgetState extends State<ChatWidget> {
           },
           theme: theme,
           primaryColor: theme.colors.primary,
+          stepKey: provider.stepVisit,
+          error: provider.stepError,
         ),
       ),
     );
@@ -768,6 +772,11 @@ class _ChatWidgetState extends State<ChatWidget> {
     // Web widget parity: the unified bottom bar stays visible for text
     // questions (answers are typed there) and choice nodes (visible under
     // the chips). Only nodes with genuinely modal inline UIs hide it.
+    // Cards with fields of their own (the code, the signature, the address)
+    // take the answer there, as on the web.
+    final step = uiState is NodeUIState ? uiState.extra['step'] : null;
+    if (step == 'otp' || step == 'signature' || uiState is AddressUIState) return true;
+
     return uiState is FileUploadUIState ||
         uiState is ImageChoiceUIState ||
         uiState is RatingUIState ||
