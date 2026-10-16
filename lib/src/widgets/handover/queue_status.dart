@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/live_chat/live_chat.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 
@@ -629,9 +630,25 @@ class _ArcPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Compact queue status indicator for inline display
+/// Compact queue status indicator for the chat header.
+///
+/// Its time is the wait card's max-wait countdown (#87): it counts down to
+/// the same deadline ([endsAt], `LiveChatExtras.waitEndsAt`: the step's max
+/// wait, or the server's seconds left after a restart) on the same clock
+/// ([now]), so the two never disagree. Without a deadline no time is shown;
+/// it never runs a countdown of its own.
 class CompactQueueStatus extends StatefulWidget {
-  final int maxWaitMinutes;
+  /// No longer read: the time comes from [endsAt].
+  @Deprecated('Pass endsAt (LiveChatExtras.waitEndsAt); the indicator no longer counts down on its own.')
+  final int? maxWaitMinutes;
+
+  /// When the max wait runs out (ms since the epoch), the wait card's
+  /// deadline; null: no time shown.
+  final int? endsAt;
+
+  /// The clock [endsAt] is read on (ms since the epoch); the wall clock
+  /// when null.
+  final int Function()? now;
   final QueueInfo? queueInfo;
   final Color primaryColor;
   final ConferBotTheme? theme;
@@ -639,7 +656,9 @@ class CompactQueueStatus extends StatefulWidget {
 
   const CompactQueueStatus({
     super.key,
-    required this.maxWaitMinutes,
+    @Deprecated('Pass endsAt (LiveChatExtras.waitEndsAt); the indicator no longer counts down on its own.') this.maxWaitMinutes,
+    this.endsAt,
+    this.now,
     this.queueInfo,
     required this.primaryColor,
     this.theme,
@@ -653,8 +672,9 @@ class CompactQueueStatus extends StatefulWidget {
 class _CompactQueueStatusState extends State<CompactQueueStatus>
     with SingleTickerProviderStateMixin {
   late AnimationController _dotController;
-  Timer? _countdownTimer;
-  int _remainingSeconds = 0;
+  Timer? _ticker;
+
+  int _now() => widget.now?.call() ?? DateTime.now().millisecondsSinceEpoch;
 
   @override
   void initState() {
@@ -663,43 +683,36 @@ class _CompactQueueStatusState extends State<CompactQueueStatus>
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     )..repeat();
-
-    _remainingSeconds = widget.queueInfo?.estimatedWaitSeconds ??
-        widget.maxWaitMinutes * 60;
-    _startCountdown();
+    _tick();
   }
 
   @override
   void dispose() {
     _dotController.dispose();
-    _countdownTimer?.cancel();
+    _ticker?.cancel();
     super.dispose();
   }
 
   @override
   void didUpdateWidget(CompactQueueStatus oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.queueInfo != oldWidget.queueInfo && widget.queueInfo != null) {
-      setState(() {
-        _remainingSeconds = widget.queueInfo!.estimatedWaitSeconds;
-      });
-    }
+    if (widget.endsAt != oldWidget.endsAt) _tick();
   }
 
-  void _startCountdown() {
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_remainingSeconds > 0) {
-        setState(() {
-          _remainingSeconds--;
-        });
+  // Redraws once a second until the deadline, as the wait card's MaxWaitLine.
+  void _tick() {
+    _ticker?.cancel();
+    _ticker = null;
+    final endsAt = widget.endsAt;
+    if (endsAt == null || _now() >= endsAt) return;
+    _ticker = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      setState(() {});
+      if (_now() >= endsAt) {
+        t.cancel();
+        _ticker = null;
       }
     });
-  }
-
-  String _formatTime(int seconds) {
-    final minutes = seconds ~/ 60;
-    final secs = seconds % 60;
-    return '$minutes:${secs.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -769,7 +782,8 @@ class _CompactQueueStatusState extends State<CompactQueueStatus>
               ),
             ],
 
-            // Time remaining
+            // The max wait left, the wait card's deadline
+            if (widget.endsAt != null) ...[
             Icon(
               Icons.access_time,
               size: 14,
@@ -777,7 +791,7 @@ class _CompactQueueStatusState extends State<CompactQueueStatus>
             ),
             SizedBox(width: effectiveTheme.spacing.xs),
             Text(
-              _formatTime(_remainingSeconds),
+              LiveChat.clock(LiveChat.secondsLeft(widget.endsAt!, now: _now())),
               style: TextStyle(
                 fontSize: effectiveTheme.typography.fontSizeSm,
                 fontWeight: effectiveTheme.typography.fontWeightMedium,
@@ -785,6 +799,7 @@ class _CompactQueueStatusState extends State<CompactQueueStatus>
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
+            ],
           ],
         ),
       ),
