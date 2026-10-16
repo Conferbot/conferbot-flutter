@@ -575,4 +575,44 @@ console.log('Hi');
       expect(retrievedHandler, equals(handler));
     });
   });
+
+  group('tables, headings, quotes and strikethrough (#52)', () {
+    Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: SizedBox(width: 240, child: child)));
+
+    testWidgets('a table scrolls sideways, the text around it stays markdown', (tester) async {
+      await tester.pumpWidget(wrap(const MarkdownMessage(
+        content: 'Our plans:\n\n| Plan | Price | Seats | Support |\n| --- | --- | --- | --- |\n| **Pro** | \$49 | 5 | Email and chat |\n\nAsk me more.',
+      )));
+      expect(find.byType(ChatTable), findsOneWidget);
+      final scroll = tester.widget<SingleChildScrollView>(
+          find.descendant(of: find.byType(ChatTable), matching: find.byType(SingleChildScrollView)));
+      expect(scroll.scrollDirection, Axis.horizontal);
+      expect(find.text('Our plans:'), findsOneWidget);
+      expect(find.text('Ask me more.'), findsOneWidget);
+      expect(find.textContaining('Email and chat', findRichText: true), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('# and ## are drawn as level 4, ### a little larger', (tester) async {
+      await tester.pumpWidget(wrap(const MarkdownMessage(content: '# Big\n\n### Mid\n\n#### Small')));
+      double size(String t) {
+        final rich = tester.widget<RichText>(find.byWidgetPredicate((w) => w is RichText && w.text.toPlainText() == t));
+        double? found;
+        rich.text.visitChildren((span) {
+          found = span.style?.fontSize ?? found;
+          return true;
+        });
+        return found ?? (rich.text as TextSpan).style!.fontSize!;
+      }
+
+      expect(size('Big'), size('Small'));
+      expect(size('Mid'), greaterThan(size('Small')));
+    });
+
+    testWidgets('quotes and strikethrough render without errors', (tester) async {
+      await tester.pumpWidget(wrap(const MarkdownMessage(content: '> Quoted\n\n~~\$59~~ \$49')));
+      expect(find.textContaining('Quoted', findRichText: true), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
