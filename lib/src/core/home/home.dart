@@ -36,6 +36,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import '../customization/mascot_art.dart';
+import '../i18n/i18n.dart';
 import '../live_chat/reply_time.dart';
 import '../requests/requests.dart';
 import '../waiting/wait_articles.dart';
@@ -44,48 +45,57 @@ export '../waiting/wait_articles.dart' show HelpArticle, isRealQuestion;
 
 // ------------------------------------------------------------ words (web ts/i18n/en.ts)
 
+/// The home screen's words, read in the active language when drawn.
 class HomeText {
   HomeText._();
-  static const title = 'Hi there 👋';
-  static const description = "Ask us anything - we're here to help.";
-  static const onlineNow = 'Online now';
-  static const support = 'Support';
-  static const chatWithUs = 'Chat with us';
-  static const ourAssistant = 'Our assistant';
-  static const resume = 'Pick up where you left off';
-  static const continueConversation = 'Continue the conversation';
-  static const askAgain = "Ask it again - we'll answer right away";
-  static const helpCentre = 'Help centre';
-  static const recentArticles = 'Recent articles';
-  static const seeAll = 'See all';
-  static const searchPlaceholder = 'Search for help';
-  static const searchLabel = 'Search help articles';
-  static String noMatch(String query) => 'No articles match “$query”.';
-  static const askInstead = 'Ask us instead';
-  static const chatInstead = 'Chat with us instead';
-  static const askPlaceholder = 'Ask a question…';
-  static String askLabel(String name) => 'Ask $name a question';
+  static String get title => t('home.title');
+  static String get description => t('home.description');
+  static String get onlineNow => t('home.onlineNow');
+  static String get support => t('home.support');
+  static String get chatWithUs => t('home.chatWithUs');
+  static String get ourAssistant => t('home.ourAssistant');
+  static String get resume => t('home.resume');
+  static String get continueConversation => t('home.continueConversation');
+  static String get askAgain => t('home.askAgain');
+  static String get helpCentre => t('home.helpCentre');
+  static String get recentArticles => t('home.recentArticles');
+  static String get seeAll => t('home.seeAll');
+  static String get searchPlaceholder => t('home.searchPlaceholder');
+  static String get searchLabel => t('kb.searchLabel');
+  static String noMatch(String query) => t('kb.noMatch', {'query': query});
+  static String get askInstead => t('home.askInstead');
+  static String get chatInstead => t('home.chatInstead');
+  static String get askPlaceholder => t('home.askPlaceholder');
+  static String askLabel(String name) => t('home.askLabel', {'name': name});
 
-  /// "Ask “<query>”": the query is drawn bold.
-  static const askQuery = 'Ask';
-  static String answersRightAway(String name) => '$name answers right away';
-  static const wellHelp = "We'll help you with it";
-  static const articles = 'Articles';
-  static const goodMorning = 'Good morning';
-  static const goodAfternoon = 'Good afternoon';
-  static const goodEvening = 'Good evening';
-  static const hello = 'Hello';
-  static String welcomeBackName(String name) => 'Welcome back, $name';
-  static const welcomeBack = 'Welcome back';
-  static const requestsTitle = 'Your requests';
-  static String requestsSeeAll(int n) => 'See all ($n)';
-  static const review = 'review';
-  static const reviews = 'reviews';
-  static String rated(String avg, int count, String reviews) => 'Rated $avg out of 5 from $count $reviews';
-  static const ourTeam = 'Our team';
-  static const customerLogo = 'Customer logo';
-  static const close = 'Close';
-  static const back = 'Back';
+  /// "Ask “<query>”": the words around the query, which is drawn bold
+  /// (web home.askQuery "Ask {query}"): ("Ask ", "") in English.
+  static (String, String) askQueryParts() {
+    final s = t('home.askQuery');
+    final i = s.indexOf('{query}');
+    return i < 0 ? ('$s ', '') : (s.substring(0, i), s.substring(i + '{query}'.length));
+  }
+
+  /// "Ask" before the bold query (see [askQueryParts] for languages that put it after).
+  static String get askQuery => askQueryParts().$1.trim();
+  static String answersRightAway(String name) => t('home.answersRightAway', {'name': name});
+  static String get wellHelp => t('home.wellHelp');
+  static String get articles => t('tabs.articles');
+  static String get goodMorning => t('home.goodMorning');
+  static String get goodAfternoon => t('home.goodAfternoon');
+  static String get goodEvening => t('home.goodEvening');
+  static String get hello => t('home.hello');
+  static String welcomeBackName(String name) => t('home.welcomeBackName', {'name': name});
+  static String get welcomeBack => t('home.welcomeBack');
+  static String get requestsTitle => t('requests.title');
+  static String requestsSeeAll(int n) => t('requests.seeAll', {'n': n});
+  static String get review => t('trust.review');
+  static String get reviews => t('trust.reviews');
+  static String rated(String avg, int count, String reviews) => t('trust.rated', {'avg': avg, 'count': count, 'reviews': reviews});
+  static String get ourTeam => t('trust.ourTeam');
+  static String get customerLogo => t('trust.customerLogo');
+  static String get close => t('common.close');
+  static String get back => t('common.back');
 }
 
 Map<String, dynamic> _map(dynamic v) => v is Map<String, dynamic> ? v : (v is Map ? Map<String, dynamic>.from(v) : const <String, dynamic>{});
@@ -253,12 +263,6 @@ HomeCopy homeCopy(Map<String, dynamic>? c, String name) {
 }
 
 String _plainText(String v) => v.replaceAll(RegExp(r'<[^>]*>'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
-
-/// The owner's words, or the stock ones (web i18n.ts ownerTextOr).
-String _ownerTextOr(dynamic value, String stock) {
-  final v = value is String ? _plainText(value) : '';
-  return v.isEmpty || v == _plainText(stock) ? stock : '$value';
-}
 
 // ------------------------------------------------------------ colours
 
@@ -608,13 +612,13 @@ List<AskRow> askRows(String? query, {required String? agentName, required List<H
   final rows = <AskRow>[];
   if (agentName != null) rows.add(AskQueryRow(query: q, sub: HomeText.answersRightAway(agentName)));
   if (found.isNotEmpty) {
-    rows.add(const AskLabelRow(HomeText.articles));
+    rows.add(AskLabelRow(HomeText.articles));
     for (final a in found) {
       rows.add(AskArticleRow(id: a.id, title: highlightRuns(a.title, tokens), sub: a.description.isNotEmpty ? a.description : a.categoryName));
     }
   } else if (agentName == null) {
     rows.add(AskNoneRow(HomeText.noMatch(q)));
-    rows.add(const AskChatRow(title: HomeText.chatWithUs, sub: HomeText.wellHelp));
+    rows.add(AskChatRow(title: HomeText.chatWithUs, sub: HomeText.wellHelp));
   }
   return rows;
 }
@@ -901,7 +905,8 @@ HomeModel? homeModel({
     status: status.isEmpty ? null : status,
     away: people.away,
     dot: !hideStatus,
-    button: _ownerTextOr(cc['initialPageCardButtonText'], HomeText.chatWithUs),
+    // The owner's words, or the stock ones in the visitor's language (web core/customizations.ts ownerTextOr).
+    button: I18n.ownerTextOr(cc['initialPageCardButtonText'], 'home.chatWithUs'),
     starters: agent == null ? const [] : agent.starters.where((s) => s.trim().isNotEmpty).take(3).toList(),
     faces: trustImages(cc['homeTeamPhotos'], 3),
     rating: ratingLine(cc['homeRating']),
@@ -981,7 +986,8 @@ HomeModel? homeModel({
   return HomeModel(
     hello: back != null ? back.hello : salutation(hour ?? DateTime.fromMillisecondsSinceEpoch(n).hour),
     brand: homeBrand(cc, firstOf([agent?.displayName, botName])),
-    title: _trim(cc['initialPageTitle']),
+    // The stock "Hi there 👋" in the visitor's language (web core/customizations.ts stockText).
+    title: I18n.stockText(_trim(cc['initialPageTitle']), 'home.title'),
     description: copy.description,
     message: cc['initialPageMessage'] is String ? _plainText(cc['initialPageMessage'] as String) : '',
     band: (a, b),
