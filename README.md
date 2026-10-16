@@ -601,15 +601,36 @@ provider.home.showChat('Where is my order?');
 
 The owner's texts may greet the visitor by name: `{{first_name|there}}`, `{{name}}`, `{{company|your team}}` (the part after the bar is the fallback). The SDK fills them from the signed-in user (`ConferBotUser.name`, or `firstName` / `lastName` / `company` in its `metadata`) and a name the chat asked for, before anything reads the settings: the greeting card, the launcher's call-to-action and the home screen's title, description and button all show "Hi Sam", or "Hi there" when the name is not known. `identify` fills them again.
 
-### Push token registration
+### Push notifications
 
-Register a device token (FCM, APNs, or any provider) against the current chat session:
+When an agent or the AI replies while the visitor is not in the chat (the app is in the background or closed), the Conferbot server sends a push: FCM on Android, APNs on iOS. The SDK does not depend on Firebase or any push plugin; push is off until your app hands it a token.
+
+1. Get the token with your push plugin, e.g. `firebase_messaging` (`FirebaseMessaging.instance.getToken()`, an FCM token on both platforms) or the APNs device token as hex.
+2. Pass it to the provider. It is registered with the current conversation (`POST /api/v1/mobile/push/register` with `chatSessionId` and `tokenType`), again for each new conversation, and unregistered on `identify(null)` (or another user), `clearAllPersistedData()`, `clearCurrentSession()` and `unregisterPush()`.
+3. Forward notifications to `handlePushNotification`. It returns `true` when it was this bot's Conferbot message and opens its conversation (the chat, or that conversation in "Your requests"); a tap that started the app is opened once start-up is done.
 
 ```dart
-await provider.registerPushToken(deviceToken);
+final messaging = FirebaseMessaging.instance;
+await messaging.requestPermission();
+final token = await messaging.getToken();
+if (token != null) await provider.setPushToken(token, PushTokenType.fcm);
+messaging.onTokenRefresh.listen((t) => provider.setPushToken(t, PushTokenType.fcm));
+
+// Tapped while in the background, or the tap that started the app.
+FirebaseMessaging.onMessageOpenedApp.listen((m) => provider.handlePushNotification(m.data));
+final initial = await messaging.getInitialMessage();
+if (initial != null) provider.handlePushNotification(initial.data);
+
+// Arrived in the foreground: count it as unread instead of taking the screen.
+FirebaseMessaging.onMessage.listen((m) => provider.handlePushNotification(m.data, open: false));
 ```
 
-Signature: `Future<void> registerPushToken(String token)` - it posts to `/push/register` with the session ID and platform. It is a no-op until a chat session exists (open the chat first). The SDK does not itself integrate Firebase; you obtain the token in your app.
+- `setPushToken(String? token, [PushTokenType? type])`: an iOS app using `firebase_messaging` passes `PushTokenType.fcm`; without a type a 64-character hex token is taken as APNs. `setPushToken(null)` unregisters.
+- `handlePushNotification(Map<String, dynamic>? data, {bool open = true})` takes the notification's data map (`RemoteMessage.data`, an APNs `userInfo`). Outside the provider, `ConferbotPush.parse(data)` / `ConferbotPush.isConferbot(data)` say whether a notification is Conferbot's (data `source: "conferbot"`, `type: "conferbot_message"`, `botId`, `chatSessionId`, `messageId`, `senderType`, `senderName`, `body`).
+- Android: the server sends on the channel `conferbot_messages` (`pushChannelId`). The SDK draws no notifications: create that channel in your app (e.g. with `flutter_local_notifications`) so the visitor can control it; otherwise Android uses its fallback channel. One notification per conversation (collapse key / tag and iOS `thread-id` = the conversation).
+- `registerPushToken(token)` still works: it is `setPushToken(token)` (and no longer waits for an open chat).
+
+Server side: sending is off until the embed-server has `MOBILE_PUSH_ENABLED=true` and the FCM / APNs credentials (embed-server `docs/mobile-push.md`). The credentials are platform-wide for now: pushes reach only apps built on Conferbot's Firebase project and bundle id. Your own app's Firebase project / bundle id needs per-workspace credentials, which are not built yet (embed-server #197); until then its tokens register but FCM / APNs refuse its pushes.
 
 ### Knowledge base (help centre)
 
@@ -715,7 +736,10 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 | `focusComposer` | `void focusComposer()` | Put the cursor in the chat's composer |
 | `sendTypingStatus` | `void sendTypingStatus(bool isTyping)` | Visitor typing indicator |
 | `sendLiveChatTyping` | `void sendLiveChatTyping(bool isTyping)` | Typing indicator during live chat only |
-| `registerPushToken` | `Future<void> registerPushToken(String token)` | Register device push token |
+| `setPushToken` | `Future<void> setPushToken(String? token, [PushTokenType? type])` | [Push notifications](#push-notifications): register the device token with the conversation (null unregisters) |
+| `handlePushNotification` | `bool handlePushNotification(Map<String, dynamic>? data, {bool open = true})` | A Conferbot notification: true, and its conversation opened |
+| `unregisterPush` | `Future<void> unregisterPush()` | Stop this device's pushes |
+| `registerPushToken` | `Future<void> registerPushToken(String token)` | The older name of `setPushToken(token)` |
 | `on` / `off` / `emit` | `void on(String event, Function(dynamic) callback)` / `void off(String event, [Function(dynamic)? callback])` / `void emit(String event, [dynamic data])` | Raw socket events |
 | `loadMoreMessages` | `Future<void> loadMoreMessages()` | Load older messages (pagination) |
 | `refreshMessages` | `Future<void> refreshMessages()` | Reload messages from storage |
