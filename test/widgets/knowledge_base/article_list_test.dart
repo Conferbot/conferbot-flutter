@@ -15,7 +15,9 @@ void main() {
     return KnowledgeBaseArticle(
       id: id,
       title: title,
-      description: description ?? 'Test description',
+      summary: description ?? 'Test description',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
       categoryId: 'cat-1',
       categoryName: categoryName,
       readTimeMinutes: readTimeMinutes,
