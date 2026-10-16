@@ -206,7 +206,14 @@ class ConsentHandler extends _RichHandler {
         ChoiceOption(id: 'agree', text: text.isNotEmpty ? '✓ $text' : 'I agree', value: true),
         ChoiceOption(id: 'continue', text: consentContinueLabel(node.data), value: false),
       ],
-      extra: {'required': consentRequired(node.data), 'consentText': text},
+      // The card draws the text with its links (markdown-lite) and a box to tick.
+      extra: {
+        'step': 'consent',
+        'required': consentRequired(node.data),
+        'consentText': text,
+        'markdown': jsString(node.data['consentText'] ?? ''),
+        'continueLabel': consentContinueLabel(node.data),
+      },
     );
   }
 
@@ -439,7 +446,13 @@ class DateTimeNodeHandler extends _RichHandler {
       answerKey: node.data['answerVariable']?.toString(),
       mode: mode,
       showTimeSelection: mode != 'date',
-      extra: const {'datetime': true},
+      // The picker's bounds, the closed days and the button, as the web card.
+      extra: {
+        'datetime': true,
+        ...dateInputAttrs(node.data, node.ctx.now()),
+        'note': closedDaysNote(node.data),
+        'submitLabel': submitLabel(node.data),
+      },
     );
   }
 
@@ -534,7 +547,7 @@ class OtpNodeHandler extends _RichHandler {
 
   String _key(FlowNode node) => '_otp_${node.id}';
 
-  TextInputUIState _ui(FlowNode node, ChatState state, String stage) {
+  TextInputUIState _ui(FlowNode node, ChatState state, String stage, [String sentTo = '', num resendIn = otpResendSeconds]) {
     final p = prompt(node, state);
     final question = stage == 'email' ? (p.isNotEmpty ? p : 'Email address') : 'Enter the $otpLength-digit code we sent you';
     final skip = jsString(node.data['skipLabel'] ?? '').trim();
@@ -544,7 +557,15 @@ class OtpNodeHandler extends _RichHandler {
       inputType: stage == 'email' ? TextInputType.email : TextInputType.number,
       placeholder: stage == 'email' ? 'name@example.com' : '123456',
       answerKey: node.data['answerVariable']?.toString() ?? '',
-      extra: {'stage': stage, 'allowSkip': jsTruthy(node.data['allowSkip']), 'skipLabel': skip.isNotEmpty ? skip : 'Skip'},
+      extra: {
+        'step': 'otp',
+        'stage': stage,
+        'allowSkip': jsTruthy(node.data['allowSkip']),
+        'skipLabel': skip.isNotEmpty ? skip : 'Skip',
+        // The code card: where the code went and when it may be sent again.
+        if (sentTo.isNotEmpty) 'sentTo': sentTo,
+        if (stage == 'code') 'resendIn': resendIn,
+      },
     );
   }
 
@@ -583,11 +604,15 @@ class OtpNodeHandler extends _RichHandler {
       state.setVariable(_key(node), {'stage': 'code', 'email': target});
       final sentTo = _f(r.data, 'sentTo');
       botSay(state, 'We sent a $otpLength-digit code to ${jsTruthy(sentTo) ? jsString(sentTo) : target}', node.id, nodeType);
+      final shownTo = jsTruthy(sentTo) ? jsString(sentTo) : maskEmail(target);
       if (r.code == 'resend_wait') {
+        final wait = jsNumber(_f(r.data, 'retryAfter'));
         return NodeResult.invalid(otpErrorText('resend_wait', {'retryAfter': _f(r.data, 'retryAfter')}),
-            uiState: _ui(node, state, 'code'), inCard: true);
+            uiState: _ui(node, state, 'code', shownTo, wait.isFinite && wait > 0 ? jsNum(wait) : otpResendSeconds), inCard: true);
       }
-      return NodeResult.displayUI(_ui(node, state, 'code'), awaitInput: true);
+      final again = jsNumber(_f(r.data, 'resendIn'));
+      return NodeResult.displayUI(_ui(node, state, 'code', shownTo, again.isFinite && again > 0 ? jsNum(again) : otpResendSeconds),
+          awaitInput: true);
     }
     if (otpEndsStep(r.code)) {
       return _finish(node, state, false, '',
@@ -626,7 +651,7 @@ class OtpNodeHandler extends _RichHandler {
     final rawCode = _f(response, 'code');
     final code = (rawCode != null ? jsString(rawCode) : typedText(response)).replaceAll(RegExp(r'\D'), '');
     if (code.length != otpLength) {
-      return NodeResult.invalid(otpErrorText('invalid_code'), uiState: _ui(node, state, 'code'), inCard: true);
+      return NodeResult.invalid(otpErrorText('invalid_code'), uiState: _ui(node, state, 'code', maskEmail(st['email'])), inCard: true);
     }
     final r = await _richPost(node.ctx, 'otp/verify', {'nodeId': node.id, 'sessionId': _sessionOf(state), 'code': code});
     final res = r.ok ? r.data : {'verified': false, 'code': r.code};
@@ -637,7 +662,7 @@ class OtpNodeHandler extends _RichHandler {
     }
     if (_f(res, 'code') == 'locked') return _finish(node, state, false, '', 'locked');
     return NodeResult.invalid(otpErrorText(_f(res, 'code'), {'attemptsLeft': _f(res, 'attemptsLeft')}),
-        uiState: _ui(node, state, 'code'), inCard: true);
+        uiState: _ui(node, state, 'code', maskEmail(st['email'])), inCard: true);
   }
 }
 
@@ -661,7 +686,10 @@ class AddressNodeHandler extends _RichHandler {
         questionText: prompt(node, state),
         results: results.map((a) => a.toJson()).toList(),
         allowManualEntry: node.data['allowManual'] != false,
-        extra: {'showMap': node.data['showMap'] != false},
+        extra: {
+          'showMap': node.data['showMap'] != false,
+          'placeholder': jsString(node.data['placeholder'] ?? '').trim(),
+        },
       );
 
   NodeResult _finish(FlowNode node, ChatState state, AddressValue value, String source) {
@@ -1038,6 +1066,8 @@ class SignatureNodeHandler extends _RichHandler {
       inputType: TextInputType.text,
       placeholder: 'Your full name',
       answerKey: node.data['answerVariable']?.toString() ?? '',
+      // The signature card: a pad to draw on, typing when allowed, the full name when asked.
+      extra: {'step': 'signature', ...signatureConfig(node.data)},
     );
   }
 
@@ -1169,7 +1199,15 @@ class PaymentNodeHandler extends _RichHandler {
       buttonLabel: buttons.first['label'] as String,
       amount: s?.amount?.toDouble(),
       currency: s?.currency,
-      extra: {'checkoutUrl': url, 'buttons': buttons, 'waiting': s?.waiting == true, 'amountText': amountText},
+      extra: {
+        'checkoutUrl': url,
+        'buttons': buttons,
+        'waiting': s?.waiting == true,
+        'amountText': amountText,
+        // The card's head: what is paid for.
+        'productName': plainText(node.data['productName']),
+        'description': plainText(node.data['description']),
+      },
     );
   }
 
