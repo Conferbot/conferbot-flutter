@@ -173,6 +173,9 @@ help centre and push. The status per feature is in
 - The full test suite is green (2261 pass, 72 skipped).
 - The example's widget test pumps the example with no connection instead of the
   stock counter test, and `flutter analyze` in `example/` is clean (#92).
+- `SocketClient.onReconnect` fires on each reconnect. socket_io_client tells
+  `reconnect` on the Manager, not the Socket, so it never fired; the reconnect
+  attempts and the failure are heard on the Manager too (#93).
 
 ### Security
 
