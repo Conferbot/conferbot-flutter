@@ -415,7 +415,7 @@ class _TextInputNodeWidgetState extends State<TextInputNodeWidget> {
     // step that may be skipped (OTP) shows its Skip chip here.
     final extra = widget.state.extra;
     if (extra['allowSkip'] != true) return const SizedBox.shrink();
-    final label = (extra['skipLabel'] ?? 'Skip').toString();
+    final label = (extra['skipLabel'] ?? t('common.skip')).toString();
     return Padding(
       padding: EdgeInsets.only(left: widget.theme.layout.avatarSize + 10),
       child: Align(
@@ -517,7 +517,7 @@ class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'File too large. Maximum size is ${widget.state.maxSizeMb}MB.',
+                t('upload.overSize', {'mb': widget.state.maxSizeMb}),
               ),
             ),
           );
@@ -549,7 +549,7 @@ class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
       if (mounted) {
         setState(() => _isUploading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick file: $e')),
+          SnackBar(content: Text(t('sdk.file.pickFailed'))),
         );
       }
     }
@@ -588,7 +588,7 @@ class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
                       ),
                       SizedBox(height: widget.theme.spacing.sm),
                       Text(
-                        _selectedFileName ?? 'Tap to upload file',
+                        _selectedFileName ?? t('sdk.file.tapToUpload'),
                         style: TextStyle(
                           fontSize: widget.theme.typography.fontSizeMd,
                           color: widget.theme.colors.text,
@@ -596,7 +596,7 @@ class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
                       ),
                       SizedBox(height: widget.theme.spacing.xs),
                       Text(
-                        'Max ${widget.state.maxSizeMb}MB',
+                        t('sdk.file.maxSize', {'mb': widget.state.maxSizeMb}),
                         style: TextStyle(
                           fontSize: widget.theme.typography.fontSizeSm,
                           color: widget.theme.colors.textSecondary,
@@ -606,7 +606,7 @@ class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
                           widget.state.allowedTypes!.isNotEmpty) ...[
                         SizedBox(height: widget.theme.spacing.xs),
                         Text(
-                          'Allowed: ${widget.state.allowedTypes!.join(', ')}',
+                          t('sdk.file.allowed', {'types': widget.state.allowedTypes!.join(', ')}),
                           style: TextStyle(
                             fontSize: widget.theme.typography.fontSizeXs,
                             color: widget.theme.colors.textSecondary,
@@ -623,7 +623,7 @@ class _FileUploadNodeWidgetState extends State<FileUploadNodeWidget> {
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: _isUploading ? null : () => widget.onResponse(const {'skip': true}),
-              child: const Text('Skip'),
+              child: Text(t('common.skip')),
             ),
           ),
         ],
@@ -851,7 +851,7 @@ class _MultipleChoiceNodeWidgetState extends State<MultipleChoiceNodeWidget> {
               borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
             ),
           ),
-          child: const Text('Submit'),
+          child: Text(t('common.submit')),
         ),
       ],
     );
@@ -1159,7 +1159,7 @@ class _DropdownNodeWidgetState extends State<DropdownNodeWidget> {
               borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
               borderSide: BorderSide(color: widget.primaryColor, width: 2),
             ),
-            hintText: 'Select an option',
+            hintText: t('sdk.select.placeholder'),
           ),
           items: widget.state.options.map((option) {
             return DropdownMenuItem<ui_state.SelectOption>(
@@ -1250,7 +1250,7 @@ class _RangeNodeWidgetState extends State<RangeNodeWidget> {
           ],
         ),
         Text(
-          'Selected: ${_value.toInt()}',
+          t('sdk.slider.selected', {'n': _value.toInt()}),
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: widget.theme.typography.fontSizeMd,
@@ -1273,7 +1273,7 @@ class _RangeNodeWidgetState extends State<RangeNodeWidget> {
               borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
             ),
           ),
-          child: const Text('Submit'),
+          child: Text(t('common.submit')),
         ),
       ],
     );
@@ -1469,7 +1469,7 @@ class HumanHandoverNodeWidget extends StatelessWidget {
             CircularProgressIndicator(color: primaryColor),
             SizedBox(height: theme.spacing.md),
             Text(
-              state.handoverMessage ?? 'Connecting you to an agent...',
+              state.handoverMessage ?? t('sdk.wait.connecting'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeMd,
               ),
@@ -1478,7 +1478,7 @@ class HumanHandoverNodeWidget extends StatelessWidget {
             if (state.maxWaitTime != null) ...[
               SizedBox(height: theme.spacing.sm),
               Text(
-                'Estimated wait: ${state.maxWaitTime} minutes',
+                t('sdk.notify.estimatedWait', {'n': state.maxWaitTime}),
                 style: TextStyle(
                   fontSize: theme.typography.fontSizeSm,
                   color: theme.colors.textSecondary,
@@ -1508,7 +1508,7 @@ class HumanHandoverNodeWidget extends StatelessWidget {
             SizedBox(width: theme.spacing.sm),
             Expanded(
               child: Text(
-                '${state.agentName ?? "Agent"} has joined the chat',
+                t('system.hasJoined', {'name': state.agentName ?? t('agent.agent')}),
                 style: TextStyle(
                   fontSize: theme.typography.fontSizeMd,
                 ),
@@ -1537,7 +1537,7 @@ class HumanHandoverNodeWidget extends StatelessWidget {
             ),
             SizedBox(height: theme.spacing.sm),
             Text(
-              state.handoverMessage ?? 'No agents available',
+              state.handoverMessage ?? t('sdk.handover.noAgentsTitle'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeMd,
               ),
@@ -1730,7 +1730,7 @@ class BotMessageBubbleWithAvatar extends StatelessWidget {
     // The bot's avatar, size and shape as the web draws them, once its settings arrived.
     final look = provider.serverCustomizations != null ? provider.customizations : null;
     final avatarUrl = look?.avatar ?? provider.botAvatarUrl;
-    final botName = provider.botName ?? 'Bot';
+    final botName = provider.botName ?? t('sdk.message.botName');
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
