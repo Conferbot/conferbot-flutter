@@ -9,6 +9,7 @@ import '../core/live_chat/live_chat.dart';
 import '../core/live_chat/email_transcript.dart';
 import '../core/live_chat/live_chat_extras.dart';
 import '../core/live_chat/live_events.dart';
+import '../core/live_chat/post_chat_redirect.dart';
 import '../core/live_chat/reply_time.dart';
 import '../models/message.dart';
 import '../providers/conferbot_provider.dart';
@@ -19,7 +20,8 @@ import '../theme/conferbot_theme.dart';
 /// follow-up email card, the queue position, the "nobody could join" email
 /// ask, leave a message, a locked conversation, an agent's dropped
 /// connection, an agent asking for a file, the post-chat rating, "Email me
-/// this chat" and the closed chat (blocked, or ended with a new chat).
+/// this chat", the closed chat (blocked, or ended with a new chat) and the
+/// post-chat redirect's countdown.
 /// State is on [ConferBotProvider.liveChat] (core/live_chat).
 
 class _LiveCard extends StatelessWidget {
@@ -608,6 +610,7 @@ class LiveChatFooter extends StatelessWidget {
       if (live.csatConfig != null && live.csatOpen) _CsatCard(liveChat: live, theme: theme),
       if (live.mailSentTo != null || live.mailOpen) EmailTranscriptCard(liveChat: live, theme: theme),
       if (closed != null) ClosedChatCard(closed: closed, theme: theme, onNewChat: provider.startNewChat),
+      if (provider.postChatRedirect.line != null) PostChatRedirectLine(redirect: provider.postChatRedirect, theme: theme),
     ];
     if (receipt == null && cards.isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -625,6 +628,95 @@ class LiveChatFooter extends StatelessWidget {
               ),
             ),
           for (var i = 0; i < cards.length; i++) ...[if (i > 0) const SizedBox(height: 8), cards[i]],
+        ],
+      ),
+    );
+  }
+}
+
+/// The owner's post-chat redirect under the ended conversation
+/// (core/live_chat/post_chat_redirect.dart; web .cb-redirect): "Taking you
+/// to example.com in 10s" with Cancel. A screen reader hears the first
+/// sentence once; the ticking number is hidden from it. When the system
+/// could not open the URL, a "Continue to example.com" button. The app
+/// going to the background stops it.
+class PostChatRedirectLine extends StatefulWidget {
+  final PostChatRedirect redirect;
+  final ConferBotTheme theme;
+  const PostChatRedirectLine({super.key, required this.redirect, required this.theme});
+
+  @override
+  State<PostChatRedirectLine> createState() => _PostChatRedirectLineState();
+}
+
+class _PostChatRedirectLineState extends State<PostChatRedirectLine> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden || state == AppLifecycleState.detached) {
+      widget.redirect.cancel();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final line = widget.redirect.line;
+    if (line == null) return const SizedBox.shrink();
+    final theme = widget.theme;
+    final small = TextStyle(color: theme.colors.systemBubbleText, fontSize: 12);
+    if (line.phase == RedirectPhase.continueLink) {
+      return Center(
+        key: const ValueKey('cb-redirect'),
+        child: Semantics(
+          link: true,
+          child: InkWell(
+            key: const ValueKey('cb-redirect-go'),
+            onTap: () => unawaited(widget.redirect.continueNow()),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              child: Text(line.text, style: small.copyWith(color: theme.colors.primary, decoration: TextDecoration.underline)),
+            ),
+          ),
+        ),
+      );
+    }
+    return Center(
+      key: const ValueKey('cb-redirect'),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        alignment: WrapAlignment.center,
+        spacing: 10,
+        children: [
+          Semantics(
+            liveRegion: true,
+            label: line.said,
+            child: ExcludeSemantics(child: Text(line.text, key: const ValueKey('cb-redirect-text'), textAlign: TextAlign.center, style: small)),
+          ),
+          if (line.phase == RedirectPhase.counting)
+            Semantics(
+              button: true,
+              label: line.cancelLabel,
+              excludeSemantics: true,
+              child: InkWell(
+                key: const ValueKey('cb-redirect-cancel'),
+                onTap: widget.redirect.cancel,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  child: Text(line.cancelText, style: small.copyWith(color: theme.colors.text, decoration: TextDecoration.underline)),
+                ),
+              ),
+            ),
         ],
       ),
     );
