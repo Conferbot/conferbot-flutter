@@ -151,7 +151,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Leave Queue'), findsOneWidget);
+      expect(find.text('Leave queue'), findsOneWidget);
     });
 
     testWidgets('calls onCancel when cancel button is tapped',
@@ -174,7 +174,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Leave Queue'));
+      await tester.tap(find.text('Leave queue'));
       await tester.pump();
 
       expect(cancelCalled, isTrue);
