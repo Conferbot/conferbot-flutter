@@ -281,7 +281,7 @@ class _SliderNodeWidgetState extends State<SliderNodeWidget> {
             StepActions(children: [
               StepButton(
                 key: const ValueKey('slider-go'),
-                label: s.submitLabel,
+                label: s.submitLabel.isNotEmpty ? s.submitLabel : t('common.send'),
                 style: style,
                 primary: true,
                 onPressed: _done
@@ -398,7 +398,7 @@ class _RankingNodeWidgetState extends State<RankingNodeWidget> {
             StepActions(children: [
               StepButton(
                 key: const ValueKey('rank-go'),
-                label: widget.state.submitLabel,
+                label: widget.state.submitLabel.isNotEmpty ? widget.state.submitLabel : t('common.send'),
                 style: style,
                 primary: true,
                 onPressed: _done
@@ -513,7 +513,7 @@ class _MatrixNodeWidgetState extends State<MatrixNodeWidget> {
                   Expanded(child: Text(t('matrix.progress', {'n': answered, 'total': s.rows.length}), style: style.hint)),
                   StepButton(
                     key: const ValueKey('mx-go'),
-                    label: s.submitLabel,
+                    label: s.submitLabel.isNotEmpty ? s.submitLabel : t('common.submit'),
                     style: style,
                     primary: true,
                     onPressed: _sent
