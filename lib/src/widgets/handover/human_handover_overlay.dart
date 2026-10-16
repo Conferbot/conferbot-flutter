@@ -427,9 +427,16 @@ class HandoverStatusIndicator extends StatelessWidget {
   final ConferBotTheme? theme;
   final VoidCallback? onTap;
 
+  /// The wait card's deadline (ms since the epoch, `LiveChatExtras.waitEndsAt`)
+  /// and its clock: the time shown while waiting. No time without it (#87).
+  final int? waitEndsAt;
+  final int Function()? now;
+
   const HandoverStatusIndicator({
     super.key,
     required this.uiState,
+    this.waitEndsAt,
+    this.now,
     this.queueInfo,
     this.agent,
     this.isAgentTyping = false,
@@ -445,7 +452,8 @@ class HandoverStatusIndicator extends StatelessWidget {
     switch (uiState.state) {
       case HandoverState.waitingForAgent:
         return CompactQueueStatus(
-          maxWaitMinutes: uiState.maxWaitTime ?? 5,
+          endsAt: waitEndsAt,
+          now: now,
           queueInfo: queueInfo,
           primaryColor: primaryColor,
           theme: effectiveTheme,
