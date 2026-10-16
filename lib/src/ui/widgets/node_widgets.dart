@@ -5,6 +5,7 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../../core/flow/i18n_en.dart' show t;
+import '../../core/flow/location.dart';
 import '../../core/nodes/node_ui_state.dart' as ui_state;
 import '../../widgets/delight/delight_views.dart' show RatingSparks;
 import '../../core/live_chat/live_chat.dart';
@@ -54,6 +55,19 @@ class NodeRenderer extends StatelessWidget {
   /// shown on the card.
   final String? error;
 
+  /// "Use my location" on the address step: this, else the chat's
+  /// `ConferBotConfig.locationProvider`; none draws no button.
+  final ConferBotLocationProvider? locationProvider;
+
+  /// The app's location provider from the chat's ConferBotProvider, if any.
+  static ConferBotLocationProvider? _appLocationProvider(BuildContext context) {
+    try {
+      return Provider.of<ConferBotProvider>(context, listen: false).config.locationProvider;
+    } on ProviderNotFoundException {
+      return null;
+    }
+  }
+
   const NodeRenderer({
     super.key,
     required this.uiState,
@@ -62,6 +76,7 @@ class NodeRenderer extends StatelessWidget {
     this.theme,
     this.stepKey,
     this.error,
+    this.locationProvider,
   });
 
   /// The cards that keep their draft through a refusal of the same visit.
@@ -182,7 +197,14 @@ class NodeRenderer extends StatelessWidget {
       return MatrixNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme, error: error);
     }
     if (state is ui_state.AddressUIState) {
-      return AddressStepWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme, error: error);
+      return AddressStepWidget(
+        state: state,
+        onResponse: onResponse,
+        primaryColor: effectivePrimaryColor,
+        theme: effectiveTheme,
+        error: error,
+        locationProvider: locationProvider ?? _appLocationProvider(context),
+      );
     }
 
     return const SizedBox.shrink();
