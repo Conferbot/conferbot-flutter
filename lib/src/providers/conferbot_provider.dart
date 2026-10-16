@@ -23,6 +23,7 @@ import '../utils/logger.dart';
 import '../utils/chat_markdown.dart';
 import '../core/agent/agent_bot.dart';
 import '../core/agent/answer_feedback.dart';
+import '../core/flow/location.dart';
 import '../core/help_centre/article_engagement.dart';
 import '../core/help_centre/help_centre.dart';
 import '../models/knowledge_base.dart';
@@ -102,6 +103,13 @@ class ConferBotConfig {
   /// Never follow the owner's post-chat redirect (default false).
   final bool disablePostChatRedirect;
 
+  /// "Use my location" on the address step, optional: the SDK reads no
+  /// position itself and adds no location plugin. Give it the device's
+  /// position (for example with `geolocator`; see the README): return null
+  /// when it cannot be found, throw [ConferBotLocationDenied] when access
+  /// is refused. Without it the button is not drawn.
+  final ConferBotLocationProvider? locationProvider;
+
   const ConferBotConfig({
     this.enableNotifications = true,
     this.enableOfflineMode = true,
@@ -117,6 +125,7 @@ class ConferBotConfig {
     this.widgetLanguage,
     this.onPostChatRedirect,
     this.disablePostChatRedirect = false,
+    this.locationProvider,
   });
 }
 
