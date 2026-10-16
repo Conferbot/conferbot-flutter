@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/constants.dart';
+import '../core/i18n/i18n.dart';
 import '../models/knowledge_base.dart';
 import '../utils/logger.dart';
 
@@ -135,7 +136,7 @@ class KnowledgeBaseService {
       } else {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
         return KBApiResponse.failure(
-          jsonData['error'] as String? ?? 'Failed to fetch articles',
+          jsonData['error'] as String? ?? t('sdk.kb.articlesFetchFailed'),
           message: jsonData['message'] as String?,
         );
       }
@@ -218,11 +219,11 @@ class KnowledgeBaseService {
         final articleData = jsonData['data'] as Map<String, dynamic>? ?? jsonData;
         return KBApiResponse.success(KnowledgeBaseArticle.fromJson(articleData));
       } else if (response.statusCode == 404) {
-        return KBApiResponse.failure('Article not found');
+        return KBApiResponse.failure(t('sdk.kb.articleNotFound'));
       } else {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
         return KBApiResponse.failure(
-          jsonData['error'] as String? ?? 'Failed to fetch article',
+          jsonData['error'] as String? ?? t('sdk.kb.articleFetchFailed'),
           message: jsonData['message'] as String?,
         );
       }
@@ -274,12 +275,12 @@ class KnowledgeBaseService {
 
         return KBApiResponse.success(
           ArticleRating.fromJson(ratingData),
-          message: 'Thank you for your feedback!',
+          message: t('csat.thanks'),
         );
       } else {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
         return KBApiResponse.failure(
-          jsonData['error'] as String? ?? 'Failed to submit rating',
+          jsonData['error'] as String? ?? t('sdk.kb.rateFailed'),
           message: jsonData['message'] as String?,
         );
       }
@@ -380,7 +381,7 @@ class KnowledgeBaseService {
       } else {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
         return KBApiResponse.failure(
-          jsonData['error'] as String? ?? 'Search failed',
+          jsonData['error'] as String? ?? t('sdk.kb.searchFailed'),
           message: jsonData['message'] as String?,
         );
       }
@@ -404,7 +405,7 @@ class KnowledgeBaseService {
         return KBApiResponse.success(KnowledgeBaseData.fromJson(jsonData));
       }
       return KBApiResponse.failure(
-        jsonData['error'] as String? ?? 'Failed to load the help centre',
+        jsonData['error'] as String? ?? t('sdk.kb.helpCentreLoadFailed'),
         message: jsonData['message'] as String?,
       );
     } catch (e) {
