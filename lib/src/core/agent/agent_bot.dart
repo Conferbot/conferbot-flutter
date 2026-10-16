@@ -206,20 +206,59 @@ class AIReplyExtras {
       };
 }
 
-/// A visitor's vote on one AI answer.
+/// A visitor's vote on one AI answer: helpful or not, and for a No the
+/// reason and a comment (web ts/chat/answerFeedback.ts). See
+/// answer_feedback.dart for the "Helpful?" row's steps.
 class AnswerFeedback {
   final bool helpful;
   final String? reason;
-  const AnswerFeedback(this.helpful, [this.reason]);
+  final String? comment;
+  const AnswerFeedback(this.helpful, [this.reason, this.comment]);
 
-  Map<String, dynamic> toJson() => {'helpful': helpful, if (reason != null) 'reason': reason};
+  Map<String, dynamic> toJson() => {
+        'helpful': helpful,
+        if (reason != null) 'reason': reason,
+        if (comment != null) 'comment': comment,
+      };
 
-  static AnswerFeedback? fromJson(dynamic raw) =>
-      raw is Map && raw['helpful'] is bool ? AnswerFeedback(raw['helpful'] as bool, raw['reason'] as String?) : null;
+  /// A stored vote, or null when it is not one (web normalizeFeedback): a
+  /// Yes keeps no reason or comment, an unknown reason is dropped, the
+  /// comment is trimmed to 500 characters.
+  static AnswerFeedback? fromJson(dynamic raw) {
+    if (raw is! Map || raw['helpful'] is! bool) return null;
+    final helpful = raw['helpful'] as bool;
+    if (helpful) return const AnswerFeedback(true);
+    final reason = AgentBotParser.feedbackReasons.any((r) => r.$1 == raw['reason']) ? raw['reason'] as String : null;
+    final c = raw['comment'] is String ? (raw['comment'] as String).trim() : '';
+    return AnswerFeedback(false, reason, c.isEmpty ? null : (c.length > 500 ? c.substring(0, 500) : c));
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is AnswerFeedback && other.helpful == helpful && other.reason == reason && other.comment == comment;
+
+  @override
+  int get hashCode => Object.hash(helpful, reason, comment);
+
+  @override
+  String toString() => 'AnswerFeedback(${toJson()})';
 }
 
 class AgentBotParser {
   AgentBotParser._();
+
+  /// How long the "writing a reply" dots may wait for the AI (web
+  /// agentListeners.ts AWAITING_REPLY_MAX_MS): the AI path stays silent when
+  /// the provider fails twice, so without a ceiling they would run forever.
+  static const awaitReply = Duration(seconds: 45);
+
+  /// Said when that ceiling is hit, so the dots do not just vanish (web chat.replyTimeout).
+  static const replyTimeoutText = 'That took too long. Try again, or ask for a human.';
+
+  /// The notice's on-screen line: its id and words. Not part of the
+  /// conversation's record, as on the web.
+  static ({String id, String text}) replyTimeoutNotice([DateTime? now]) =>
+      (id: 'reply-timeout-${(now ?? DateTime.now()).millisecondsSinceEpoch}', text: replyTimeoutText);
 
   static const defaultAgentName = 'AI Assistant';
   static const defaultGreeting = 'Hi! How can I help you today?';
