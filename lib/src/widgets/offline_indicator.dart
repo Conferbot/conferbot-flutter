@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/i18n/i18n.dart';
 import '../services/connectivity_service.dart';
 import '../services/message_queue_service.dart';
 import '../theme/conferbot_theme.dart';
@@ -172,7 +173,7 @@ class _OfflineIndicatorState extends State<OfflineIndicator>
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   child: Text(
-                    'Send Now',
+                    t('sdk.offline.sendNow'),
                     style: TextStyle(
                       fontSize: effectiveTheme.typography.fontSizeSm,
                       fontWeight: effectiveTheme.typography.fontWeightBold,
@@ -191,14 +192,14 @@ class _OfflineIndicatorState extends State<OfflineIndicator>
     if (isOffline) {
       if (pendingCount > 0 && widget.showPendingCount) {
         return widget.offlineMessage ??
-            'You\'re offline. $pendingCount message${pendingCount > 1 ? 's' : ''} will be sent when connected.';
+            tPlural('sdk.offline.willSend', pendingCount);
       }
-      return widget.offlineMessage ?? 'You\'re offline. Messages will be queued.';
+      return widget.offlineMessage ?? t('sdk.offline.messagesWillSend');
     }
 
     if (pendingCount > 0 && widget.showPendingCount) {
       return widget.pendingMessage ??
-          'Sending $pendingCount queued message${pendingCount > 1 ? 's' : ''}...';
+          tPlural('sdk.offline.sendingQueued', pendingCount);
     }
 
     return '';
@@ -255,7 +256,7 @@ class OfflineBadge extends StatelessWidget {
               ),
               SizedBox(width: effectiveTheme.spacing.xs),
               Text(
-                isOnline ? 'Online' : 'Offline',
+                isOnline ? t('status.online') : t('sdk.status.offline'),
                 style: TextStyle(
                   fontSize: effectiveTheme.typography.fontSizeXs,
                   color:
@@ -317,7 +318,7 @@ class PendingMessagesIndicator extends StatelessWidget {
                 ),
                 SizedBox(width: effectiveTheme.spacing.xs),
                 Text(
-                  '$pendingCount pending',
+                  tPlural('sdk.offline.pending', pendingCount),
                   style: TextStyle(
                     fontSize: effectiveTheme.typography.fontSizeXs,
                     color: effectiveTheme.colors.warning,
