@@ -1,9 +1,9 @@
 name: conferbot_flutter
 description: Official Flutter SDK for Conferbot - Beautiful native chat widget for iOS and Android
-version: 1.0.0
+version: 2.0.0
 homepage: https://docs.conferbot.com/mobile/flutter
-repository: https://github.com/conferbot/flutter-sdk
-# No license field - proprietary
+repository: https://github.com/Conferbot/conferbot-flutter
+issue_tracker: https://github.com/Conferbot/conferbot-flutter/issues
 
 topics:
   - chatbot
@@ -57,6 +57,7 @@ dependencies:
 
   # Rich Text / Markdown Rendering
   flutter_markdown: ^0.6.18
+  markdown: ^7.1.1 # imported by the markdown message widget
   flutter_html: ^3.0.0-beta.2
   flutter_highlighter: ^0.1.1
   timezone: ^0.11.2
@@ -75,6 +76,11 @@ dev_dependencies:
 
   # Hive code generation
   hive_generator: ^2.0.1
+
+  # Imported by the tests (asset hashes, path_provider fakes)
+  crypto: ^3.0.3
+  path_provider_platform_interface: ^2.1.2
+  plugin_platform_interface: ^2.1.8
 
 flutter:
   uses-material-design: true
