@@ -14,9 +14,15 @@
 ///                         {reason: unavailable | cancelled | ended}.
 ///
 /// No personal data (the visitor's email) is ever put in a detail. Pure.
+///
+/// Also the AI escalation's max wait ([EscalationNudge], web
+/// handoverWaiting.ts armAIEscalationNudge, special.ts
+/// _handleAIEscalationWait).
 library;
 
 import 'dart:async';
+
+import 'live_chat.dart';
 
 class WidgetSignals {
   WidgetSignals._();
@@ -131,5 +137,80 @@ class WidgetSignalBus {
       }
     }
     return n;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The AI escalation's max wait (web handoverWaiting.ts armAIEscalationNudge,
+// special.ts _handleAIEscalationWait; RN src/core/handoverWaiting.ts)
+// ---------------------------------------------------------------------------
+
+/// After an AI escalation's max wait, how much longer the server is given before it is nudged.
+const serverGrace = Duration(seconds: 30);
+
+/// The handover step's max wait (minutes; 2 when unset) plus the grace.
+Duration aiEscalationNudgeAfter(dynamic maxWaitTimeMinutes) =>
+    Duration(milliseconds: (LiveChat.waitMinutes(maxWaitTimeMinutes) * 60000).round()) + serverGrace;
+
+/// Does this agent-left start the escalation's wait? Only an AI agent
+/// handing the visitor on: a person leaving is not an escalation, and an
+/// inactivity close ends the chat (ai-agent-inactive-close).
+bool startsEscalationWait(dynamic data) {
+  if (data is! Map) return false;
+  final details = data['agentDetails'];
+  return details is Map && details['isAIAgent'] == true && data['reason'] != 'visitor_inactive';
+}
+
+/// The handover step an escalation waits on: the flow's current handover
+/// step, else (an agent bot, whose silent handover is not a flow step) the
+/// latest handover step in the record.
+Map<String, dynamic>? escalationHandoverData(Map<String, dynamic>? stepData, List<dynamic>? record) {
+  if (stepData != null) return stepData;
+  final list = record ?? const [];
+  for (var i = list.length - 1; i >= 0; i--) {
+    final r = list[i];
+    if (r is! Map) continue;
+    if ((r['type'] == 'human-handover-node' || r['shape'] == 'human-handover-node') && r['data'] is Map) {
+      return Map<String, dynamic>.from(r['data'] as Map);
+    }
+  }
+  return null;
+}
+
+/// After the AI escalates, the server owns the wait: it hands the chat back
+/// to the AI and says so (handover-waiting), or sends no-agents-available.
+/// This timer never draws anything; it only nudges (handover-timeout) a
+/// server that lost its own timer, the step's max wait plus 30s after the
+/// AI left.
+///
+///   arm(maxWait)  the AI escalated: (re)start the timer (one per chat).
+///   clear()       someone accepted, the server's handover-waiting or
+///                 no-agents-available came, the visitor left the queue, the
+///                 chat ended or closed for inactivity, the visitor was
+///                 blocked.
+class EscalationNudge {
+  EscalationNudge(this._nudge, {SetTimer? setTimer, ClearTimer? clearTimer})
+      : _set = setTimer ?? _setTimer,
+        _clear = clearTimer ?? _clearTimer;
+
+  final void Function() _nudge;
+  final SetTimer _set;
+  final ClearTimer _clear;
+  Object? _timer;
+
+  bool get pending => _timer != null;
+
+  void arm(dynamic maxWaitTimeMinutes) {
+    clear();
+    _timer = _set(() {
+      _timer = null;
+      _nudge();
+    }, aiEscalationNudgeAfter(maxWaitTimeMinutes));
+  }
+
+  void clear() {
+    final t = _timer;
+    if (t != null) _clear(t);
+    _timer = null;
   }
 }
