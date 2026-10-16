@@ -18,23 +18,24 @@ library;
 
 import 'dart:async';
 
+import '../i18n/i18n.dart' show I18n, t;
 import '../live_chat/handover_waiting.dart' show SetTimer, ClearTimer;
 import 'games_logic.dart';
 import 'waiting_games.dart';
 
-/// The card's words (web i18n/en.ts "games.*").
+/// The card's words (web ui.ts, "games.*"), in the active language.
 class GamesText {
   GamesText._();
-  static const card = 'Games while you wait';
-  static const close = 'Close games';
-  static const pick = 'Pick a game';
-  static const again = 'Play again';
-  static const another = 'Another game';
-  static const notNow = 'Not now';
-  static String pausedNamed(String name) => "$name's here!";
-  static const pausedSomeone = "Someone's here!";
-  static const pausedSaved = 'Your game is saved - finish it later?';
-  static const resume = 'Finish my game';
+  static String get card => t('games.card');
+  static String get close => t('games.close');
+  static String get pick => t('games.pick');
+  static String get again => t('games.again');
+  static String get another => t('games.another');
+  static String get notNow => t('common.notNow');
+  static String pausedNamed(String name) => t('games.paused.named', {'name': name});
+  static String get pausedSomeone => t('games.paused.someone');
+  static String get pausedSaved => t('games.paused.saved');
+  static String get resume => t('games.paused.resume');
 }
 
 /// A footer button's key: notNow, again, another, action ("Next"), resume.
@@ -291,6 +292,7 @@ class _Ctx {
     required this.categories,
     required this.recent,
     required this.plays,
+    required this.lang,
     required this.meta,
     required this.status,
     required this.finish,
@@ -308,6 +310,9 @@ class _Ctx {
   final List categories;
   final List recent;
   final int plays;
+
+  /// The language the quiz and the scramble are in.
+  final String lang;
   final void Function(String text) meta;
   final void Function(String text) status;
   final void Function(String text, bool win) finish;
@@ -332,12 +337,13 @@ abstract class _Game {
 
 // ------------------------------------------------------------------ games
 
-String _handLower(String h) => handName[h]!.toLowerCase();
+// German nouns keep their capital (web ui.ts handLower).
+String _handLower(String h) => I18n.language == 'de' ? handName[h]! : handName[h]!.toLowerCase();
 
 class _Rps extends _Game {
   _Rps(this.ctx) {
     _show();
-    ctx.status('First to two wins. Pick your hand!');
+    ctx.status(t('games.rps.intro'));
   }
 
   final _Ctx ctx;
@@ -349,17 +355,20 @@ class _Rps extends _Game {
   bool _shaking = false;
   bool _busy = false;
 
-  void _show() => ctx.meta('You $_you · $_bot Bot');
+  void _show() => ctx.meta(t('games.rps.score', {'you': _you, 'bot': _bot}));
 
   @override
-  Board board() => RpsBoard(
+  Board board() {
+    final names = handName;
+    return RpsBoard(
         you: _youFace,
         bot: _botFace,
         outcome: _outcome,
         shaking: _shaking,
         busy: _busy,
-        hands: [for (final h in hands) RpsHand(h, handEmoji[h]!, handName[h]!)],
+        hands: [for (final h in hands) RpsHand(h, handEmoji[h]!, names[h]!)],
       );
+  }
 
   @override
   void input(GameInput a) {
@@ -381,14 +390,16 @@ class _Rps extends _Game {
       if (r == 'lose') _bot += 1;
       _show();
       final line = r == 'draw'
-          ? '${handName[mine]} and ${_handLower(theirs)} - a draw!'
+          ? t('games.rps.draw', {'a': handName[mine], 'b': _handLower(theirs)})
           : r == 'win'
-              ? '${handName[mine]} beats ${_handLower(theirs)} - point to you!'
-              : '${handName[theirs]} beats ${_handLower(mine)} - point to the bot.';
+              ? t('games.rps.youPoint', {'a': handName[mine], 'b': _handLower(theirs)})
+              : t('games.rps.botPoint', {'a': handName[theirs], 'b': _handLower(mine)});
       final w = rpsWinner(you: _you, bot: _bot);
       if (w != null) {
         ctx.finish(
-          w == 'you' ? '$line You win $_you-$_bot! 🎉' : '$line The bot takes it $_bot-$_you. Rematch? 🤖',
+          w == 'you'
+              ? '$line ${t('games.rps.youWin', {'you': _you, 'bot': _bot})}'
+              : '$line ${t('games.rps.botWins', {'bot': _bot, 'you': _you})}',
           w == 'you',
         );
         return;
@@ -401,7 +412,7 @@ class _Rps extends _Game {
       reveal();
     } else {
       _shaking = true;
-      ctx.status('Rock... paper... scissors...');
+      ctx.status(t('games.rps.shake'));
       ctx.later(reveal, 900);
     }
   }
@@ -409,12 +420,12 @@ class _Rps extends _Game {
 
 class _Ttt extends _Game {
   _Ttt(this.ctx) {
-    ctx.meta('You ✕ · Bot ◯');
+    ctx.meta(t('games.ttt.meta'));
     // Turns alternate between games: the bot opens every second one.
     if (ctx.plays % 2 == 1) {
       _botTurn();
     } else {
-      ctx.status('You go first - tap a square');
+      ctx.status(t('games.ttt.youFirst'));
     }
   }
 
@@ -430,23 +441,23 @@ class _Ttt extends _Game {
     _over = true;
     _line = w.line;
     if (w.winner == 'X') {
-      ctx.finish('Three in a row - you beat the bot! 🎉', true);
+      ctx.finish(t('games.ttt.win'), true);
     } else if (w.winner == 'O') {
-      ctx.finish('The bot got this one. Rematch? 🤖', false);
+      ctx.finish(t('games.ttt.lose'), false);
     } else {
-      ctx.finish('A draw - great minds think alike 🤝', false);
+      ctx.finish(t('games.ttt.draw'), false);
     }
     return true;
   }
 
   void _botTurn() {
     _busy = true;
-    ctx.status('The bot is thinking...');
+    ctx.status(t('games.ttt.thinking'));
     ctx.later(() {
       final m = tttBotMove(_cells, ctx.rng);
       if (m >= 0) _cells[m] = 'O';
       _busy = false;
-      if (!_check()) ctx.status('Your move');
+      if (!_check()) ctx.status(t('games.ttt.yourMove'));
     }, ctx.reduced ? 250 : 550);
   }
 
@@ -465,7 +476,7 @@ class _Ttt extends _Game {
 class _Memory extends _Game {
   _Memory(this.ctx) : _s = MemoryState(cards: memoryDeck(memoryFaces, 6, ctx.rng)) {
     _paint();
-    ctx.status('Find all six pairs');
+    ctx.status(t('games.memory.intro'));
   }
 
   final _Ctx ctx;
@@ -475,7 +486,7 @@ class _Memory extends _Game {
 
   void _paint() {
     final pairs = _s.cards.where((c) => c.matched).length ~/ 2;
-    ctx.meta('Moves ${_s.moves} · Pairs $pairs/6');
+    ctx.meta(t('games.memory.meta', {'moves': _s.moves, 'pairs': pairs}));
   }
 
   @override
@@ -496,7 +507,7 @@ class _Memory extends _Game {
     _pop = const [];
     _paint();
     if (r.result == 'match') {
-      ctx.status('A pair! ✨');
+      ctx.status(t('games.memory.pair'));
       // The pair just made (the card tapped and its twin).
       final face = _s.cards[a.i].face;
       _pop = [
@@ -504,7 +515,7 @@ class _Memory extends _Game {
           if (_s.cards[i].face == face) i,
       ];
     } else if (r.result == 'miss') {
-      ctx.status('Not a pair');
+      ctx.status(t('games.memory.noPair'));
       _waiting = true;
       ctx.later(() {
         _s = memoryHide(_s);
@@ -512,7 +523,7 @@ class _Memory extends _Game {
         _paint();
       }, 850);
     } else if (r.result == 'done') {
-      ctx.finish('All pairs in ${_s.moves} moves! ${'⭐' * memoryStars(_s.moves)}', true);
+      ctx.finish('${t('games.memory.done', {'moves': _s.moves})} ${'⭐' * memoryStars(_s.moves)}', true);
     }
   }
 }
@@ -526,7 +537,7 @@ class _Round {
   final int answer;
 }
 
-const _right = ['Correct! 🎯', 'Spot on! ✨', 'Nailed it! 🙌', 'Yes! 🎉'];
+const _right = ['games.right.1', 'games.right.2', 'games.right.3', 'games.right.4'];
 String _pickLine(List<String> xs, Rng rng) => xs[(rng() * xs.length).floor() % xs.length];
 
 /// Shared by the quiz and the emoji riddles: a round at a time, three in all.
@@ -544,7 +555,7 @@ class _ChoiceRounds extends _Game {
   int? _picked;
   int _shown = 0;
 
-  void _meta() => ctx.meta('${_shown + 1} of ${rounds.length} · $_score right');
+  void _meta() => ctx.meta(t('games.choice.meta', {'n': _shown + 1, 'total': rounds.length, 'score': _score}));
 
   void _showRound() {
     _shown = _at;
@@ -568,7 +579,7 @@ class _ChoiceRounds extends _Game {
     if (right) _score += 1;
     _meta();
     if (right) ctx.cheer();
-    final fb = right ? _pickLine(_right, ctx.rng) : "Not quite - it's ${r.options[r.answer]}";
+    final fb = right ? _pickLine([for (final k in _right) t(k)], ctx.rng) : t('games.choice.wrong', {'answer': r.options[r.answer]});
     _at += 1;
     if (_at >= rounds.length) {
       final s = summary(_score, rounds.length);
@@ -576,7 +587,7 @@ class _ChoiceRounds extends _Game {
       return;
     }
     ctx.status(fb);
-    ctx.action(_at == rounds.length - 1 ? 'Last one →' : 'Next →', _showRound);
+    ctx.action(_at == rounds.length - 1 ? t('games.choice.last') : t('games.choice.next'), _showRound);
   }
 }
 
@@ -584,22 +595,22 @@ _Game _quiz(_Ctx ctx) {
   final kb = ctx.c is Map && ctx.c['enableKnowledgeBase'] == true
       ? quizFromArticles(ctx.categories, ctx.recent, ctx.rng)
       : <QuizQuestion>[];
-  final qs = buildQuiz(trivia, kb, ctx.rng);
-  ctx.status(kb.isNotEmpty ? 'Three questions - some about our help centre' : 'Three quick questions');
+  final qs = buildQuiz(triviaFor(ctx.lang), kb, ctx.rng);
+  ctx.status(kb.isNotEmpty ? t('games.quiz.introKb') : t('games.quiz.intro'));
   return _ChoiceRounds(
     ctx,
     'quiz',
     [
       for (final q in qs)
-        _Round(q: q.q, options: q.options, answer: q.answer, tag: q.source == 'kb' ? 'From our help centre' : null),
+        _Round(q: q.q, options: q.options, answer: q.answer, tag: q.source == 'kb' ? t('games.quiz.fromKb') : null),
     ],
-    (score, total) => (text: '$score out of $total. ${quizVerdict(score, total)}', win: score == total),
+    (score, total) => (text: '${t('games.quiz.score', {'score': score, 'total': total})} ${quizVerdict(score, total)}', win: score == total),
   );
 }
 
 _Game _emoji(_Ctx ctx) {
   final picked = shuffle(riddles, ctx.rng).take(3).toList();
-  ctx.status('What phrase do the emoji spell?');
+  ctx.status(t('games.emoji.intro'));
   return _ChoiceRounds(
     ctx,
     'emoji',
@@ -607,10 +618,10 @@ _Game _emoji(_Ctx ctx) {
       for (final r in picked)
         () {
           final o = riddleOptions(r, ctx.rng);
-          return _Round(big: r.e, q: "What's the phrase?", options: o.options, answer: o.answer);
+          return _Round(big: r.e, q: t('games.emoji.q'), options: o.options, answer: o.answer);
         }(),
     ],
-    (score, total) => (text: '$score of $total riddles solved. ${quizVerdict(score, total)}', win: score == total),
+    (score, total) => (text: '${t('games.emoji.score', {'score': score, 'total': total})} ${quizVerdict(score, total)}', win: score == total),
   );
 }
 
@@ -618,15 +629,15 @@ const reactionRounds = 3;
 
 class _Reaction extends _Game {
   _Reaction(this.ctx) {
-    ctx.meta('Round 1 of $reactionRounds');
-    ctx.status('When the pad turns green, tap as fast as you can');
+    ctx.meta(t('games.reaction.round', {'n': 1, 'total': reactionRounds}));
+    ctx.status(t('games.reaction.intro'));
   }
 
   final _Ctx ctx;
   final List<int> _times = [];
   String _state = 'idle';
   String _big = '⚡';
-  String _line = 'Tap to start';
+  String _line = t('games.reaction.start');
   double _goAt = 0;
   Object? _timer;
 
@@ -637,12 +648,12 @@ class _Reaction extends _Game {
   }
 
   void _start() {
-    _set('wait', '👀', 'Wait for green...');
-    ctx.meta('Round ${_times.length + 1} of $reactionRounds');
+    _set('wait', '👀', t('games.reaction.wait'));
+    ctx.meta(t('games.reaction.round', {'n': _times.length + 1, 'total': reactionRounds}));
     _timer = ctx.timer(() {
       _timer = null;
       _goAt = ctx.now();
-      _set('go', '🟢', 'Tap now!');
+      _set('go', '🟢', t('games.reaction.go'));
     }, reactionDelay(ctx.rng));
   }
 
@@ -656,46 +667,46 @@ class _Reaction extends _Game {
     if (_state == 'idle' || _state == 'between') {
       _start();
     } else if (_state == 'wait') {
-      final t = _timer;
-      if (t != null) ctx.clear(t);
+      final pending = _timer;
+      if (pending != null) ctx.clear(pending);
       _timer = null;
-      _set('between', '🙈', 'Too soon! Tap to try again');
-      ctx.status('Too soon - wait for green');
+      _set('between', '🙈', t('games.reaction.tooSoon'));
+      ctx.status(t('games.reaction.tooSoonHint'));
     } else if (_state == 'go') {
       final ms = jsRound(ctx.now() - _goAt);
       if (!reactionCounts(ms)) {
-        _set('between', '🙈', 'A lucky guess! Tap to try again');
-        ctx.status('Too quick to be real - wait until you see green');
+        _set('between', '🙈', t('games.reaction.lucky'));
+        ctx.status(t('games.reaction.luckyHint'));
         return;
       }
       _times.add(ms);
       if (_times.length >= reactionRounds) {
         final avg = average(_times);
-        _set('done', '🏁', '$avg ms average');
+        _set('done', '🏁', t('sdk.games.reactionAvg', {'ms': avg}));
         ctx.meta('${_times.join(' · ')} ms');
-        ctx.finish('${reactionVerdict(avg)} - $avg ms on average.', avg < 350);
+        ctx.finish('${reactionVerdict(avg)} - ${t('games.reaction.avg', {'ms': avg})}', avg < 350);
         return;
       }
-      _set('between', '⏱️', '$ms ms - tap for the next round');
-      ctx.status('$ms milliseconds');
+      _set('between', '⏱️', t('games.reaction.next', {'ms': ms}));
+      ctx.status(t('games.reaction.ms', {'ms': ms}));
     }
   }
 
   @override
   void pause() {
-    final t = _timer;
-    if (t != null) ctx.clear(t);
+    final pending = _timer;
+    if (pending != null) ctx.clear(pending);
     _timer = null;
-    if (_state == 'wait' || _state == 'go') _set('between', '⏸️', 'Tap to carry on');
+    if (_state == 'wait' || _state == 'go') _set('between', '⏸️', t('games.reaction.resume'));
   }
 }
 
 const scrambleRounds = 3;
 
 class _Scramble extends _Game {
-  _Scramble(this.ctx) : _words = shuffle(words, ctx.rng).take(scrambleRounds).toList() {
+  _Scramble(this.ctx) : _words = shuffle(wordsFor(ctx.lang), ctx.rng).take(scrambleRounds).toList() {
     // The web's intro says "or just type": a phone has no keys to type on.
-    ctx.status('Tap the letters in order');
+    ctx.status(t('sdk.games.scrambleIntro'));
     _round();
   }
 
@@ -718,20 +729,21 @@ class _Scramble extends _Game {
     _placed = [];
     _isSolved = false;
     _revealed = false;
-    ctx.meta('Word ${_at + 1} of $scrambleRounds · $_solvedCount solved');
+    ctx.meta(t('games.scramble.meta', {'n': _at + 1, 'total': scrambleRounds, 'solved': _solvedCount}));
   }
 
   void _next(String msg, bool win) {
     _at += 1;
     if (win) _solvedCount += 1;
-    ctx.meta('Word ${(_at + 1).clamp(0, scrambleRounds)} of $scrambleRounds · $_solvedCount solved');
+    ctx.meta(t('games.scramble.meta', {'n': (_at + 1).clamp(0, scrambleRounds), 'total': scrambleRounds, 'solved': _solvedCount}));
     if (_at >= scrambleRounds) {
       final verdict = _solvedCount == scrambleRounds
-          ? 'Word wizard! 🧙'
+          ? t('games.scramble.verdict.all')
           : _solvedCount > 0
               ? Verdict.nice
-              : 'Tricky ones! 🙈';
-      ctx.finish('$msg You solved $_solvedCount of $scrambleRounds. $verdict', _solvedCount == scrambleRounds);
+              : t('games.scramble.verdict.none');
+      ctx.finish('$msg ${t('games.scramble.score', {'solved': _solvedCount, 'total': scrambleRounds})} $verdict',
+          _solvedCount == scrambleRounds);
       return;
     }
     ctx.status(msg);
@@ -744,10 +756,10 @@ class _Scramble extends _Game {
     if (scrambleSolved(guess, _word)) {
       _isSolved = true;
       ctx.cheer();
-      _next('$_word - got it! 🎉', true);
+      _next(t('games.scramble.gotIt', {'word': _word}), true);
     } else {
       _nope += 1;
-      ctx.status('Not quite - tap letters to take them back');
+      ctx.status(t('games.scramble.wrong'));
     }
   }
 
@@ -765,7 +777,7 @@ class _Scramble extends _Game {
         solved: _isSolved,
         revealed: _revealed,
         nope: _nope,
-        skipLabel: _at == scrambleRounds - 1 ? 'Reveal' : 'Skip',
+        skipLabel: _at == scrambleRounds - 1 ? t('games.scramble.reveal') : t('common.skip'),
       );
 
   @override
@@ -806,7 +818,7 @@ class _Scramble extends _Game {
         }
         _placed.add(at);
       }
-      _next('It was $_word.', false);
+      _next(t('games.scramble.itWas', {'word': _word}), false);
     }
   }
 }
@@ -842,7 +854,7 @@ double _now() => _clock.elapsedMicroseconds / 1000;
 /// no game for this language. Starts on the menu: with the owner's offer
 /// line for an offer, "Pick a game" when the visitor asked.
 class GamesCard implements OfferCard {
-  GamesCard._(this._o, this._settings, List<GameMeta> available)
+  GamesCard._(this._o, this._settings, this._lang, List<GameMeta> available)
       : _rng = _o.rng ?? defaultRng,
         _set = _o.setTimer ?? _setTimer,
         _clear = _o.clearTimer ?? _clearTimer,
@@ -854,13 +866,17 @@ class GamesCard implements OfferCard {
   /// The card, or null when the owner's games leave none for this language.
   static GamesCard? create(GamesCardOptions o) {
     final settings = waitingGamesOf(o.customizations);
-    final available = gamesForLanguage(gamesCatalogue.where((g) => settings.games.contains(g.id)), o.lang);
+    final lang = o.lang ?? I18n.language;
+    final available = gamesForLanguage(gamesCatalogue.where((g) => settings.games.contains(g.id)), lang);
     if (available.isEmpty) return null;
-    return GamesCard._(o, settings, available);
+    return GamesCard._(o, settings, lang, available);
   }
 
   final GamesCardOptions _o;
   final WaitingGamesSettings _settings;
+
+  /// The language the games are offered in.
+  final String _lang;
   final Rng _rng;
   final SetTimer _set;
   final ClearTimer _clear;
@@ -903,7 +919,7 @@ class GamesCard implements OfferCard {
     }
   }
 
-  static const _quietAnother = FootButton(key: 'another', label: GamesText.another, primary: false);
+  static FootButton get _quietAnother => FootButton(key: 'another', label: GamesText.another, primary: false);
 
   void _showMenu(bool first) {
     _stopTimers();
@@ -916,11 +932,11 @@ class GamesCard implements OfferCard {
       game: null,
       board: null,
       titleEmoji: '',
-      title: first && _o.mode != 'menu' ? _settings.offerText : GamesText.pick,
+      title: first && _o.mode != 'menu' ? offerLine(_settings.offerText) : GamesText.pick,
       meta: '',
       status: '',
       result: null,
-      foot: const [FootButton(key: 'notNow', label: GamesText.notNow, primary: false)],
+      foot: [FootButton(key: 'notNow', label: GamesText.notNow, primary: false)],
     );
   }
 
@@ -939,7 +955,7 @@ class GamesCard implements OfferCard {
       result: null,
       settled: false,
       closable: true,
-      foot: const [_quietAnother],
+      foot: [_quietAnother],
     );
     final entry = _Entry(id);
     bool live() => identical(_current, entry);
@@ -951,6 +967,7 @@ class GamesCard implements OfferCard {
       categories: _o.categories,
       recent: _o.recentArticles,
       plays: _plays,
+      lang: _lang,
       meta: (t) => _state = _state.copyWith(meta: t),
       status: (t) => _state = _state.copyWith(status: t),
       action: (label, fn) {
@@ -970,7 +987,7 @@ class GamesCard implements OfferCard {
           result: win ? 'win' : 'done',
           status: text,
           confetti: win && !_o.reducedMotion ? _state.confetti + 1 : _state.confetti,
-          foot: const [
+          foot: [
             FootButton(key: 'again', label: GamesText.again, primary: true),
             FootButton(key: 'another', label: GamesText.another, primary: false),
           ],
@@ -1101,7 +1118,7 @@ class GamesCard implements OfferCard {
       titleEmoji: '👋',
       title: who.isNotEmpty ? GamesText.pausedNamed(who) : GamesText.pausedSomeone,
       status: GamesText.pausedSaved,
-      foot: const [FootButton(key: 'resume', label: GamesText.resume, primary: false)],
+      foot: [FootButton(key: 'resume', label: GamesText.resume, primary: false)],
     );
     _emit();
   }
@@ -1141,7 +1158,7 @@ class GamesCardOptions {
     this.mode = 'offer',
     this.rng,
     this.reducedMotion = false,
-    this.lang = 'en',
+    this.lang,
     this.onDismiss,
     this.setTimer,
     this.clearTimer,
@@ -1157,8 +1174,9 @@ class GamesCardOptions {
   final Rng? rng;
   final bool reducedMotion;
 
-  /// The language the games are offered in (the emoji riddles are English only).
-  final String lang;
+  /// The language the games are offered in (the emoji riddles are English
+  /// only); the widget's language when unset.
+  final String? lang;
 
   /// The card was closed ("Not now", the x).
   final void Function()? onDismiss;
