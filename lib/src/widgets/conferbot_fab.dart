@@ -1185,10 +1185,11 @@ class _ConferBotFABState extends State<ConferBotFAB>
       if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication).catchError((_) => false);
       return;
     }
+    // "send" goes past the home screen to the conversation and asks there
+    // 400ms later (core/home/home_extras.dart showChat); "open" lands
+    // wherever the chat was, the home screen first.
+    if (card.click == 'send') provider.home.showChat(card.text);
     if (!_isOpen) _openChat(context, provider);
-    if (card.click == 'send') {
-      Future.delayed(const Duration(milliseconds: 400), () => provider.sendMessage(card.text).catchError((_) {}));
-    }
   }
 
   // ── Open chat sheet ───────────────────────────────────────────────────────
@@ -1472,8 +1473,9 @@ class _ConferBotFABState extends State<ConferBotFAB>
                 },
                 onStarter: (text) {
                   greeting.closeForNow();
+                  // Past the home screen: the question is asked in the conversation.
+                  provider.home.showChat(text);
                   _openChat(context, provider);
-                  Future.delayed(const Duration(milliseconds: 400), () => provider.sendMessage(text).catchError((_) {}));
                 },
               ),
               look: entranceLook,
