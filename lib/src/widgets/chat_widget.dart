@@ -650,6 +650,7 @@ class _ChatWidgetState extends State<ChatWidget> {
         theme: theme,
         message: uiState.handoverMessage,
         onLeave: () => provider.leaveQueue(),
+        replyTime: provider.serverCustomizations?['replyTime'],
       );
     }
 
