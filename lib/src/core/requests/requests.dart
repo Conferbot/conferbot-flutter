@@ -17,14 +17,17 @@
 /// from any device. Only conversations a person on the team handles are
 /// requests; a chat the AI answered alone is not one.
 ///
-/// English only for now (the web's i18n `requests.*`, `when.*` keys).
+/// The words are the web's i18n `requests.*` and `when.*` keys, in the active language.
 library;
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:intl/intl.dart';
+
 import '../../models/user.dart';
+import '../i18n/i18n.dart';
 
 // ------------------------------------------------------------ types
 
@@ -144,28 +147,28 @@ enum RequestState { replied, waiting, solved }
 
 // ------------------------------------------------------------ the words
 
-/// The web's English strings (i18n en `requests.*`, `common.*`, `transcript.you`).
+/// The web's strings (i18n `requests.*`, `common.*`, `transcript.you`), read in the active language when drawn.
 class RequestsText {
   RequestsText._();
-  static const title = 'Your requests';
-  static const one = 'Your request';
-  static const back = 'Back';
-  static const loading = 'Loading...';
-  static const loadFailed = "We couldn't load this just now.";
-  static const tryAgain = 'Try again';
-  static const empty = 'Nothing here yet. When you ask us something, you can follow it here.';
-  static const you = 'You';
-  static const supportTeam = 'Support team';
-  static const replyPlaceholder = 'Write your reply...';
-  static const reopenPlaceholder = 'Write here to open it again...';
-  static const yourReply = 'Your reply';
-  static const send = 'Send';
-  static const sending = 'Sending...';
-  static const notSent = 'Not sent.';
-  static const locked = 'This conversation is closed for replies.';
-  static const newReply = 'New reply';
-  static String newReplyFrom(String name) => 'New reply from $name';
-  static String seeAll(int n) => 'See all ($n)';
+  static String get title => t('requests.title');
+  static String get one => t('requests.one');
+  static String get back => t('common.back');
+  static String get loading => t('common.loading');
+  static String get loadFailed => t('requests.loadFailed');
+  static String get tryAgain => t('common.tryAgain');
+  static String get empty => t('requests.empty');
+  static String get you => t('transcript.you');
+  static String get supportTeam => t('requests.supportTeam');
+  static String get replyPlaceholder => t('requests.replyPlaceholder');
+  static String get reopenPlaceholder => t('requests.reopenPlaceholder');
+  static String get yourReply => t('requests.yourReply');
+  static String get send => t('common.send');
+  static String get sending => t('common.sending');
+  static String get notSent => t('requests.notSent');
+  static String get locked => t('requests.locked');
+  static String get newReply => t('requests.newReply');
+  static String newReplyFrom(String name) => t('requests.newReplyFrom', {'name': name});
+  static String seeAll(int n) => t('requests.seeAll', {'n': n});
 
   /// The chat menu's item (the web has the home card instead).
   static String menu(int unread) => unread > 0 ? '$title · $newReply' : title;
@@ -174,11 +177,14 @@ class RequestsText {
 /// Each state in a few plain words, never a ticket status (web words.ts STATE_WORDS).
 typedef StateWords = ({String label, String detail});
 
-const Map<RequestState, StateWords> stateWords = {
-  RequestState.replied: (label: 'We replied', detail: 'Read it below. If you need anything else, just write back.'),
-  RequestState.waiting: (label: "We're on it", detail: "We'll reply right here. You can close this - your message is safe with us."),
-  RequestState.solved: (label: 'Solved', detail: "Still need help with this? Write below and we'll pick it up again."),
-};
+StateWords _stateWords(String s) => (label: t('requests.$s.label'), detail: t('requests.$s.detail'));
+
+/// Read when drawn, in the active language.
+Map<RequestState, StateWords> get stateWords => {
+      RequestState.replied: _stateWords('replied'),
+      RequestState.waiting: _stateWords('waiting'),
+      RequestState.solved: _stateWords('solved'),
+    };
 
 int _ms(dynamic v) {
   if (v == null) return 0;
@@ -202,26 +208,36 @@ RequestState stateOf(RequestSummary r) =>
     r.status == 'solved' ? RequestState.solved : (r.lastFrom == 'team' ? RequestState.replied : RequestState.waiting);
 
 const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const _days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const _days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-/// "Just now", "5 min ago", "3 hours ago", "Yesterday", "Monday", "3 Oct" (web whenWords, English).
+/// "Just now", "5 min ago", "3 hours ago", "Yesterday", "Monday", "3 Oct", in the active language (web whenWords).
 String whenWords(dynamic v, [int? now]) {
   final n = now ?? _nowMs();
-  final t = _ms(v);
-  if (t == 0) return '';
-  final diff = math.max(0, n - t);
-  if (diff < 60 * 1000) return 'Just now';
-  if (diff < 60 * 60 * 1000) return '${diff ~/ 60000} min ago';
-  final d = DateTime.fromMillisecondsSinceEpoch(t);
+  final at = _ms(v);
+  if (at == 0) return '';
+  final diff = math.max(0, n - at);
+  if (diff < 60 * 1000) return t('when.justNow');
+  if (diff < 60 * 60 * 1000) return t('when.minutesAgo', {'n': diff ~/ 60000});
+  final d = DateTime.fromMillisecondsSinceEpoch(at);
   final today = DateTime.fromMillisecondsSinceEpoch(n);
   final startOfToday = DateTime(today.year, today.month, today.day).millisecondsSinceEpoch;
-  if (t >= startOfToday) {
+  if (at >= startOfToday) {
     final h = diff ~/ 3600000;
-    return h <= 1 ? '1 hour ago' : '$h hours ago';
+    return h <= 1 ? t('when.hourAgo') : t('when.hoursAgo', {'n': h});
   }
-  if (t >= startOfToday - 86400000) return 'Yesterday';
-  if (t >= startOfToday - 6 * 86400000) return _days[d.weekday - 1];
-  return '${d.day} ${_months[d.month - 1]}${d.year != today.year ? ' ${d.year}' : ''}';
+  if (at >= startOfToday - 86400000) return t('when.yesterday');
+  // Sunday first, as the web's getDay().
+  if (at >= startOfToday - 6 * 86400000) return I18n.weekdayNames('long', _days)[d.weekday % 7];
+  final otherYear = d.year != today.year;
+  if (I18n.language != I18n.en) {
+    // The language's own order and month word ("3 oct.", "3. Okt.").
+    try {
+      return (otherYear ? DateFormat.yMMMd(I18n.intlLocale) : DateFormat.MMMd(I18n.intlLocale)).format(d);
+    } catch (_) {
+      return '${d.day} ${I18n.monthNames('short', _months)[d.month - 1]}${otherYear ? ' ${d.year}' : ''}';
+    }
+  }
+  return '${d.day} ${_months[d.month - 1]}${otherYear ? ' ${d.year}' : ''}';
 }
 
 /// The line under a request's title (web rowLine).
