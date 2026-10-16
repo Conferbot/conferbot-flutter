@@ -426,6 +426,36 @@ class LiveChat {
     return 2;
   }
 
+  // ---- The wait card's max-wait countdown (web queueCard.ts clock,
+  // setRemaining; special.ts _attachHandoverWait; RN src/core/liveChat.ts) ----
+
+  /// "1:05" (never below 0:00).
+  static String clock(num seconds) {
+    final v = seconds.toDouble();
+    final s = v.isFinite && v > 0 ? v.round() : 0;
+    return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
+  }
+
+  /// The card's countdown line: "Max wait 1:05", in the visitor's language.
+  static String maxWaitText(num seconds) => t('queue.maxWait', {'time': clock(seconds)});
+
+  /// When the handover's max wait runs out (ms since the epoch): the
+  /// server's seconds left for a wait picked back up after a restart
+  /// (live-chat-state waitEndsAt, HandoverRecord.restoredLiveChat), else the
+  /// step's max wait from now (minutes; 2 when unset).
+  static int waitDeadline(dynamic maxWaitTimeMinutes, num? remainingSeconds, {int? now}) {
+    final at = now ?? DateTime.now().millisecondsSinceEpoch;
+    final r = remainingSeconds?.toDouble();
+    final ms = r != null && r.isFinite && r >= 0 ? r.round() * 1000 : (waitMinutes(maxWaitTimeMinutes) * 60000).round();
+    return at + ms;
+  }
+
+  /// Whole seconds left before the deadline (0 once it has passed).
+  static int secondsLeft(int deadline, {int? now}) {
+    final left = ((deadline - (now ?? DateTime.now().millisecondsSinceEpoch)) / 1000).ceil();
+    return left < 0 ? 0 : left;
+  }
+
   /// handover-timeout, sent once the handover step's max wait passes with
   /// nobody joined: the server then decides (no-agents-available), as the
   /// web widget's maxWaitTimer does.
