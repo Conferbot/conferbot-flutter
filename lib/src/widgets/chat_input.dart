@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../core/i18n/i18n.dart';
 import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
 import '../config/constants.dart';
@@ -143,7 +144,7 @@ class _ChatInputState extends State<ChatInput> with SingleTickerProviderStateMix
   void _showMinDurationSnackBar() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Recording too short. Hold longer to record.'),
+        content: Text(t('sdk.voice.holdLonger')),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
       ),
@@ -157,27 +158,27 @@ class _ChatInputState extends State<ChatInput> with SingleTickerProviderStateMix
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          'Microphone Permission',
+          t('sdk.permission.micTitle'),
           style: TextStyle(
             fontSize: theme.typography.fontSizeLg,
             fontWeight: theme.typography.fontWeightBold,
           ),
         ),
         content: Text(
-          'Microphone permission is required to record voice messages. Please enable it in your device settings.',
+          t('sdk.permission.micDenied'),
           style: TextStyle(fontSize: theme.typography.fontSizeMd),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(t('common.cancel')),
           ),
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
               _recordingService.openSettings();
             },
-            child: const Text('Open Settings'),
+            child: Text(t('sdk.permission.openSettings')),
           ),
         ],
       ),
@@ -248,7 +249,7 @@ class _ChatInputState extends State<ChatInput> with SingleTickerProviderStateMix
               onSubmitted: (_) => _handleSend(),
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: widget.placeholder ?? 'Type a message...',
+                hintText: widget.placeholder ?? t('chat.composer.placeholder'),
                 hintStyle: TextStyle(
                   color: theme.colors.textSecondary,
                 ),
@@ -379,7 +380,7 @@ class _ChatInputState extends State<ChatInput> with SingleTickerProviderStateMix
                   ),
                   SizedBox(width: theme.spacing.xs),
                   Text(
-                    'Slide to cancel',
+                    t('sdk.voice.slideToCancel'),
                     style: TextStyle(
                       fontSize: theme.typography.fontSizeSm,
                       color: theme.colors.error,
