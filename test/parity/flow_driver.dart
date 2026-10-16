@@ -334,8 +334,15 @@ class RunResult {
   const RunResult(this.outcome, this.problems);
 }
 
-/// Plays one fixture through the engine.
-Future<RunResult> runFixture(Map<String, dynamic> fx) async {
+/// A visitor action as a step's card sends it (test/widgets/step_views_test.dart):
+/// called before each action with the waiting step's UI state, its visit and
+/// its refusal; returns the card's answer (`local`: the card kept it to
+/// itself), or null for the driver's own.
+typedef ViewAnswer = ({dynamic response, bool local})? Function(
+    int index, Map<String, dynamic> action, dynamic ui, int visit, String? error);
+
+/// Plays one fixture through the engine; [answer] plays the actions as the cards send them.
+Future<RunResult> runFixture(Map<String, dynamic> fx, {ViewAnswer? answer}) async {
   final clock = _Clock();
   final problems = <String>[];
   final trace = <(FlowTraceEvent, int)>[];
@@ -425,7 +432,8 @@ Future<RunResult> runFixture(Map<String, dynamic> fx) async {
       if (a['do'] == 'serverEvent') {
         zone.run(() => socket.fire('${a['event']}', a['payload']));
       } else {
-        final ans = _answerFor(a, engine.currentUIState, memo, '$at');
+        final view = answer?.call(i, a, engine.currentUIState, engine.stepVisit, engine.validationMessage);
+        final ans = view != null ? _Answer(view.response, local: view.local) : _answerFor(a, engine.currentUIState, memo, '$at');
         if (!ans.local) {
           zone.run(() => engine.submitResponse(ans.response).catchError((Object e) => problems.add('input $i: $e')));
         }
