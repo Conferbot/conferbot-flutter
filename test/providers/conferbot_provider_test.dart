@@ -1,22 +1,46 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:conferbot_flutter/src/providers/conferbot_provider.dart';
 import 'package:conferbot_flutter/src/models/user.dart';
+import 'package:conferbot_flutter/src/services/storage_service.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../fixtures/test_fixtures.dart';
+
+class _TempPaths extends PathProviderPlatform with MockPlatformInterfaceMixin {
+  _TempPaths(this.dir);
+  final String dir;
+  @override
+  Future<String?> getApplicationDocumentsPath() async => dir;
+  @override
+  Future<String?> getApplicationSupportPath() async => dir;
+  @override
+  Future<String?> getTemporaryPath() async => dir;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late ConferBotProvider provider;
 
+  // openChat starts a session: the visitor id comes from StorageService
+  // (the test binding answers every HTTP call with 400, so the session is local).
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    PathProviderPlatform.instance = _TempPaths(Directory.systemTemp.createTempSync('cb_provider_').path);
+    await StorageService.init();
+  });
+
   setUp(() {
     // Create provider with autoConnect disabled for testing
     provider = ConferBotProvider(
       apiKey: 'test_api_key',
       botId: 'test_bot_id',
-      config: const ConferBotConfig(autoConnect: false),
+      config: const ConferBotConfig(autoConnect: false, enablePersistence: false),
     );
   });
 
@@ -157,19 +181,19 @@ void main() {
   group('ConferBotProvider Open/Close Chat', () {
     test('should set isOpen to true when opened', () async {
       // Note: This will attempt to init session but we're just testing the open state
-      provider.openChat();
+      await provider.openChat();
 
       expect(provider.isOpen, true);
     });
 
     test('should clear unread count when opened', () async {
-      provider.openChat();
+      await provider.openChat();
 
       expect(provider.unreadCount, 0);
     });
 
-    test('should set isOpen to false when closed', () {
-      provider.openChat();
+    test('should set isOpen to false when closed', () async {
+      await provider.openChat();
       provider.closeChat();
 
       expect(provider.isOpen, false);
@@ -251,23 +275,29 @@ void main() {
   });
 
   group('ConferBotProvider Notification', () {
-    test('should notify listeners on state change', () {
+    test('should notify listeners on state change', () async {
       var notified = false;
       provider.addListener(() => notified = true);
 
-      provider.openChat();
+      await provider.openChat();
 
       expect(notified, true);
     });
 
-    test('should not notify after dispose', () {
+    test('should not notify after dispose', () async {
+      // Its own provider: the shared one is disposed in tearDown.
+      final own = ConferBotProvider(
+        apiKey: 'test_api_key',
+        botId: 'test_bot_id',
+        config: const ConferBotConfig(autoConnect: false, enablePersistence: false),
+      );
       var notifyCount = 0;
-      provider.addListener(() => notifyCount++);
+      own.addListener(() => notifyCount++);
 
-      provider.openChat();
+      await own.openChat();
       final countAfterOpen = notifyCount;
 
-      provider.dispose();
+      own.dispose();
 
       // After dispose, we should not be able to trigger more notifications
       expect(notifyCount, countAfterOpen);
@@ -309,13 +339,13 @@ void main() {
         botId: 'test_bot_id',
         config: const ConferBotConfig(autoConnect: false),
         customization: const ConferBotCustomization(
-          primaryColor: 0xFF0000FF,
+          primaryColor: '#0000FF',
           headerTitle: 'Custom Chat',
         ),
       );
 
       expect(customizedProvider.customization, isNotNull);
-      expect(customizedProvider.customization!.primaryColor, 0xFF0000FF);
+      expect(customizedProvider.customization!.primaryColor, '#0000FF');
       expect(customizedProvider.customization!.headerTitle, 'Custom Chat');
 
       customizedProvider.dispose();
@@ -367,18 +397,20 @@ void main() {
   group('ConferBotCustomization', () {
     test('should create with all fields', () {
       const customization = ConferBotCustomization(
-        primaryColor: 0xFF0000FF,
+        primaryColor: '#0000FF',
+        fontFamily: 'Inter',
+        bubbleRadius: 12,
         headerTitle: 'Custom Chat',
-        welcomeMessage: 'Hello!',
-        placeholderText: 'Type here...',
-        botAvatarUrl: 'https://example.com/avatar.png',
+        enableAvatar: true,
+        avatarUrl: 'https://example.com/avatar.png',
+        botBubbleColor: '#EEEEEE',
+        userBubbleColor: '#0808EE',
       );
 
-      expect(customization.primaryColor, 0xFF0000FF);
+      expect(customization.primaryColor, '#0000FF');
       expect(customization.headerTitle, 'Custom Chat');
-      expect(customization.welcomeMessage, 'Hello!');
-      expect(customization.placeholderText, 'Type here...');
-      expect(customization.botAvatarUrl, 'https://example.com/avatar.png');
+      expect(customization.avatarUrl, 'https://example.com/avatar.png');
+      expect(ConferBotCustomization.fromJson(customization.toJson()).toJson(), customization.toJson());
     });
 
     test('should create with minimal fields', () {
