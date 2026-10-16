@@ -30,6 +30,8 @@ import '../core/live_chat/live_chat.dart';
 import '../core/state/chat_state.dart';
 import '../core/help_centre/help_centre.dart';
 import '../core/live_chat/email_transcript.dart';
+import 'waiting/games_card_view.dart';
+import 'waiting/wait_help_card.dart';
 import 'package:file_picker/file_picker.dart';
 
 /// Complete drop-in chat widget with node rendering support
@@ -187,6 +189,8 @@ class _ChatWidgetState extends State<ChatWidget> {
     // AI sources and rich article cards open articles through this chat.
     _chatProvider = context.read<ConferBotProvider>();
     _chatProvider!.articleOpener = _openArticleById;
+    // The help card's articles, also those the help centre does not list.
+    _chatProvider!.waitArticleOpener = _openWaitArticle;
     _chatProvider!.composerFocuser = () {
       if (mounted) _composerFocus.requestFocus();
     };
@@ -231,6 +235,18 @@ class _ChatWidgetState extends State<ChatWidget> {
     final provider = context.read<ConferBotProvider>();
     if (!_helpCentreVisible(provider)) return;
     final kb = _ensureKbProvider(provider);
+    setState(() {
+      _showKnowledgeBase = true;
+    });
+    kb.openArticle(articleId);
+  }
+
+  /// An article from the help card while waiting: from the help centre data
+  /// when it is there, else fetched from the server by id (the server picks
+  /// articles the help centre may not list, or shows while it is off).
+  void _openWaitArticle(String articleId) {
+    if (!mounted || articleId.isEmpty) return;
+    final kb = _ensureKbProvider(context.read<ConferBotProvider>());
     setState(() {
       _showKnowledgeBase = true;
     });
@@ -340,6 +356,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     _connectivity.removeListener(_onConnectivityChange);
     _messageQueue.removeListener(_onQueueChange);
     _chatProvider?.articleOpener = null;
+    _chatProvider?.waitArticleOpener = null;
     _chatProvider?.composerFocuser = null;
     _composerFocus.dispose();
     _kbProvider?.dispose();
@@ -507,6 +524,10 @@ class _ChatWidgetState extends State<ChatWidget> {
       );
     }
 
+    // While waiting for a person: the help card and the games, each after
+    // the message that was last when it was drawn (core/waiting).
+    final waiting = _waitingCards(provider, messages, theme);
+
     // Handle handover overlay separately (still positioned)
     if (uiState is HumanHandoverUIState && uiState.state != HandoverState.waitingForAgent) {
       return Stack(
@@ -522,6 +543,7 @@ class _ChatWidgetState extends State<ChatWidget> {
             onLoadMore: () => provider.loadMoreMessages(),
             paginationConfig:
                 widget.paginationConfig ?? const MessageListPaginationConfig(),
+            inlineAfter: waiting.inline,
           ),
           Positioned(
             left: 0, right: 0, bottom: 0,
@@ -542,17 +564,58 @@ class _ChatWidgetState extends State<ChatWidget> {
       onLoadMore: () => provider.loadMoreMessages(),
       paginationConfig:
           widget.paginationConfig ?? const MessageListPaginationConfig(),
-      trailingWidget: _trailing(interactiveNode ?? _agentTrailing(provider, theme), provider, theme),
+      trailingWidget: _trailing(interactiveNode ?? _agentTrailing(provider, theme), provider, theme, waiting.atEnd),
+      inlineAfter: waiting.inline,
     );
   }
 
+  /// The help card and the games card: after the message each follows, or
+  /// at the end when that message is not on screen.
+  ({Map<String, List<Widget>> inline, List<Widget> atEnd}) _waitingCards(
+      ConferBotProvider provider, List<RecordItem> messages, ConferBotTheme theme) {
+    final inline = <String, List<Widget>>{};
+    final atEnd = <Widget>[];
+    final shown = {for (final m in messages) m.id};
+    void place(String? after, Widget card) {
+      if (after != null && shown.contains(after)) {
+        inline.putIfAbsent(after, () => []).add(card);
+      } else {
+        atEnd.add(card);
+      }
+    }
+
+    final help = provider.waitHelpCard;
+    final games = provider.gamesCard;
+    final helpCard = help == null
+        ? null
+        : WaitHelpCard(
+            key: ValueKey('cb-wait-help-${help.key}'),
+            card: help,
+            theme: theme,
+            onOpen: provider.openWaitHelpItem,
+            onSolved: () => provider.solveWait(),
+          );
+    final gamesCard = games == null
+        ? null
+        : GamesCardView(key: ObjectKey(games), card: games, theme: theme, customizations: provider.serverCustomizations);
+    final helpFirst = provider.waiting.gamesAfterHelp;
+    for (final (after, card) in helpFirst
+        ? [(provider.waitHelpAfter, helpCard), (provider.gamesAfter, gamesCard)]
+        : [(provider.gamesAfter, gamesCard), (provider.waitHelpAfter, helpCard)]) {
+      if (card != null) place(after, card);
+    }
+    return (inline: inline, atEnd: atEnd);
+  }
+
   /// The step or AI reply at the end of the list, then the live chat's
-  /// receipt and cards (core/live_chat).
-  Widget _trailing(Widget? node, ConferBotProvider provider, ConferBotTheme theme) {
+  /// receipt and cards (core/live_chat), and a waiting card with nothing
+  /// before it on screen.
+  Widget _trailing(Widget? node, ConferBotProvider provider, ConferBotTheme theme, [List<Widget> cards = const []]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
+        ...cards,
         if (node != null) node,
         LiveChatFooter(provider: provider, theme: theme, onUpload: _pickLiveFile),
       ],
@@ -784,9 +847,10 @@ class _ChatWidgetState extends State<ChatWidget> {
     // These node types show their own input UI
     // For HumanHandover when agent is connected, allow text input
     if (uiState is HumanHandoverUIState) {
-      // Only hide input for pre-chat, queue, survey states
-      // Allow input when agent is connected
-      return uiState.state != HandoverState.agentConnected;
+      // Hidden for the pre-chat form and the survey. Open while a person is
+      // connected, and while waiting for one: as on the web widget, live
+      // messages reach whoever joins, and "play" opens the games (#76).
+      return uiState.state != HandoverState.agentConnected && uiState.state != HandoverState.waitingForAgent;
     }
 
     // Web widget parity: the unified bottom bar stays visible for text
