@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../config/constants.dart';
+import '../core/i18n/i18n.dart';
 import '../models/knowledge_base.dart';
 import '../services/knowledge_base_service.dart';
 import '../utils/logger.dart';
@@ -107,7 +108,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
           _dataLoaded = true;
           return true;
         }
-        _articlesError = response.error ?? 'Failed to load articles';
+        _articlesError = response.error ?? t('sdk.kb.articlesLoadFailed');
         return false;
       } finally {
         _loadingData = null;
@@ -130,7 +131,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
       _selectedCategoryId != null
           ? _categories.firstWhere(
               (c) => c.id == _selectedCategoryId,
-              orElse: () => KnowledgeBaseCategory(id: '', name: 'All'),
+              orElse: () => KnowledgeBaseCategory(id: '', name: t('sdk.kb.all')),
             )
           : null;
 
@@ -204,7 +205,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
     if (await _ensureData()) {
       _categories = _data.categories;
     } else {
-      _categoriesError = _articlesError ?? 'Failed to load categories';
+      _categoriesError = _articlesError ?? t('sdk.kb.categoriesLoadFailed');
     }
 
     _isLoadingCategories = false;
@@ -227,7 +228,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
       _articles = _data.articlesIn(categoryId ?? _selectedCategoryId);
       _pagination = _onePage(_articles.length);
     } else {
-      _articlesError ??= 'Failed to load articles';
+      _articlesError ??= t('sdk.kb.articlesLoadFailed');
     }
 
     _isLoadingArticles = false;
@@ -318,7 +319,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
         }
         _articles = _articles.map((a) => a.id == articleId ? merged : a).toList();
       } else {
-        _articleError = response.error ?? 'Article not found';
+        _articleError = response.error ?? t('sdk.kb.articleNotFound');
       }
     } catch (e) {
       _articleError = e.toString();
@@ -434,7 +435,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
         _articles = local.map((r) => r.article).toList();
         _pagination = _onePage(_articles.length);
       } else {
-        _searchError = response.error ?? 'Search failed';
+        _searchError = response.error ?? t('sdk.kb.searchFailed');
       }
     } catch (e) {
       _searchError = e.toString();
@@ -477,7 +478,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
     }
 
     if (rating < 1 || rating > 5) {
-      _ratingError = 'Invalid rating';
+      _ratingError = t('sdk.kb.invalidRating');
       notifyListeners();
       return false;
     }
@@ -497,7 +498,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
 
       if (response.success) {
         _visitorRatings[articleId] = rating;
-        _ratingSuccess = response.message ?? 'Thank you for your feedback!';
+        _ratingSuccess = response.message ?? t('csat.thanks');
 
         // Update selected article if it matches
         if (_selectedArticle?.id == articleId) {
@@ -511,7 +512,7 @@ class KnowledgeBaseProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _ratingError = response.error ?? 'Failed to submit rating';
+        _ratingError = response.error ?? t('sdk.kb.rateFailed');
       }
     } catch (e) {
       _ratingError = e.toString();
