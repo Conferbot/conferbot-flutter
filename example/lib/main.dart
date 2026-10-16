@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:conferbot_flutter/conferbot_flutter.dart';
 
@@ -17,7 +16,18 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.config = defaultConfig});
+
+  /// The SDK's configuration (a test passes one that does not connect).
+  final ConferBotConfig config;
+
+  static const defaultConfig = ConferBotConfig(
+    enableNotifications: true,
+    enableOfflineMode: true,
+    // Session persistence configuration
+    enablePersistence: true, // Enable session persistence (default: true)
+    sessionTimeout: Duration(minutes: 30), // Session timeout like web widget
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -25,13 +35,7 @@ class MyApp extends StatelessWidget {
       create: (_) => ConferBotProvider(
         apiKey: 'test_key', // Replace with your API key
         botId: '691c970890527a0468f9b2c9', // Replace with your bot ID
-        config: const ConferBotConfig(
-          enableNotifications: true,
-          enableOfflineMode: true,
-          // Session persistence configuration
-          enablePersistence: true, // Enable session persistence (default: true)
-          sessionTimeout: Duration(minutes: 30), // Session timeout like web widget
-        ),
+        config: config,
       ),
       child: MaterialApp(
         title: 'Conferbot Flutter Example',
@@ -230,6 +234,8 @@ class ExampleHomePage extends StatelessWidget {
 
   void _handleMenuAction(BuildContext context, String action) async {
     final provider = context.read<ConferBotProvider>();
+    // Taken before the awaits below: the context is not used across them.
+    final messenger = ScaffoldMessenger.of(context);
 
     switch (action) {
       case 'stats':
@@ -257,14 +263,14 @@ class ExampleHomePage extends StatelessWidget {
 
       case 'clear_session':
         await provider.clearCurrentSession();
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('Current session cleared')),
         );
         break;
 
       case 'clear_all':
         await provider.clearAllPersistedData();
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('All persisted data cleared')),
         );
         break;
