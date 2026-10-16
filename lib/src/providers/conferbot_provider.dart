@@ -23,6 +23,7 @@ import '../utils/logger.dart';
 import '../utils/chat_markdown.dart';
 import '../core/agent/agent_bot.dart';
 import '../core/agent/answer_feedback.dart';
+import '../core/help_centre/article_engagement.dart';
 import '../core/help_centre/help_centre.dart';
 import '../models/knowledge_base.dart';
 import '../core/agent/agent_handover.dart';
@@ -503,6 +504,20 @@ class ConferBotProvider with ChangeNotifier {
   bool get isConnected => _isConnected;
   bool get isOpen => _isOpen;
   String? get chatSessionId => _chatSessionId;
+
+  /// The help centre's way to the server over the chat's socket, as the web
+  /// does it: helpful / not helpful (`rate-article`), reading time and
+  /// scroll depth (`track-article-engagement`) and the search inside
+  /// article bodies (`search-kb-articles`); REST while it is not connected.
+  late final HelpCentreLink helpCentreLink = HelpCentreLink(
+    emit: (event, payload) {
+      if (!_socketClient.isConnected) return false;
+      _socketClient.emit(event, payload);
+      return true;
+    },
+    search: home.searchKbArticles,
+    sessionId: () => _chatSessionId,
+  );
   String? get visitorId => _visitorId;
   List<RecordItem> get record => List.unmodifiable(_record);
   Agent? get currentAgent => _currentAgent;
