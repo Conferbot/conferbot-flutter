@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
+import '../../core/flow/i18n_en.dart' show t;
 import '../../core/nodes/node_ui_state.dart' as ui_state;
 import '../../core/live_chat/live_chat.dart';
 import '../../core/customization/customizations.dart';
@@ -17,9 +18,23 @@ import '../../widgets/voice_message/voice_player.dart';
 import '../../widgets/media/image_viewer.dart';
 import '../../widgets/media/video_player_widget.dart';
 import '../../widgets/media/audio_player_widget.dart';
+import 'address_step.dart';
+import 'consent_step.dart';
+import 'date_steps.dart';
+import 'otp_step.dart';
+import 'payment_step.dart';
 import 'rich_node_widgets.dart';
+import 'signature_step.dart';
+import 'step_style.dart';
 
+export 'address_step.dart';
+export 'consent_step.dart' show ConsentNodeWidget;
+export 'date_steps.dart';
+export 'otp_step.dart';
+export 'payment_step.dart';
 export 'rich_node_widgets.dart';
+export 'signature_step.dart';
+export 'step_style.dart';
 
 /// Main widget that routes to the correct node component based on UI state
 /// Accepts both canonical (node_ui_state.dart) and legacy handler UI states
@@ -29,19 +44,42 @@ class NodeRenderer extends StatelessWidget {
   final Color? primaryColor;
   final ConferBotTheme? theme;
 
+  /// The step's visit (NodeFlowEngine.stepVisit). A card that takes
+  /// several tries (a code, a signature, an address, a grid) keeps what
+  /// the visitor entered while the same visit asks again.
+  final Object? stepKey;
+
+  /// Why the last answer was refused (NodeFlowEngine.validationMessage),
+  /// shown on the card.
+  final String? error;
+
   const NodeRenderer({
     super.key,
     required this.uiState,
     required this.onResponse,
     this.primaryColor,
     this.theme,
+    this.stepKey,
+    this.error,
   });
+
+  /// The cards that keep their draft through a refusal of the same visit.
+  static bool keepsDraft(dynamic state) {
+    if (state is ui_state.AddressUIState || state is ui_state.MatrixUIState || state is ui_state.PaymentUIState) return true;
+    if (state is ui_state.CalendarUIState) return state.extra['datetime'] == true;
+    final step = state is ui_state.NodeUIState ? state.extra['step'] : null;
+    return step == 'otp' || step == 'signature' || step == 'consent';
+  }
 
   @override
   Widget build(BuildContext context) {
-    // A new step (or the same step asking again) gets a fresh card: the
-    // last one's pick or input does not carry over.
-    return KeyedSubtree(key: ObjectKey(uiState), child: _card(context));
+    // A new step (or the same step entered again) gets a fresh card: the
+    // last one's pick or input does not carry over. A refusal of the same
+    // visit keeps the card that takes tries.
+    final key = stepKey != null && keepsDraft(uiState)
+        ? ValueKey<Object>('step-${uiState.runtimeType}-$stepKey')
+        : ObjectKey(uiState);
+    return KeyedSubtree(key: key, child: _card(context));
   }
 
   Widget _card(BuildContext context) {
@@ -64,6 +102,15 @@ class NodeRenderer extends StatelessWidget {
     }
     if (state is ui_state.FileUIState) {
       return FileNodeWidget(state: state, theme: effectiveTheme);
+    }
+    if (state is ui_state.TextInputUIState && state.extra['step'] == 'otp') {
+      return OtpNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme, error: error);
+    }
+    if (state is ui_state.TextInputUIState && state.extra['step'] == 'signature') {
+      return SignatureNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme, error: error);
+    }
+    if (state is ui_state.SingleChoiceUIState && state.extra['step'] == 'consent') {
+      return ConsentNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme, error: error);
     }
     if (state is ui_state.TextInputUIState) {
       return TextInputNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
@@ -92,8 +139,11 @@ class NodeRenderer extends StatelessWidget {
     if (state is ui_state.RangeUIState) {
       return RangeNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
     }
+    if (state is ui_state.CalendarUIState && state.extra['datetime'] == true) {
+      return DateTimeStepWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme, error: error);
+    }
     if (state is ui_state.CalendarUIState) {
-      return CalendarNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+      return CalendarStepWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
     }
     if (state is ui_state.ImageChoiceUIState) {
       return ImageChoiceNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
@@ -111,7 +161,7 @@ class NodeRenderer extends StatelessWidget {
       return HtmlNodeWidget(state: state, theme: effectiveTheme);
     }
     if (state is ui_state.PaymentUIState) {
-      return PaymentNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+      return PaymentStepWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme, error: error);
     }
     if (state is ui_state.RedirectUIState) {
       return RedirectNodeWidget(state: state, theme: effectiveTheme);
@@ -128,10 +178,10 @@ class NodeRenderer extends StatelessWidget {
       return RankingNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
     }
     if (state is ui_state.MatrixUIState) {
-      return MatrixNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+      return MatrixNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme, error: error);
     }
     if (state is ui_state.AddressUIState) {
-      return AddressNodeWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme);
+      return AddressStepWidget(state: state, onResponse: onResponse, primaryColor: effectivePrimaryColor, theme: effectiveTheme, error: error);
     }
 
     return const SizedBox.shrink();
@@ -830,85 +880,96 @@ class ImageChoiceNodeWidget extends StatefulWidget {
 class _ImageChoiceNodeWidgetState extends State<ImageChoiceNodeWidget> {
   String? _selectedId;
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 1,
-          ),
-          itemCount: widget.state.images.length,
-          itemBuilder: (context, index) {
-            final image = widget.state.images[index];
-            final isSelected = _selectedId == image.id;
-
-            return InkWell(
-              onTap: _selectedId != null
-                  ? null
-                  : () {
-                      setState(() => _selectedId = image.id);
-                      widget.onResponse({
-                        'buttonId': image.id,
-                        'label': image.label,
-                        'imageUrl': image.imageUrl,
-                      });
-                    },
-              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
-                  border: isSelected
-                      ? Border.all(color: widget.primaryColor, width: 3)
-                      : null,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.network(
-                      image.imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: widget.theme.colors.surface,
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            color: widget.theme.colors.textSecondary,
-                          ),
-                        );
-                      },
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        padding: EdgeInsets.all(widget.theme.spacing.sm),
-                        color: Colors.black.withOpacity(0.6),
-                        child: Text(
-                          image.label,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: widget.theme.typography.fontSizeSm,
-                          ),
-                          textAlign: TextAlign.center,
+  // The web's image choice (nodeKit.ts imageChoiceHtml): two columns, or a
+  // row to scroll past four; each picture over its label, ringed when picked.
+  Widget _item(ui_state.ImageChoiceOption image, StepLook style) {
+    final picked = _selectedId == image.id;
+    return Opacity(
+      opacity: _selectedId != null && !picked ? 0.5 : 1,
+      child: Material(
+        color: style.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: picked ? style.accent : style.line, width: picked ? 2 : 1),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: ValueKey('img-${image.id}'),
+          onTap: _selectedId != null
+              ? null
+              : () {
+                  setState(() => _selectedId = image.id);
+                  widget.onResponse({'buttonId': image.id, 'label': image.label, 'imageUrl': image.imageUrl});
+                },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AspectRatio(
+                aspectRatio: 4 / 3,
+                child: Container(
+                  color: const Color(0xFFF1F5F9),
+                  child: image.imageUrl.isEmpty
+                      ? Icon(Icons.image_outlined, color: style.muted)
+                      : Image.network(
+                          image.imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(Icons.broken_image_outlined, color: style.muted),
                         ),
-                      ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(image.label,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: style.text)),
                     ),
+                    if (picked) Icon(Icons.check_circle, size: 18, color: style.accent),
                   ],
                 ),
               ),
-            );
-          },
+            ],
+          ),
         ),
-      ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final style = StepLook.of(context, widget.theme, widget.primaryColor);
+    final images = widget.state.images;
+    final Widget body;
+    if (images.length > 4) {
+      body = SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [for (final i in images) Padding(padding: const EdgeInsets.only(right: 8), child: SizedBox(width: 140, child: _item(i, style)))],
+        ),
+      );
+    } else if (images.length == 1) {
+      body = ConstrainedBox(constraints: const BoxConstraints(maxWidth: 240), child: _item(images.first, style));
+    } else {
+      body = ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: LayoutBuilder(builder: (context, c) {
+          final w = (c.maxWidth - 8) / 2;
+          return Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [for (final i in images) SizedBox(width: w, child: _item(i, style))],
+          );
+        }),
+      );
+    }
+    return Padding(
+      padding: stepIndent(widget.theme),
+      child: Semantics(label: t('image.choose'), child: Align(alignment: Alignment.centerLeft, child: body)),
     );
   }
 }
@@ -1213,215 +1274,6 @@ class _RangeNodeWidgetState extends State<RangeNodeWidget> {
             ),
           ),
           child: const Text('Submit'),
-        ),
-      ],
-    );
-  }
-}
-
-/// Widget for calendar/date picker
-class CalendarNodeWidget extends StatefulWidget {
-  final ui_state.CalendarUIState state;
-  final ValueChanged<dynamic> onResponse;
-  final Color primaryColor;
-  final ConferBotTheme theme;
-
-  const CalendarNodeWidget({
-    super.key,
-    required this.state,
-    required this.onResponse,
-    required this.primaryColor,
-    required this.theme,
-  });
-
-  @override
-  State<CalendarNodeWidget> createState() => _CalendarNodeWidgetState();
-}
-
-class _CalendarNodeWidgetState extends State<CalendarNodeWidget> {
-  DateTime? _selectedDate;
-  TimeOfDay? _selectedTime;
-  String? _selectedSlot;
-  bool _submitted = false;
-
-  /// A date/time step (datetime-node) answers one value; the calendar step
-  /// answers a day and, with bookable slots, one of them.
-  bool get _isDateTime => widget.state.extra['datetime'] == true;
-  bool get _needsDate => !_isDateTime || widget.state.mode != 'time';
-  bool get _needsTime => _isDateTime ? widget.state.mode != 'date' : false;
-  List<String>? get _slots =>
-      _selectedDate == null ? null : widget.state.availableSlots?[_formatDate(_selectedDate!)];
-
-  bool get _ready =>
-      (!_needsDate || _selectedDate != null) &&
-      (!_needsTime || _selectedTime != null) &&
-      (widget.state.availableSlots == null || _selectedSlot != null);
-
-  Map<String, dynamic> _answer() {
-    if (_isDateTime) {
-      final date = _selectedDate == null ? null : _formatDate(_selectedDate!);
-      final time = _selectedTime == null ? null : _formatTime(_selectedTime!);
-      final value = widget.state.mode == 'time'
-          ? time
-          : widget.state.mode == 'datetime'
-              ? '${date}T$time'
-              : date;
-      return {'value': value, 'label': value};
-    }
-    final date = _formatDate(_selectedDate!);
-    return {'date': date, if (_selectedSlot != null) 'slot': _selectedSlot, 'label': _selectedSlot == null ? date : '$date $_selectedSlot'};
-  }
-
-  Future<void> _pickDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: widget.state.minDate != null && widget.state.minDate!.isAfter(DateTime.now()) ? widget.state.minDate! : DateTime.now(),
-      firstDate: widget.state.minDate ?? DateTime(2000),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(primary: widget.primaryColor),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (date != null) {
-      setState(() {
-        _selectedDate = date;
-        _selectedSlot = null;
-      });
-    }
-  }
-
-  Future<void> _pickTime() async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(primary: widget.primaryColor),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (time != null) {
-      setState(() => _selectedTime = time);
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  }
-
-  String _formatTime(TimeOfDay time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(widget.theme.spacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_needsDate) Text(
-                  'Select Date',
-                  style: TextStyle(
-                    fontSize: widget.theme.typography.fontSizeMd,
-                    fontWeight: widget.theme.typography.fontWeightMedium,
-                  ),
-                ),
-                if (_needsDate) SizedBox(height: widget.theme.spacing.sm),
-                if (_needsDate) OutlinedButton.icon(
-                  onPressed: _submitted ? null : _pickDate,
-                  icon: const Icon(Icons.calendar_today),
-                  label: Text(
-                    _selectedDate != null
-                        ? _formatDate(_selectedDate!)
-                        : 'Choose date',
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.all(widget.theme.spacing.md),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(widget.theme.borderRadius.md),
-                    ),
-                  ),
-                ),
-                if (_slots != null) ...[
-                  SizedBox(height: widget.theme.spacing.md),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final slot in _slots!)
-                        ChoiceChip(
-                          label: Text(slot),
-                          selected: _selectedSlot == slot,
-                          onSelected: _submitted ? null : (_) => setState(() => _selectedSlot = slot),
-                        ),
-                    ],
-                  ),
-                ],
-                if (_needsTime) ...[
-                  SizedBox(height: widget.theme.spacing.md),
-                  Text(
-                    'Select Time',
-                    style: TextStyle(
-                      fontSize: widget.theme.typography.fontSizeMd,
-                      fontWeight: widget.theme.typography.fontWeightMedium,
-                    ),
-                  ),
-                  SizedBox(height: widget.theme.spacing.sm),
-                  OutlinedButton.icon(
-                    onPressed: _submitted ? null : _pickTime,
-                    icon: const Icon(Icons.access_time),
-                    label: Text(
-                      _selectedTime != null
-                          ? _formatTime(_selectedTime!)
-                          : 'Choose time',
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.all(widget.theme.spacing.md),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(widget.theme.borderRadius.md),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-        SizedBox(height: widget.theme.spacing.sm),
-        ElevatedButton(
-          onPressed: _submitted || !_ready
-              ? null
-              : () {
-                  setState(() => _submitted = true);
-                  widget.onResponse(_answer());
-                },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: widget.primaryColor,
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: widget.theme.spacing.md),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(widget.theme.borderRadius.lg),
-            ),
-          ),
-          child: const Text('Confirm'),
         ),
       ],
     );
@@ -1767,58 +1619,6 @@ class HtmlNodeWidget extends StatelessWidget {
             ),
           },
         ),
-      ),
-    );
-  }
-}
-
-/// Widget for payment (payment-node): the step's buttons - Pay now opens
-/// Stripe Checkout, then "I've paid" checks, and Cancel - as the web draws
-/// them. The step waits for the payment itself.
-class PaymentNodeWidget extends StatelessWidget {
-  final ui_state.PaymentUIState state;
-  final ValueChanged<dynamic>? onResponse;
-  final Color primaryColor;
-  final ConferBotTheme theme;
-
-  const PaymentNodeWidget({
-    super.key,
-    required this.state,
-    this.onResponse,
-    required this.primaryColor,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final buttons = (state.extra['buttons'] is List ? state.extra['buttons'] as List : const [])
-        .whereType<Map>()
-        .toList();
-    final url = (state.extra['checkoutUrl'] ?? state.paymentUrl)?.toString() ?? '';
-    final list = buttons.isEmpty ? [{'id': 'open', 'label': state.buttonLabel ?? 'Pay now'}] : buttons;
-    return Padding(
-      padding: EdgeInsets.only(left: theme.layout.avatarSize + 10),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: [
-          for (final b in list)
-            ElevatedButton(
-              onPressed: () async {
-                final id = '${b['id']}';
-                if (id == 'open' && url.isNotEmpty) {
-                  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                }
-                onResponse?.call({'action': id, 'label': '${b['label']}'});
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: '${b['id']}' == 'open' ? primaryColor : theme.colors.optionBubble,
-                foregroundColor: '${b['id']}' == 'open' ? Colors.white : theme.colors.optionBubbleText,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(theme.borderRadius.md)),
-              ),
-              child: Text('${b['label']}'),
-            ),
-        ],
       ),
     );
   }
