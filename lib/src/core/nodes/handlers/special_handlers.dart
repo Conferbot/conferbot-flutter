@@ -281,10 +281,14 @@ class HumanHandoverNodeHandler extends BaseNodeHandler {
   }
 
   /// The live chat ended: the post-chat survey when the step has one, else
-  /// the flow carries on along the first edge.
+  /// the flow carries on along the first edge. The builder saves the switch
+  /// as `enablePostChatSurveyQuestions`, which is what the web reads (web
+  /// core/events/agentListeners.ts, index.ts); the older
+  /// `enablePostChatSurvey` still counts, as in the Android SDK.
   NodeResult onChatEnded(String nodeId, Map<String, dynamic> nodeData) {
     final questions = getArray(nodeData, 'postChatSurveyQuestions');
-    if (getBoolean(nodeData, 'enablePostChatSurvey') && questions.isNotEmpty) {
+    final on = getBoolean(nodeData, 'enablePostChatSurveyQuestions') || getBoolean(nodeData, 'enablePostChatSurvey');
+    if (on && questions.isNotEmpty) {
       _handoverState[nodeId] = HandoverState.postChatSurvey;
       _postChatIndices[nodeId] = 0;
       final first = questions.first;
