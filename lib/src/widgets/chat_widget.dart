@@ -34,6 +34,9 @@ import '../core/requests/requests.dart';
 import 'requests/requests_portal_view.dart';
 import 'waiting/games_card_view.dart';
 import 'waiting/wait_help_card.dart';
+import 'home/home_screen_view.dart';
+import 'home/view_switch.dart';
+import '../core/home/home.dart' show HomeView;
 import 'package:file_picker/file_picker.dart';
 
 /// Complete drop-in chat widget with node rendering support
@@ -221,14 +224,26 @@ class _ChatWidgetState extends State<ChatWidget> {
     return kb;
   }
 
-  void _openKnowledgeBase() {
+  /// The help centre comes up: the home's help view when the owner has a
+  /// home screen (Back returns where it was opened from), else over the chat.
+  void _showHelpCentre(ConferBotProvider provider, {String? categoryId}) {
+    if (provider.homeModel != null) {
+      provider.home.showHelp(categoryId: categoryId);
+    } else {
+      setState(() {
+        _showKnowledgeBase = true;
+      });
+    }
+  }
+
+  void _openKnowledgeBase([String? categoryId]) {
     final provider = context.read<ConferBotProvider>();
     if (!_helpCentreVisible(provider)) return;
     final kb = _ensureKbProvider(provider);
-    setState(() {
-      _showKnowledgeBase = true;
+    _showHelpCentre(provider, categoryId: categoryId);
+    kb.initialize().then((_) {
+      if (categoryId != null) kb.selectCategory(categoryId);
     });
-    kb.initialize();
   }
 
   /// An AI source or a rich article card: the article, in the help centre.
@@ -237,9 +252,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     final provider = context.read<ConferBotProvider>();
     if (!_helpCentreVisible(provider)) return;
     final kb = _ensureKbProvider(provider);
-    setState(() {
-      _showKnowledgeBase = true;
-    });
+    _showHelpCentre(provider);
     kb.openArticle(articleId);
   }
 
@@ -248,17 +261,56 @@ class _ChatWidgetState extends State<ChatWidget> {
   /// articles the help centre may not list, or shows while it is off).
   void _openWaitArticle(String articleId) {
     if (!mounted || articleId.isEmpty) return;
-    final kb = _ensureKbProvider(context.read<ConferBotProvider>());
-    setState(() {
-      _showKnowledgeBase = true;
-    });
+    final provider = context.read<ConferBotProvider>();
+    final kb = _ensureKbProvider(provider);
+    _showHelpCentre(provider);
     kb.openArticle(articleId);
   }
 
   void _closeKnowledgeBase() {
+    final provider = context.read<ConferBotProvider>();
+    // The home's help view goes back where it was opened from.
+    if (provider.home.view == HomeView.help) provider.home.leaveHelp();
     setState(() {
       _showKnowledgeBase = false;
     });
+  }
+
+  /// The view on screen: the help centre over the chat, else the home's
+  /// (home, conversation or help centre; always the conversation without a home).
+  HomeView _view(ConferBotProvider provider) {
+    if (_showKnowledgeBase && _kbProvider != null) return HomeView.help;
+    final v = provider.home.viewFor(provider.serverCustomizations);
+    // The help centre needs its data: the conversation until it is there.
+    if (v == HomeView.help && _kbProvider == null) return provider.homeModel != null ? HomeView.home : HomeView.chat;
+    return v;
+  }
+
+  HomeView? _lastView;
+
+  /// Back (the system's, or a view's own): a step back in the help centre,
+  /// the help centre to where it came from, the conversation to the home.
+  void _back(ConferBotProvider provider) {
+    if (provider.requestsOpen) return; // the portal steps back itself
+    final view = _view(provider);
+    if (view == HomeView.help) {
+      final kb = _kbProvider;
+      if (kb != null && kb.canGoBack) {
+        kb.goBack();
+      } else {
+        _closeKnowledgeBase();
+      }
+      return;
+    }
+    if (view == HomeView.chat && provider.home.back()) return;
+    _close(provider);
+  }
+
+  /// Close the chat (the header's or the home's cross): past every view.
+  void _close(ConferBotProvider provider) {
+    provider.closeChat();
+    final nav = Navigator.of(context);
+    if (nav.canPop()) nav.pop();
   }
 
   void _handleArticleInsert(KnowledgeBaseArticle article) {
@@ -378,38 +430,84 @@ class _ChatWidgetState extends State<ChatWidget> {
         ? provider.serverTheme
         : (widget.theme ?? defaultTheme);
 
-    // Show Knowledge Base screen if active
-    if (_showKnowledgeBase && _kbProvider != null) {
-      return ChangeNotifierProvider.value(
-        value: _kbProvider!,
-        child: KnowledgeBaseScreen(
-          title: 'Help Center',
-          onClose: _closeKnowledgeBase,
-          onArticleInsertToChat: _handleArticleInsert,
-          theme: effectiveTheme,
-        ),
-      );
+    final view = _view(provider);
+    // The home came into view: its requests card reads again.
+    if (view == HomeView.home && _lastView != HomeView.home) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) provider.home.homeShown();
+      });
     }
+    _lastView = view;
 
-    return Scaffold(
-      backgroundColor: effectiveTheme.colors.background,
-      body: _withRequests(provider, effectiveTheme, Column(
-        children: [
-          _buildHeader(provider, effectiveTheme),
-          // Offline indicator banner
-          if (widget.showOfflineIndicator)
-            OfflineIndicator(
-              theme: effectiveTheme,
-              showPendingCount: true,
-              autoHide: true,
-              onRetryAll: _handleRetryAll,
-            ),
-          Expanded(
-            child: _buildChatContent(provider, effectiveTheme),
+    final Widget content = switch (view) {
+      HomeView.home => _buildHome(provider),
+      HomeView.help => ChangeNotifierProvider.value(
+          value: _kbProvider!,
+          child: KnowledgeBaseScreen(
+            title: 'Help Center',
+            onClose: _closeKnowledgeBase,
+            onArticleInsertToChat: _handleArticleInsert,
+            theme: effectiveTheme,
           ),
-          _buildInputArea(provider, effectiveTheme),
-        ],
-      )),
+        ),
+      HomeView.chat => Column(
+          children: [
+            _buildHeader(provider, effectiveTheme),
+            // Offline indicator banner
+            if (widget.showOfflineIndicator)
+              OfflineIndicator(
+                theme: effectiveTheme,
+                showPendingCount: true,
+                autoHide: true,
+                onRetryAll: _handleRetryAll,
+              ),
+            Expanded(
+              child: _buildChatContent(provider, effectiveTheme),
+            ),
+            _buildInputArea(provider, effectiveTheme),
+          ],
+        ),
+    };
+
+    return PopScope(
+      // The system back: the help centre and the conversation step back
+      // (to the home when there is one); the home closes the chat.
+      canPop: view == HomeView.home || (view == HomeView.chat && provider.homeModel == null),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back(provider);
+      },
+      child: Scaffold(
+        backgroundColor: view == HomeView.home ? homeColorOf(provider.homePalette.page) : effectiveTheme.colors.background,
+        body: _withRequests(
+          provider,
+          effectiveTheme,
+          ViewSwitch(
+            view: view,
+            transition: provider.serverCustomizations?['viewTransition'],
+            direction: provider.serverCustomizations?['viewTransitionDirection'],
+            child: content,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The home screen (core/home, widgets/home): what the visitor sees first
+  /// when the owner has one.
+  Widget _buildHome(ConferBotProvider provider) {
+    final model = provider.homeModel!;
+    return HomeScreenView(
+      model: model,
+      palette: provider.homePalette,
+      fontFamily: provider.customization?.fontFamily,
+      rawArticles: provider.home.knowledgeBase.rawArticles,
+      hasAgent: provider.agentBot != null,
+      onClose: () => _close(provider),
+      onShowChat: ([text]) => provider.home.showChat(text),
+      onOpenArticle: _openArticleById,
+      onShowHelp: ([categoryId]) => _openKnowledgeBase(categoryId),
+      onOpenRequests: ([id]) => provider.openRequests(id),
+      searchArticleText: provider.home.searchArticleText,
     );
   }
 
@@ -443,10 +541,9 @@ class _ChatWidgetState extends State<ChatWidget> {
       subtitle: _getSubtitle(provider),
       statusText: provider.headerStatus,
       botAvatarUrl: provider.botAvatarUrl,
-      onClose: () {
-        provider.closeChat();
-        Navigator.of(context).pop();
-      },
+      onClose: () => _close(provider),
+      // Back to the home screen, when the owner has one.
+      onBack: provider.homeModel != null ? provider.home.showHome : null,
       showConnectionStatus: true,
       showKnowledgeBase: _helpCentreVisible(provider),
       onKnowledgeBaseTap: _openKnowledgeBase,
@@ -941,6 +1038,9 @@ class ChatHeaderWithKB extends StatelessWidget {
   /// "Your requests" in the chat menu; null leaves it out.
   final VoidCallback? onRequests;
 
+  /// ‹ at the start: back to the home screen; null leaves it out.
+  final VoidCallback? onBack;
+
   /// Requests with a new reply: the item says "Your requests · New reply".
   final int requestsUnread;
 
@@ -960,6 +1060,7 @@ class ChatHeaderWithKB extends StatelessWidget {
     this.look,
     this.onEmailTranscript,
     this.onRequests,
+    this.onBack,
     this.requestsUnread = 0,
   });
 
@@ -988,6 +1089,23 @@ class ChatHeaderWithKB extends StatelessWidget {
       ),
       child: Row(
           children: [
+            if (onBack != null) ...[
+              Semantics(
+                button: true,
+                label: 'Back',
+                excludeSemantics: true,
+                child: InkWell(
+                  key: const ValueKey('cb-header-back'),
+                  onTap: onBack,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(2, 4, 6, 4),
+                    child: Text('‹', style: TextStyle(color: t.colors.headerText, fontSize: 28, height: 1)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 2),
+            ],
             // The agent's photo, else the bot's logo (none when the owner hid it).
             if (agent != null || look?.hideLogo != true) ...[
               _buildHeaderAvatar(t),
