@@ -12,12 +12,14 @@ void main() {
     String content = 'Test article content',
     String? categoryName,
     int? readTimeMinutes,
-    List<KnowledgeBaseArticle>? relatedArticles,
+    List<RelatedArticle>? relatedArticles,
   }) {
     return KnowledgeBaseArticle(
       id: id,
       title: title,
-      description: description,
+      summary: description,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
       content: content,
       categoryId: 'cat-1',
       categoryName: categoryName,
@@ -186,9 +188,9 @@ void main() {
     group('Related articles', () {
       testWidgets('shows related articles section when available',
           (WidgetTester tester) async {
-        final relatedArticles = [
-          createTestArticle(id: 'related-1', title: 'Related Article 1'),
-          createTestArticle(id: 'related-2', title: 'Related Article 2'),
+        const relatedArticles = [
+          RelatedArticle(id: 'related-1', title: 'Related Article 1'),
+          RelatedArticle(id: 'related-2', title: 'Related Article 2'),
         ];
 
         final article = createTestArticle(relatedArticles: relatedArticles);
