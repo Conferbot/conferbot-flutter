@@ -4,11 +4,14 @@
 /// question chips. The reply's text itself is drawn by the bubble's markdown.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/agent/agent_bot.dart';
+import '../core/agent/answer_feedback.dart';
 import '../models/message.dart';
 import '../providers/conferbot_provider.dart';
 import '../theme/conferbot_theme.dart';
@@ -67,26 +70,6 @@ class _Pill extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _QuietPill extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  final ConferBotTheme theme;
-  const _QuietPill({required this.label, required this.onTap, required this.theme});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      customBorder: const StadiumBorder(),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: ShapeDecoration(shape: StadiumBorder(side: BorderSide(color: theme.colors.border))),
-        child: Text(label, style: TextStyle(fontSize: theme.typography.fontSizeXs, color: theme.colors.text)),
       ),
     );
   }
@@ -180,7 +163,9 @@ class AgentReplyExtras extends StatelessWidget {
         !message.deleted &&
         AgentBotParser.canRate(message.id) &&
         AgentBotParser.answerFeedbackOn(provider?.serverCustomizations) &&
-        provider != null;
+        provider != null &&
+        // Rated answers keep their line; only the newest unrated one asks.
+        (message.feedback != null || provider.newestRateableAnswerId == message.id);
     if ((extras == null || extras.isEmpty) && !showHelpful) return const SizedBox.shrink();
     final accent = theme.colors.primary;
 
@@ -272,7 +257,16 @@ class AgentReplyExtras extends StatelessWidget {
                   ],
                 ),
               ),
-            if (showHelpful) _Helpful(message: message, theme: theme, provider: provider),
+            if (showHelpful)
+              HelpfulRow(
+                key: ValueKey('helpful-${message.id}'),
+                initial: message.feedback,
+                theme: theme,
+                onSend: (fb) => provider.sendAnswerFeedback(message.id, fb),
+                // "Talk to a person" only while nobody is coming or here (web offerHuman).
+                onAsk: provider.talkToPersonAllowed ? (text) => provider.sendMessage(text) : null,
+                onRetry: provider.focusComposer,
+              ),
           ],
         ),
       ),
@@ -367,48 +361,222 @@ class _ActionCardState extends State<_ActionCard> {
   }
 }
 
-class _Helpful extends StatefulWidget {
-  final AgentMessageRecord message;
+/// "Helpful?" under an AI answer (core/agent/answer_feedback.dart, web
+/// answerFeedback.ts): a vote goes the moment it is given - a No too, before
+/// any reason - then the reasons, an optional comment, "Talk to a person" and
+/// "Ask another way". The rated line's thumbs change the vote.
+class HelpfulRow extends StatefulWidget {
+  /// The vote the answer already has (a restored chat starts rated).
+  final AnswerFeedback? initial;
   final ConferBotTheme theme;
-  final ConferBotProvider? provider;
-  const _Helpful({required this.message, required this.theme, required this.provider});
+
+  /// Send this vote (ai-answer-feedback) and keep it on the answer.
+  final void Function(AnswerFeedback feedback) onSend;
+
+  /// Send the visitor's words ("Talk to a person"); null hides the button.
+  final void Function(String text)? onAsk;
+
+  /// Put the cursor in the composer ("Ask another way").
+  final VoidCallback? onRetry;
+
+  const HelpfulRow({super.key, this.initial, required this.theme, required this.onSend, this.onAsk, this.onRetry});
 
   @override
-  State<_Helpful> createState() => _HelpfulState();
+  State<HelpfulRow> createState() => _HelpfulRowState();
 }
 
-class _HelpfulState extends State<_Helpful> {
-  bool _askWhy = false;
+class _HelpfulRowState extends State<HelpfulRow> {
+  late HelpfulState _state = Helpful.start(widget.initial);
+  final _comment = TextEditingController();
+  Timer? _settle;
+
+  @override
+  void dispose() {
+    _settle?.cancel();
+    _comment.dispose();
+    super.dispose();
+  }
+
+  void _tap(HelpfulTap tap) {
+    final r = Helpful.step(_state, tap);
+    if (r.send != null) widget.onSend(r.send!);
+    if (r.ask != null) widget.onAsk?.call(r.ask!);
+    if (r.focus) widget.onRetry?.call();
+    setState(() => _state = r.state);
+    _settle?.cancel();
+    // "Thanks for letting us know!", then the quiet rated line.
+    if (_state.view == HelpfulView.thanks) {
+      _settle = Timer(Helpful.thanksFor, () {
+        if (mounted) setState(() => _state = Helpful.step(_state, const HelpfulSettle()).state);
+      });
+    }
+  }
+
+  Widget _thumb(bool helpful, {bool pressed = false}) {
+    final theme = widget.theme;
+    final rated = _state.view == HelpfulView.rated;
+    final icon = helpful ? (pressed ? Icons.thumb_up : Icons.thumb_up_outlined) : (pressed ? Icons.thumb_down : Icons.thumb_down_outlined);
+    return Semantics(
+      button: true,
+      selected: pressed,
+      label: rated ? (helpful ? Helpful.ratedUp : Helpful.ratedDown) : (helpful ? Helpful.yes : Helpful.no),
+      child: InkWell(
+        key: ValueKey('cb-helpful-${helpful ? 'up' : 'down'}'),
+        customBorder: const StadiumBorder(),
+        onTap: () => _tap(HelpfulVote(helpful)),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: pressed
+              ? ShapeDecoration(color: theme.colors.surface, shape: StadiumBorder(side: BorderSide(color: theme.colors.border, width: 0.5)))
+              : null,
+          child: Icon(icon, size: 15, color: theme.colors.textSecondary.withOpacity(rated && !pressed ? 0.45 : 1)),
+        ),
+      ),
+    );
+  }
+
+  Widget _action(String label, VoidCallback onTap, String key) => InkWell(
+        key: ValueKey(key),
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Text(label,
+              style: TextStyle(fontSize: widget.theme.typography.fontSizeXs, color: widget.theme.colors.primary, fontWeight: FontWeight.w600)),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
     final theme = widget.theme;
     final label = TextStyle(fontSize: theme.typography.fontSizeXs, color: theme.colors.textSecondary);
-    final given = widget.message.feedback;
-    if (given != null) {
-      return Text(given.helpful ? 'Thanks, glad it helped' : 'Thanks for telling us', style: label);
+    switch (_state.view) {
+      case HelpfulView.thanks:
+        return Text(Helpful.thanks, style: label);
+      case HelpfulView.rated:
+        return Semantics(
+          container: true,
+          label: Helpful.groupLabel,
+          child: Row(
+            key: const ValueKey('cb-helpful-rated'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _thumb(true, pressed: _state.current?.helpful == true),
+              _thumb(false, pressed: _state.current?.helpful == false),
+              const SizedBox(width: 4),
+              Flexible(child: Text(Helpful.ratedLabel(_state.current), style: label)),
+            ],
+          ),
+        );
+      case HelpfulView.ask:
+        return Semantics(
+          container: true,
+          label: Helpful.groupLabel,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [Text(Helpful.ask, style: label), const SizedBox(width: 4), _thumb(true), _thumb(false)],
+          ),
+        );
+      case HelpfulView.down:
+        final reason = _state.current?.reason;
+        final onPrimary = theme.colors.primary.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+        final border = OutlineInputBorder(borderRadius: BorderRadius.circular(theme.borderRadius.md), borderSide: BorderSide(color: theme.colors.border, width: 0.5));
+        return Semantics(
+          container: true,
+          label: Helpful.groupLabel,
+          child: Column(
+            key: const ValueKey('cb-helpful-reasons'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(Helpful.sorry, style: label),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final (key, text) in Helpful.reasons)
+                    Semantics(
+                      inMutuallyExclusiveGroup: true,
+                      checked: reason == key,
+                      child: InkWell(
+                        key: ValueKey('cb-helpful-reason-$key'),
+                        customBorder: const StadiumBorder(),
+                        onTap: () => _tap(HelpfulReason(key)),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: ShapeDecoration(
+                            color: reason == key ? theme.colors.primary : null,
+                            shape: StadiumBorder(side: BorderSide(color: reason == key ? theme.colors.primary : theme.colors.border)),
+                          ),
+                          child: Text(text,
+                              style: TextStyle(
+                                  fontSize: theme.typography.fontSizeXs, color: reason == key ? onPrimary : theme.colors.text)),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              if (_state.commented)
+                Padding(padding: const EdgeInsets.only(top: 6), child: Text(Helpful.thanksComment, style: label))
+              else if (reason != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          key: const ValueKey('cb-helpful-comment'),
+                          controller: _comment,
+                          autofocus: true,
+                          maxLength: 500,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (v) => _tap(HelpfulComment(v)),
+                          style: TextStyle(fontSize: theme.typography.fontSizeSm, color: theme.colors.text),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            counterText: '',
+                            hintText: Helpful.comment,
+                            hintStyle: TextStyle(fontSize: theme.typography.fontSizeSm, color: theme.colors.textSecondary),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            filled: true,
+                            fillColor: theme.colors.background,
+                            border: border,
+                            enabledBorder: border,
+                            focusedBorder: border,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Semantics(
+                        button: true,
+                        label: Helpful.sendFeedback,
+                        child: InkWell(
+                          key: const ValueKey('cb-helpful-comment-send'),
+                          onTap: () => _tap(HelpfulComment(_comment.text)),
+                          borderRadius: BorderRadius.circular(theme.borderRadius.md),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(color: theme.colors.primary, borderRadius: BorderRadius.circular(theme.borderRadius.md)),
+                            child: Icon(Icons.send, size: 15, color: onPrimary),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                children: [
+                  if (widget.onAsk != null) _action(Helpful.talkToPerson, () => _tap(const HelpfulHuman()), 'cb-helpful-human'),
+                  _action(Helpful.retry, () => _tap(const HelpfulRetry()), 'cb-helpful-retry'),
+                ],
+              ),
+            ],
+          ),
+        );
     }
-    if (_askWhy) {
-      return Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Text('What was wrong?', style: label),
-          for (final (key, text) in AgentBotParser.feedbackReasons)
-            _QuietPill(label: text, theme: theme, onTap: () => widget.provider?.sendAnswerFeedback(widget.message.id, false, key)),
-        ],
-      );
-    }
-    return Row(
-      children: [
-        Text('Helpful?', style: label),
-        const SizedBox(width: 6),
-        _QuietPill(label: 'Yes', theme: theme, onTap: () => widget.provider?.sendAnswerFeedback(widget.message.id, true)),
-        const SizedBox(width: 6),
-        _QuietPill(label: 'No', theme: theme, onTap: () => setState(() => _askWhy = true)),
-      ],
-    );
   }
 }
 
