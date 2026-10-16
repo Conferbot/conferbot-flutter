@@ -53,10 +53,11 @@ void main() {
           ),
         );
 
-        // Should find SizedBox.shrink
-        final sizedBox = tester.widget<SizedBox>(find.byType(SizedBox));
-        expect(sizedBox.width, isNull);
-        expect(sizedBox.height, isNull);
+        // SizedBox.shrink: zero by zero.
+        final sizedBox = tester.widget<SizedBox>(
+            find.descendant(of: find.byType(ConnectionStatus), matching: find.byType(SizedBox)));
+        expect(sizedBox.width, 0.0);
+        expect(sizedBox.height, 0.0);
       });
 
       testWidgets('shows indicator when online and showWhenOnline is true',
