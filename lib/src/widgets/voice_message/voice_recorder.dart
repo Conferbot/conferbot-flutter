@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/voice_recording_service.dart';
+import '../../core/i18n/i18n.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
 
@@ -555,14 +556,14 @@ class _VoiceRecorderButtonState extends State<VoiceRecorderButton> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          'Microphone Permission',
+          t('sdk.permission.micTitle'),
           style: TextStyle(
             fontSize: theme.typography.fontSizeLg,
             fontWeight: theme.typography.fontWeightBold,
           ),
         ),
         content: Text(
-          'Microphone permission is required to record voice messages. Please enable it in your device settings.',
+          t('sdk.permission.micDenied'),
           style: TextStyle(
             fontSize: theme.typography.fontSizeMd,
           ),
@@ -570,14 +571,14 @@ class _VoiceRecorderButtonState extends State<VoiceRecorderButton> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(t('common.cancel')),
           ),
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
               _recordingService.openSettings();
             },
-            child: const Text('Open Settings'),
+            child: Text(t('sdk.permission.openSettings')),
           ),
         ],
       ),
