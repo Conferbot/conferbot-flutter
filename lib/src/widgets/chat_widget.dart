@@ -605,8 +605,10 @@ class _ChatWidgetState extends State<ChatWidget> {
     if (uiState is! HumanHandoverUIState) return null;
 
     if (uiState.state == HandoverState.waitingForAgent) {
+      // The wait card's deadline and clock (#87): the two count down together.
       return CompactQueueStatus(
-        maxWaitMinutes: uiState.maxWaitTime ?? widget.handoverMaxWaitMinutes,
+        endsAt: provider.liveChat.waitEndsAt,
+        now: provider.liveChat.now,
         queueInfo: _queueInfo,
         primaryColor: theme.colors.primary,
         theme: theme,
