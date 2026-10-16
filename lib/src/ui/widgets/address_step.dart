@@ -1,9 +1,12 @@
 /// address-node's card (web richNodesView.ts addressCardHtml): a search
 /// with suggestions as the visitor types (the words they typed in bold),
 /// a picked address confirmed on a small map with a pin, or the address
-/// typed by hand. Sends `{action: search, q}`, `{action: pick, index}`
-/// (after Confirm) and `{action: manual, line1, city, region, postal,
-/// country}`; the step searches on the server and says why one was refused.
+/// typed by hand, or "Use my location" when the app gives a location
+/// provider (`ConferBotConfig.locationProvider`; no plugin in the SDK).
+/// Sends `{action: search, q}`, `{action: locate, lat, lng}`, `{action:
+/// pick, index}` (after Confirm) and `{action: manual, line1, city, region,
+/// postal, country}`; the step searches on the server and says why one was
+/// refused.
 library;
 
 import 'dart:async';
@@ -12,7 +15,8 @@ import 'package:flutter/material.dart';
 
 import '../../config/constants.dart' show ConferBotEndpoints;
 import '../../core/flow/i18n_en.dart';
-import '../../core/flow/rich.dart' show osmLink, osmTile, tileSrc;
+import '../../core/flow/location.dart';
+import '../../core/flow/rich.dart' show addressErrorText, osmLink, osmTile, tileSrc;
 import '../../core/nodes/node_ui_state.dart' as ui_state;
 import '../../theme/conferbot_theme.dart';
 import 'consent_step.dart' show openStepLink;
@@ -141,6 +145,10 @@ class AddressStepWidget extends StatefulWidget {
   /// The server the map tiles come from (embed-server /api/v1/geo/tile).
   final String? tileOrigin;
 
+  /// The app's way to the device's position: "Use my location" is drawn
+  /// only with it (and while the owner allows it, `allowMyLocation`).
+  final ConferBotLocationProvider? locationProvider;
+
   const AddressStepWidget({
     super.key,
     required this.state,
@@ -149,6 +157,7 @@ class AddressStepWidget extends StatefulWidget {
     required this.theme,
     this.error,
     this.tileOrigin,
+    this.locationProvider,
   });
 
   @override
@@ -169,6 +178,10 @@ class _AddressStepWidgetState extends State<AddressStepWidget> {
   bool _searching = false;
   bool _sent = false;
 
+  // "Use my location": asking the app, then the server, for the address.
+  bool _locating = false;
+  String? _locateError;
+
   static const _labels = {
     'line1': 'address.street',
     'city': 'address.city',
@@ -185,6 +198,12 @@ class _AddressStepWidgetState extends State<AddressStepWidget> {
     if (!identical(old.state, widget.state) || old.error != widget.error) {
       _searching = false;
       _sent = false;
+      // The device's address came back: confirm it on the map, as a pick.
+      if (_locating && widget.state.extra['located'] == true && _results.isNotEmpty) {
+        _picked = 0;
+        _pane = _Pane.confirm;
+      }
+      _locating = false;
     }
   }
 
@@ -216,6 +235,29 @@ class _AddressStepWidgetState extends State<AddressStepWidget> {
       return;
     }
     _debounce = Timer(addressDebounce, () => _ask(q));
+  }
+
+  bool get _canLocate => widget.locationProvider != null && widget.state.extra['allowMyLocation'] != false;
+
+  Future<void> _locate() async {
+    final provider = widget.locationProvider;
+    if (provider == null || _locating || _sent) return;
+    _debounce?.cancel();
+    setState(() {
+      _locating = true;
+      _locateError = null;
+    });
+    final r = await locate(provider);
+    if (!mounted) return;
+    final at = r.at;
+    if (at == null) {
+      setState(() {
+        _locating = false;
+        _locateError = addressErrorText(r.error);
+      });
+      return;
+    }
+    widget.onResponse({'action': 'locate', 'lat': at.latitude, 'lng': at.longitude});
   }
 
   void _send(Map<String, dynamic> answer) {
@@ -261,8 +303,10 @@ class _AddressStepWidgetState extends State<AddressStepWidget> {
   }
 
   Widget _searchPane(StepLook style) {
-    final error = widget.error ?? '';
-    final status = _searching
+    final error = _locateError ?? widget.error ?? '';
+    final status = _locating
+        ? t('address.locating')
+        : _searching
         ? t('address.searching')
         : (_results.isNotEmpty
             ? t(_results.length == 1 ? 'address.suggestions.one' : 'address.suggestions.other', {'n': _results.length})
@@ -288,7 +332,10 @@ class _AddressStepWidgetState extends State<AddressStepWidget> {
             invalid: error.isNotEmpty,
             suffix: Icon(Icons.search, size: 20, color: style.muted),
           ),
-          onChanged: _typed,
+          onChanged: (q) {
+            if (_locateError != null) setState(() => _locateError = null);
+            _typed(q);
+          },
           onSubmitted: (q) {
             _asked = '';
             _ask(q);
@@ -324,11 +371,25 @@ class _AddressStepWidgetState extends State<AddressStepWidget> {
             ),
           ),
         StepStatus(style: style, hint: status, error: error),
-        if (widget.state.allowManualEntry)
+        if (_canLocate)
           Align(
             alignment: Alignment.centerLeft,
             child: Padding(
               padding: const EdgeInsets.only(top: 6),
+              child: StepLink(
+                key: const ValueKey('ad-locate'),
+                label: t('address.useLocation'),
+                style: style,
+                icon: Icons.my_location,
+                onPressed: _sent || _locating ? null : _locate,
+              ),
+            ),
+          ),
+        if (widget.state.allowManualEntry)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.only(top: _canLocate ? 0 : 6),
               child: StepLink(
                 key: const ValueKey('ad-manual'),
                 label: t('address.manual'),
@@ -428,7 +489,12 @@ class _AddressStepWidgetState extends State<AddressStepWidget> {
             key: const ValueKey('ad-change'),
             label: t('common.change'),
             style: style,
-            onPressed: _sent ? null : () => setState(() => _pane = _Pane.search),
+            onPressed: _sent
+                ? null
+                : () => setState(() {
+                      _pane = _Pane.search;
+                      _locateError = null;
+                    }),
           ),
           StepButton(
             key: const ValueKey('ad-confirm'),
