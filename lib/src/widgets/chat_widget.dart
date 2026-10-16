@@ -30,6 +30,8 @@ import '../core/live_chat/live_chat.dart';
 import '../core/state/chat_state.dart';
 import '../core/help_centre/help_centre.dart';
 import '../core/live_chat/email_transcript.dart';
+import '../core/requests/requests.dart';
+import 'requests/requests_portal_view.dart';
 import 'waiting/games_card_view.dart';
 import 'waiting/wait_help_card.dart';
 import 'package:file_picker/file_picker.dart';
@@ -391,7 +393,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
     return Scaffold(
       backgroundColor: effectiveTheme.colors.background,
-      body: Column(
+      body: _withRequests(provider, effectiveTheme, Column(
         children: [
           _buildHeader(provider, effectiveTheme),
           // Offline indicator banner
@@ -407,7 +409,27 @@ class _ChatWidgetState extends State<ChatWidget> {
           ),
           _buildInputArea(provider, effectiveTheme),
         ],
-      ),
+      )),
+    );
+  }
+
+  /// "Your requests" opened from the chat menu, over the conversation
+  /// (core/requests); Back and Android's back step back.
+  Widget _withRequests(ConferBotProvider provider, ConferBotTheme theme, Widget chat) {
+    // Always a Stack, so the chat under it keeps its place.
+    return Stack(
+      children: [
+        Positioned.fill(child: chat),
+        if (provider.requestsOpen)
+          Positioned.fill(
+            child: RequestsPortalView(
+              portal: provider.requests.portal,
+              theme: theme,
+              accent: requestsColorOf(requestsAccent(provider.serverCustomizations)),
+              fontFamily: provider.customization?.fontFamily,
+            ),
+          ),
+      ],
     );
   }
 
@@ -431,6 +453,10 @@ class _ChatWidgetState extends State<ChatWidget> {
       // The chat menu: the conversation to the visitor's inbox (web
       // emailTranscript.ts), once there is one and the visitor is not blocked.
       onEmailTranscript: provider.chatSessionId != null && provider.visitorBlocked == null ? provider.openEmailTranscript : null,
+      // "Your requests" once the visitor has one (web home card,
+      // ts/home/requests/card.ts; there is no home screen yet).
+      onRequests: provider.requests.hasRequests ? () => provider.openRequests() : null,
+      requestsUnread: provider.requestsUnread,
       theme: provider.serverTheme,
       // Show handover indicator in header
       handoverIndicator: _buildHandoverIndicator(provider, theme),
@@ -912,6 +938,12 @@ class ChatHeaderWithKB extends StatelessWidget {
   /// "Email me this chat" in the chat menu; null leaves it out.
   final VoidCallback? onEmailTranscript;
 
+  /// "Your requests" in the chat menu; null leaves it out.
+  final VoidCallback? onRequests;
+
+  /// Requests with a new reply: the item says "Your requests · New reply".
+  final int requestsUnread;
+
   const ChatHeaderWithKB({
     super.key,
     this.title,
@@ -927,6 +959,8 @@ class ChatHeaderWithKB extends StatelessWidget {
     this.handoverIndicator,
     this.look,
     this.onEmailTranscript,
+    this.onRequests,
+    this.requestsUnread = 0,
   });
 
   @override
@@ -1034,22 +1068,36 @@ class ChatHeaderWithKB extends StatelessWidget {
               ),
               const SizedBox(width: 4),
             ],
-            if (onEmailTranscript != null) ...[
+            if (onEmailTranscript != null || onRequests != null) ...[
               PopupMenuButton<String>(
                 key: const ValueKey('cb-chat-menu'),
                 icon: Icon(Icons.more_vert, color: t.colors.headerText),
                 tooltip: 'Chat menu',
                 padding: EdgeInsets.zero,
                 onSelected: (id) {
-                  if (id == 'email-transcript') onEmailTranscript!();
+                  if (id == 'email-transcript') onEmailTranscript?.call();
+                  if (id == 'requests') onRequests?.call();
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: 'email-transcript',
-                    child: Row(
-                      children: [Icon(Icons.mail_outline, size: 18), SizedBox(width: 10), Text(EmailTranscript.menu)],
+                  if (onRequests != null)
+                    PopupMenuItem(
+                      key: const ValueKey('cb-menu-requests'),
+                      value: 'requests',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.inbox_outlined, size: 18),
+                          const SizedBox(width: 10),
+                          Flexible(child: Text(RequestsText.menu(requestsUnread), overflow: TextOverflow.ellipsis)),
+                        ],
+                      ),
                     ),
-                  ),
+                  if (onEmailTranscript != null)
+                    const PopupMenuItem(
+                      value: 'email-transcript',
+                      child: Row(
+                        children: [Icon(Icons.mail_outline, size: 18), SizedBox(width: 10), Text(EmailTranscript.menu)],
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(width: 4),
