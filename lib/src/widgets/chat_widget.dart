@@ -206,6 +206,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     // AI sources and rich article cards open articles through this chat.
     _chatProvider = context.read<ConferBotProvider>();
     _chatProvider!.articleOpener = _openArticleById;
+    _chatProvider!.articlesShown = () => mounted && _chatProvider != null && _helpCentreVisible(_chatProvider!);
     // The help card's articles, also those the help centre does not list.
     _chatProvider!.waitArticleOpener = _openWaitArticle;
     _chatProvider!.composerFocuser = () {
@@ -422,6 +423,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     _connectivity.removeListener(_onConnectivityChange);
     _messageQueue.removeListener(_onQueueChange);
     _chatProvider?.articleOpener = null;
+    _chatProvider?.articlesShown = null;
     _chatProvider?.waitArticleOpener = null;
     _chatProvider?.composerFocuser = null;
     _composerFocus.dispose();
