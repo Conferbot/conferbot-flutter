@@ -467,6 +467,17 @@ stop(); // stop listening
 
 `cb:waiting-for-human` fires from the server's `handover-waiting`, or 20 seconds into a wait for a person with nobody yet (once per wait, and only while the chat is open). No signal carries the visitor's email.
 
+### While you wait
+
+As on the web widget, while the visitor waits for a person (a flow's handover step with no AI agent on it, an AI handing the chat to the team, or a restored chat still in the queue):
+
+- **Help articles.** 6 seconds into the wait, "While you wait, this might help" shows up to two help-centre articles that match the visitor's last real question (only while the owner's help centre is on). When the server picks the help itself (`queue-help`, or a waiting `queue-status` with `help`), its pick replaces ours and has **That solved it**: it sends `queue-self-resolve {chatSessionId, articleId}`, and if the server agrees the visitor leaves the queue ("You left the queue. Glad that helped.", recorded as "Resolved while waiting"). An article opens in the app's help centre view; one the help centre does not list is fetched from the server by its id. A page opens in the browser. Once the wait is over the card stays as "Articles that might help".
+- **Games.** 2.5 seconds after the waiting signal (`cb:waiting-for-human`), a card offers seven games: rock paper scissors, tic-tac-toe, a quick quiz (with questions from the bot's help centre when it has enough), memory match, a reflex test, emoji riddles and word scramble, with the web's rules and scoring. The owner's `waitingGames` setting (`{enabled, games, offerText}`) picks them; unset is on with all seven. **Not now** or the x stops the offers for the app session. Typing "play" or "games" while waiting opens the menu instead of sending the words. When a person joins, an unused offer goes and a game in progress is saved ("Sam's here!", **Finish my game**).
+- The composer stays open during the wait: what the visitor types goes as a live message for whoever joins.
+- The cards follow the phone's reduced-motion setting, and are drawn in the conversation only: never saved on the device or sent to the server.
+
+Headless: `provider.waitHelpCard` (`HelpCardState`), `provider.openWaitHelpItem(item)`, `provider.solveWait()`, `provider.gamesCard` (`GamesCard`, its `state` and `subscribe`); `WaitHelpCard` and `GamesCardView` draw them.
+
 ### Push token registration
 
 Register a device token (FCM, APNs, or any provider) against the current chat session:
