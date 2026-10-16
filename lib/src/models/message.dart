@@ -1,3 +1,4 @@
+import '../core/i18n/i18n.dart';
 import '../core/agent/agent_bot.dart';
 import '../core/live_chat/live_chat.dart';
 
@@ -206,7 +207,7 @@ class AgentDetails {
     final avatar = json['avatar']?.toString();
     return AgentDetails(
       id: id,
-      name: json['name']?.toString() ?? 'Agent',
+      name: json['name']?.toString() ?? t('agent.agent'),
       email: json['email']?.toString() ?? '',
       avatar: avatar == null || avatar.isEmpty ? null : avatar,
       isAIAgent: json['isAIAgent'] == true || id.startsWith('ai-agent-'),
@@ -266,7 +267,7 @@ class AgentMessageRecord extends RecordItem {
   factory AgentMessageRecord.fromJson(Map<String, dynamic> json) {
     final agentDetails = json['agentDetails'] is Map
         ? AgentDetails.fromJson(Map<String, dynamic>.from(json['agentDetails'] as Map))
-        : const AgentDetails(id: '', name: 'Agent', email: '');
+        : AgentDetails(id: '', name: t('agent.agent'), email: '');
     final extrasRaw = json['extras'];
     return AgentMessageRecord(
       id: json['_id'].toString(),
