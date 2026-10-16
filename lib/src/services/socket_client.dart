@@ -105,6 +105,8 @@ class SocketClient with ChangeNotifier {
   io.Socket? _socket;
   SocketConnectionState _connectionState = SocketConnectionState.disconnected;
   int _reconnectionAttempts = 0;
+  /// Set by the first connect: each connect after it is a reconnect (#93).
+  bool _connectedBefore = false;
   Timer? _reconnectionTimer;
   Timer? _connectionTimeoutTimer;
   SocketException? _lastError;
@@ -286,6 +288,15 @@ class SocketClient with ChangeNotifier {
       _updateConnectionState(SocketConnectionState.connected);
       socketLogger.debug('Connected');
 
+      // Every connect after the first is a reconnect. socket_io_client tells
+      // `reconnect` on the Manager only, so it is told from here, as React
+      // Native and Android do (#93).
+      if (_connectedBefore) {
+        _onReconnectController.add(null);
+        socketLogger.debug('Reconnected');
+      }
+      _connectedBefore = true;
+
       // Process any queued messages
       if (config.enableOfflineQueue) {
         _messageQueue.processQueue();
@@ -315,20 +326,9 @@ class SocketClient with ChangeNotifier {
       _handleConnectionError(error, null);
     });
 
-    _socket?.on(SocketEvents.reconnect, (_) {
-      _reconnectionAttempts = 0;
-      _clearError();
-      _updateConnectionState(SocketConnectionState.connected);
-      _onReconnectController.add(null);
-      socketLogger.debug('Reconnected');
-
-      // Process queued messages on reconnect
-      if (config.enableOfflineQueue) {
-        _messageQueue.processQueue();
-      }
-    });
-
-    _socket?.on(SocketEvents.reconnectAttempt, (attempt) {
+    // The attempts and the failure are told on the Manager (socket.io), not
+    // the Socket (#93).
+    _socket?.io.on(SocketEvents.reconnectAttempt, (attempt) {
       _reconnectionAttempts = attempt as int? ?? _reconnectionAttempts + 1;
       _updateConnectionState(SocketConnectionState.reconnecting);
       onReconnecting?.call(
@@ -340,7 +340,7 @@ class SocketClient with ChangeNotifier {
       );
     });
 
-    _socket?.on(SocketEvents.reconnectFailed, (_) {
+    _socket?.io.on(SocketEvents.reconnectFailed, (_) {
       _updateConnectionState(SocketConnectionState.failed);
       final error = SocketException.reconnectionFailed(
         attempts: _reconnectionAttempts,
@@ -913,10 +913,14 @@ class SocketClient with ChangeNotifier {
 
     if (_socket != null) {
       _socket!.clearListeners();
+      _socket!.io
+        ..off(SocketEvents.reconnectAttempt)
+        ..off(SocketEvents.reconnectFailed);
       _socket!.disconnect();
       _socket!.dispose();
       _socket = null;
     }
+    _connectedBefore = false;
 
     _updateConnectionState(SocketConnectionState.disconnected);
   }
