@@ -18,7 +18,22 @@ class QueueStatus {
   final int? agentsOnline;
   final String? estimateLabel;
 
-  const QueueStatus({required this.status, this.position, this.ahead, this.agentsOnline, this.estimateLabel});
+  /// The server's estimate bucket (under_minute, about_1 ... longer), worded here.
+  final String? estimateBucket;
+
+  /// The routed team's usual first reply (embed-server replyTimeService):
+  /// `{bucket, phrase, wait}`.
+  final Map<String, dynamic>? typical;
+
+  const QueueStatus({
+    required this.status,
+    this.position,
+    this.ahead,
+    this.agentsOnline,
+    this.estimateLabel,
+    this.estimateBucket,
+    this.typical,
+  });
 
   @override
   bool operator ==(Object other) =>
@@ -27,10 +42,15 @@ class QueueStatus {
       other.position == position &&
       other.ahead == ahead &&
       other.agentsOnline == agentsOnline &&
-      other.estimateLabel == estimateLabel;
+      other.estimateLabel == estimateLabel &&
+      other.estimateBucket == estimateBucket &&
+      _sameMap(other.typical, typical);
+
+  static bool _sameMap(Map? a, Map? b) =>
+      a == null || b == null ? a == b : a.length == b.length && a.keys.every((k) => b.containsKey(k) && a[k] == b[k]);
 
   @override
-  int get hashCode => Object.hash(status, position, ahead, agentsOnline, estimateLabel);
+  int get hashCode => Object.hash(status, position, ahead, agentsOnline, estimateLabel, estimateBucket, typical?.length);
 }
 
 class HandoverWaiting {
@@ -137,7 +157,36 @@ class LiveChat {
       ahead: _int(raw['ahead']),
       agentsOnline: _int(raw['agentsOnline']),
       estimateLabel: estimate is Map ? _str(estimate['label']) : null,
+      estimateBucket: estimate is Map && estimate['bucket'] is String ? estimate['bucket'] as String : null,
+      typical: raw['typical'] is Map ? Map<String, dynamic>.from(raw['typical'] as Map) : null,
     );
+  }
+
+  // The server's estimate buckets (embed-server liveChat/queueService),
+  // worded here (web queueCard.ts ESTIMATE_WORDS).
+  static const _estimateWords = {
+    'under_minute': 'queue.estimate.underMinute',
+    'about_1': 'queue.estimate.about1',
+    'about_2': 'queue.estimate.about2',
+    'about_3': 'queue.estimate.about3',
+    'few': 'queue.estimate.few',
+    'longer': 'queue.estimate.longer',
+  };
+
+  /// The wait card's lines under the headline (web queueCard.ts
+  /// estimateText and the card's third line): the live estimate in the
+  /// visitor's language, else the usual wait ("Typical wait: a few
+  /// minutes", ReplyTime.typicalWait), else a calm promise; then the usual
+  /// wait again under a live estimate, when it says something else.
+  static ({String estimate, String typical}) waitCardLines(QueueStatus? q, String? typical) {
+    String estimate;
+    if (q != null && q.status == 'waiting' && q.estimateLabel != null) {
+      final key = _estimateWords[q.estimateBucket];
+      estimate = key != null ? t(key) : q.estimateLabel!;
+    } else {
+      estimate = typical ?? t('queue.soon');
+    }
+    return (estimate: estimate, typical: typical != null && estimate != typical ? typical : '');
   }
 
   /// "1st", "2nd", "3rd", "11th"
