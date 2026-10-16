@@ -854,6 +854,7 @@ final Map<String, String> i18nNl = <String, String>{
   "sdk.bubble.reactHint": "Lang indrukken om een reactie toe te voegen",
   "sdk.calendar.dayClosed": "Deze dag is niet beschikbaar.",
   "sdk.calendar.noTimes": "Op deze dag zijn geen tijden vrij.",
+  "sdk.calendar.slotBooked": "{time}, bezet",
   "sdk.card.learnMore": "Meer informatie",
   "sdk.chat.complete": "Gesprek afgerond",
   "sdk.chat.loadOlder": "Oudere berichten laden",
