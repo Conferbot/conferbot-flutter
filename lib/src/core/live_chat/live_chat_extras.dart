@@ -27,12 +27,14 @@ class LiveChatExtras extends ChangeNotifier {
     required void Function() sendRecord,
     void Function()? continueFlow,
     Future<TranscriptEmailResult> Function(String chatSessionId, String email)? postTranscriptEmail,
+    void Function(dynamic data)? onQueueStatus,
   })  : _socket = socket,
         _sessionId = sessionId,
         _addMessage = addMessage,
         _sendRecord = sendRecord,
         _continueFlow = continueFlow ?? (() {}),
-        _postTranscriptEmail = postTranscriptEmail;
+        _postTranscriptEmail = postTranscriptEmail,
+        _onQueueStatus = onQueueStatus ?? ((_) {});
 
   final SocketClient? Function() _socket;
   final String? Function() _sessionId;
@@ -40,6 +42,10 @@ class LiveChatExtras extends ChangeNotifier {
   final void Function() _sendRecord;
   final void Function() _continueFlow;
   final Future<TranscriptEmailResult> Function(String chatSessionId, String email)? _postTranscriptEmail;
+
+  /// Every queue-status, the event and the poll's answer, as the server sent
+  /// it (its `help` is what to offer while waiting, core/waiting).
+  final void Function(dynamic data) _onQueueStatus;
   ChatState get _state => ChatState.instance;
 
   QueueStatus? queue;
@@ -91,6 +97,7 @@ class LiveChatExtras extends ChangeNotifier {
     on('queue-status', (d) {
       if (!_own(d)) return;
       queue = LiveChat.queueStatusOf(d);
+      _onQueueStatus(d);
       notifyListeners();
     });
     on('handover-waiting', (d) {
@@ -272,7 +279,9 @@ class LiveChatExtras extends ChangeNotifier {
     final s = _socket();
     if (id == null || s == null) return;
     try {
-      final res = await s.emitWithAck('queue-status', {'chatSessionId': id});
+      final raw = await s.emitWithAck('queue-status', {'chatSessionId': id});
+      final res = raw is List && raw.isNotEmpty ? raw.first : raw;
+      _onQueueStatus(res);
       final q = LiveChat.queueStatusOf(res);
       if (q != null) {
         queue = q;
