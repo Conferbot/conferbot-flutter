@@ -15,7 +15,17 @@
 ///   - delay, iterations (infinity loops) and fill (forwards / backwards /
 ///     both; none: the element's own value outside the animation);
 ///   - several animations on one element: the later one wins for the
-///     properties it sets.
+///     properties it sets;
+///   - the `transform` property: "scaleY(n)" (the eyelids) is the scale's y;
+///     a list ("translateY(-3px) scale(0.92, 1.14)", "rotate(-7deg)
+///     translateX(-1px)", "none") is interpolated function by function, as
+///     Chrome does for lists of the same functions (none is their identity),
+///     into tx / ty / sx / sy / r; [transformOrder] says in which order to
+///     draw them. Its values share the channels of the individual
+///     translate / scale / rotate, so an element animated both ways is drawn
+///     as two nested boxes (the individual properties outside);
+///   - CSS @keyframes ([cssKeyframes]): each selector's offsets, the
+///     animation's timing function on every keyframe, as CSS plays it.
 ///
 /// The same algorithm as the React Native SDK's core/keyframes.ts, which is
 /// checked against Chrome's own animations frame by frame
@@ -205,9 +215,120 @@ const Map<String, List<String>> _channelsOf = {
   'strokeDashoffset': ['dash'],
   'clipPath': ['clip'],
   'left': ['left'],
-  // Only "scaleY(n)" is used (the eyelids): it is the scale's y.
+  // "scaleY(n)" (the eyelids) is the scale's y; a function list sets them all (_transformList).
   'transform': ['sy'],
 };
+const _transformListChannels = ['tx', 'ty', 'sx', 'sy', 'r'];
+final _scaleYOnly = RegExp(r'^scaleY\([^)]*\)$');
+
+/// A track whose `transform` is a function list (not the eyelids' plain scaleY).
+bool _listTransform(List<Keyframe> kfs) => kfs.any((k) => k['transform'] != null && !_scaleYOnly.hasMatch(_str(k['transform']!).trim()));
+
+/// A CSS transform list as tx / ty (px), sx / sy, r (deg); "none" is the identity.
+Map<String, double> _transformList(String s) {
+  final out = {'tx': 0.0, 'ty': 0.0, 'sx': 1.0, 'sy': 1.0, 'r': 0.0};
+  if (s == 'none') return out;
+  for (final m in RegExp(r'([a-zA-Z]+)\(([^)]*)\)').allMatches(s)) {
+    final args = m.group(2)!.split(RegExp(r'[\s,]+')).where((a) => a.isNotEmpty).map(jsParseFloat).toList();
+    final a = args.isNotEmpty && args[0].isFinite ? args[0] : 0.0;
+    final b = args.length > 1 && args[1].isFinite ? args[1] : null;
+    switch (m.group(1)) {
+      case 'translate':
+        out['tx'] = a;
+        out['ty'] = b ?? 0;
+      case 'translateX':
+        out['tx'] = a;
+      case 'translateY':
+        out['ty'] = a;
+      case 'scale':
+        out['sx'] = a;
+        out['sy'] = b ?? a;
+      case 'scaleX':
+        out['sx'] = a;
+      case 'scaleY':
+        out['sy'] = a;
+      case 'rotate':
+        out['r'] = a;
+    }
+  }
+  return out;
+}
+
+/// The order a track's transform list draws its functions in ("t"
+/// translate, "r" rotate, "s" scale), from its fullest list: "ts" for
+/// "translateY(..) scale(..)", "rts" for "rotate(..) translateX(..)". The
+/// individual properties (and a plain scaleY) draw translate, rotate, scale.
+String transformOrder(Track track) {
+  var order = '';
+  for (final k in track.keyframes) {
+    final s = k['transform'] == null ? '' : _str(k['transform']!).trim();
+    if (s.isEmpty || s == 'none' || _scaleYOnly.hasMatch(s)) continue;
+    var o = '';
+    for (final m in RegExp(r'([a-zA-Z]+)\(').allMatches(s)) {
+      final fn = m.group(1)!;
+      final c = fn.startsWith('translate') ? 't' : fn.startsWith('scale') ? 's' : fn.startsWith('rotate') ? 'r' : '';
+      if (c.isNotEmpty && !o.contains(c)) o += c;
+    }
+    if (o.length > order.length) order = o;
+  }
+  for (final c in ['t', 'r', 's']) {
+    if (!order.contains(c)) order += c;
+  }
+  return order;
+}
+
+/// A transform's values as the CSS matrix [a, b, c, d, e, f] (x' = a x + c y
+/// + e, y' = b x + d y + f), its functions in `order` ([transformOrder]).
+List<double> transformMatrix(FxValues v, [String order = 'trs']) {
+  var m = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+  void mul(List<double> n) {
+    final a1 = m[0], b1 = m[1], c1 = m[2], d1 = m[3], e1 = m[4], f1 = m[5];
+    final a2 = n[0], b2 = n[1], c2 = n[2], d2 = n[3], e2 = n[4], f2 = n[5];
+    m = [a1 * a2 + c1 * b2, b1 * a2 + d1 * b2, a1 * c2 + c1 * d2, b1 * c2 + d1 * d2, a1 * e2 + c1 * f2 + e1, b1 * e2 + d1 * f2 + f1];
+  }
+
+  for (final op in order.split('')) {
+    if (op == 't') {
+      mul([1, 0, 0, 1, v.tx, v.ty]);
+    } else if (op == 's') {
+      mul([v.sx, 0, 0, v.sy, 0, 0]);
+    } else if (op == 'r') {
+      final a = v.r * math.pi / 180;
+      mul([math.cos(a), math.sin(a), -math.sin(a), math.cos(a), 0, 0]);
+    }
+  }
+  return m;
+}
+
+/// A CSS @keyframes body ("0%,100%{transform:scaleY(0)}42.6%{transform:scaleY(1)}")
+/// as keyframes, in offset order, each eased by the animation's timing
+/// function (CSS eases every keyframe interval with it). Property names are
+/// camelCased (stroke-dashoffset: strokeDashoffset), values kept as written.
+List<Keyframe> cssKeyframes(String body, [String timing = 'ease']) {
+  final out = <Keyframe>[];
+  for (final m in RegExp(r'([^{}]+)\{([^}]*)\}').allMatches(body)) {
+    final props = <String, Object?>{};
+    for (final decl in m.group(2)!.split(';')) {
+      final i = decl.indexOf(':');
+      if (i < 0) continue;
+      final name = decl.substring(0, i).trim().replaceAllMapped(RegExp(r'-([a-z])'), (x) => x.group(1)!.toUpperCase());
+      final value = decl.substring(i + 1).trim();
+      if (name.isNotEmpty && value.isNotEmpty) props[name] = value;
+    }
+    for (final sel in m.group(1)!.split(',')) {
+      final t = sel.trim();
+      final offset = t == 'from' ? 0.0 : t == 'to' ? 1.0 : jsParseFloat(t) / 100;
+      if (offset.isFinite) out.add({'offset': offset, 'easing': timing, ...props});
+    }
+  }
+  // A stable sort by offset (as JavaScript's).
+  final idx = List<int>.generate(out.length, (i) => i)
+    ..sort((a, b) {
+      final c = (out[a]['offset'] as double).compareTo(out[b]['offset'] as double);
+      return c != 0 ? c : a.compareTo(b);
+    });
+  return [for (final i in idx) out[i]];
+}
 
 /// "12px", "-160%", "0", "calc(10% + 4px)": [px, %].
 List<double> _length(String v) {
@@ -232,10 +353,11 @@ List<double> _length(String v) {
 String _str(Object v) => v is num ? jsNum(v) : '$v';
 
 /// One keyframe's value for a group, or null when it does not set it.
-Map<String, double>? _parse(Keyframe k, String g) {
+Map<String, double>? _parse(Keyframe k, String g, [bool list = false]) {
   final v = k[g];
   if (v == null) return null;
   final s = _str(v).trim();
+  if (g == 'transform' && list) return _transformList(s);
   switch (g) {
     case 'translate':
       // Split on spaces outside calc().
@@ -337,7 +459,8 @@ class _Pt {
 }
 
 class _Compiled {
-  final List<(String, List<_Pt>, List<double>)> groups;
+  /// Each group's channels, keyframes and the 0% keyframe's easing.
+  final List<(List<String>, List<_Pt>, List<double>)> groups;
   final List<double> ease;
   const _Compiled(this.groups, this.ease);
 }
@@ -347,14 +470,15 @@ _Compiled _compile(Track track) {
   final offs = computedOffsets(kfs);
   final first = offs.indexWhere((o) => o == 0);
   final firstEase = first >= 0 ? easingOf(kfs[first]['easing'] as String?) : _ease['linear']!;
-  final groups = <(String, List<_Pt>, List<double>)>[];
+  final groups = <(List<String>, List<_Pt>, List<double>)>[];
+  final list = _listTransform(kfs);
   for (final g in _groups) {
     final pts = <_Pt>[];
     for (var i = 0; i < kfs.length; i++) {
-      final v = _parse(kfs[i], g);
+      final v = _parse(kfs[i], g, list);
       if (v != null) pts.add(_Pt(offs[i], v, easingOf(kfs[i]['easing'] as String?)));
     }
-    if (pts.isNotEmpty) groups.add((g, pts, firstEase));
+    if (pts.isNotEmpty) groups.add((g == 'transform' && list ? _transformListChannels : _channelsOf[g]!, pts, firstEase));
   }
   return _Compiled(groups, easingOf(track.options.easing));
 }
@@ -367,8 +491,7 @@ Map<String, double>? trackValues(Track track, double t, [FxValues? base]) {
   final c = track._compiled;
   if (c.groups.isEmpty) return null;
   final out = <String, double>{};
-  for (final (g, parsed, firstEase) in c.groups) {
-    final chs = _channelsOf[g]!;
+  for (final (chs, parsed, firstEase) in c.groups) {
     // A missing 0% or 100% keyframe is the element's own value (null here); a missing 0% eases with the 0% keyframe's easing.
     final pts = [
       if (parsed.first.at != 0) _Pt(0, null, firstEase),
