@@ -535,11 +535,18 @@ class _MessageListState extends State<MessageList> {
           ],
           // Typing dots in a bubble
           Container(
-            constraints: look == null ? null : const BoxConstraints(minHeight: 36, minWidth: 54),
+            // The mascot's bubble: 42 tall, 6 / 12 at the sides; the pencil's at least 70 wide.
+            constraints: look == null
+                ? null
+                : look.typingStyle == 'mascot'
+                    ? const BoxConstraints(minHeight: 42, maxHeight: 42, minWidth: 54)
+                    : BoxConstraints(minHeight: 36, minWidth: look.typingStyle == 'pencil' ? 70 : 54),
             alignment: look == null ? null : Alignment.center,
             padding: look == null
                 ? const EdgeInsets.symmetric(horizontal: 16, vertical: 10)
-                : const EdgeInsets.symmetric(horizontal: 12),
+                : look.typingStyle == 'mascot'
+                    ? const EdgeInsets.only(left: 6, right: 12)
+                    : const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: theme.colors.botBubble,
               borderRadius: BorderRadius.only(
@@ -555,6 +562,8 @@ class _MessageListState extends State<MessageList> {
               dotColor: look != null ? theme.colors.botBubbleText : null,
               dotSize: look != null ? 6 : 8,
               style: look?.typingStyle ?? 'dots',
+              mascot: look?.mascot,
+              accent: look?.mascotAccent,
             ),
           ),
         ],
