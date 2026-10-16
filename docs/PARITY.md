@@ -38,8 +38,8 @@ Layout:
    - #16: `media_service_test` fails because MockController is not an AudioPlayer.
    - #58: the older help centre widget tests (`article_list_test`, `article_detail_test`, `category_chips_test`) and `message_bubble_test` don't compile or fail. The help centre is covered by `test/core/help_centre/`, `test/providers/knowledge_base_provider_test.dart` and `test/widgets/knowledge_base/help_centre_test.dart`.
 5. **Flow node follow-ups:**
-   - Check the rich steps on a device (iOS and Android): carousel, slider, ranking, matrix, address, payment, consent, OTP.
-   - Not drawn natively yet: the signature pad (a typed signature works, `{action: 'sign', method: 'typed'}`), the OTP six-digit boxes (the code is typed in the bottom bar), the address map preview.
+   - Check the step cards on a device (iOS and Android). They are covered by widget tests and images only (no emulator or simulator run).
+   - Address: no "Use my location" (it would need a location plugin); search, the map and typing by hand work.
    - Hidden fields read the page the chat runs on. An app has none: the provider passes no `NodeFlowEngineConfig.page`.
    - The visitor's time zone is the device's offset as a fixed `Etc/GMT` zone, because Dart does not expose the IANA name. The provider does not pass `NodeFlowEngineConfig.visitorTimeZone` yet.
 6. There's no `identify()` after construction; the user comes only from the provider's `user`.
@@ -51,7 +51,7 @@ Layout:
 ## How to test
 
 - **Unit tests:** `flutter test test/core` (skip the media test, #16).
-- **Flow nodes:** `flutter test test/parity/flows_test.dart` runs the 156 fixtures; `flutter test test/core/node_flow_engine_test.dart test/core/handlers test/core/flow test/core/privacy test/widgets/node_renderer_test.dart test/widgets/flow_media_lines_test.dart` covers the engine API, the handlers, the flow rules and the step cards. `tool/sync_flow_fixtures.sh` copies the fixtures from the React Native repo (`RN_SDK` if it is not next door) into `test/fixtures/parity_flows/` and writes the RN revision to `REVISION`.
+- **Flow nodes:** `flutter test test/parity/flows_test.dart` runs the 156 fixtures; `flutter test test/widgets/step_views_test.dart` plays them through the step cards; `flutter test test/core/node_flow_engine_test.dart test/core/handlers test/core/flow test/core/privacy test/widgets/node_renderer_test.dart test/widgets/flow_media_lines_test.dart` covers the engine API, the handlers, the flow rules and the step cards. `tool/sync_flow_fixtures.sh` copies the fixtures from the React Native repo (`RN_SDK` if it is not next door) into `test/fixtures/parity_flows/` and writes the RN revision to `REVISION`.
 - **Handover lifecycle:** `flutter test test/core/live_chat test/core/agent test/widgets/handover/handover_lifecycle_widgets_test.dart`. `handover_lifecycle_test.dart` drives the lifecycle against a fake socket and a fake clock.
 - **Handover on a device:** a temporary bot in local Mongo (`conferbotStaging`) with welcome -> human-handover-node (`enableHandoverEmail: false`) -> message, linked in `workspaces.chatbots` and `admins.chatbots` (the server finds a bot's workspace through `admins`). A node socket.io-client script plays the agent with a dashboard JWT signed with the server's `JWT_ACCESS_SECRET` (`auth: {userId, workspaceId, token}`): `accept-handover`, `leave-chat` with `agentDetails.isAIAgent: true` (the visitor sees an AI escalating), `end-chat`. Hot restart (`R`) checks the restore: count `initiate-handover` in the app log and the session's tickets. Delete the bot and everything for its sessions afterwards.
 - **Help centre:** `flutter test test/core/help_centre test/providers/knowledge_base_provider_test.dart test/services/knowledge_base_service_test.dart test/widgets/knowledge_base/help_centre_test.dart`. The payloads in `test/fixtures/kb_payloads.json` were captured from a local embed-server (socket `fetched-chatbot-data`, `get-kb-article`, `search-kb-articles`; REST `/mobile/chatbot/:id/kb` and `/mobile/knowledge-base/*`). To refresh them, run a small socket.io-client script against `:8001` with a bot that has published articles.
@@ -154,9 +154,23 @@ The flow engine follows the shared flow-node spec (conferbot-react-native `scrip
 - **Time zones:** business hours, calendar slots and date limits read IANA zones through `package:timezone` (`core/flow/zones.dart`), with DST.
 - **The chat UI:**
   - Each step says its own lines through `botMessageStream`: questions, greetings, answers, and media lines (image, video, audio, file, HTML, link) that `MessageBubble` draws. The visitor's answers come through `userMessageStream`.
-  - The waiting step's card is `currentUIState`. `NodeRenderer` draws it, keyed by the state, so two steps of the same kind don't share a card.
-  - Typed questions are answered in the bottom bar.
-  - The rich steps have their own cards (`ui/widgets/rich_node_widgets.dart`: carousel and product card, slider, ranking, matrix, address); payment, consent, dynamic choices and navigate draw as buttons.
+  - The waiting step's card is `currentUIState`. `NodeRenderer` draws it, keyed by the step's visit (`NodeFlowEngine.stepVisit`) for the cards that take tries (OTP, signature, address, matrix, consent, date/time, payment), else by the state. So two steps never share a card, and a refused answer keeps what the visitor entered. The refusal (`validationMessage`, `ConferBotProvider.stepError`) is shown on the card (#72).
+  - Typed questions are answered in the bottom bar. The OTP, signature and address cards have their own fields, so the bar is hidden for them.
+  - Every step that waits has its web card, in the bot's option colours, option corner radius and font size and the theme's card colours (`ui/widgets/step_style.dart`, web `css/nodes/08-rich-cards.css`). Nothing moves on its own.
+
+    | Step | Card | File |
+    |---|---|---|
+    | signature | a pad to sign with a finger (Undo, Clear), sent as a trimmed PNG; "Type instead" with a preview; the full name when asked; the consent line | `signature_step.dart` |
+    | otp | the e-mail with Send code (and Skip); six digit boxes (paste and one-time-code autofill, six digits verify on their own), Verify, Resend after its countdown, Change email | `otp_step.dart` |
+    | address | search with suggestions as you type (the typed words in bold), the pick confirmed on a 3x3 map-tile map with a pin and "View map", or typed by hand | `address_step.dart` |
+    | consent | the text with its links (they open in the browser), bold and italics, a box to tick, Continue, "(optional)" | `consent_step.dart` |
+    | datetime | the phone's date / time picker within the step's bounds, the closed days said up front, the step's button | `date_steps.dart` |
+    | calendar | the month grid in the bot's colour, past days and days without free times greyed, then the day's free times | `date_steps.dart` |
+    | payment | what is paid for and the amount, "Secure checkout by Stripe", the waiting line once open, Cancel / I've paid / Pay now | `payment_step.dart` |
+    | carousel, product card | cards with image, title, price, description; path buttons in the option colours; link buttons with their site and an open icon; Continue when there is no path | `rich_node_widgets.dart` |
+    | slider, ranking, matrix | the value over the track with its ends; numbered rows with up / down; rows of options with progress ("2 of 3 answered") | `rich_node_widgets.dart` |
+    | image choice | two columns (one for a single image, a row to scroll past four), each picture over its label, ringed when picked | `node_widgets.dart` |
+  - `test/widgets/step_views_test.dart` plays every fixture that has a card through the cards: the driver records what each action finds waiting, the widget test plays the action on the card with taps, typing and drags (the card pumped again with the next state of the same visit), and the driver runs again with what the cards sent. All 24 come out as the web's. `STEP_IMAGES_DIR=/abs/dir flutter test --update-goldens test/widgets/step_views_images_test.dart` writes an image of each card (map tiles don't load in tests).
 
 ## Conventions
 
