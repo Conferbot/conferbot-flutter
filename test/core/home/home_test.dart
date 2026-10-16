@@ -440,8 +440,12 @@ void main() {
       expect(hiddenWhileAsking, [HomeSection.resume, HomeSection.requests, HomeSection.talk, HomeSection.help]);
     });
 
-    test('the mascot has its place, empty for now', () {
-      expect(homeModel(c: home)!.mascot, isNull);
+    test('carries the owner\'s mascot and its colour, for the app\'s own spot (#81)', () {
+      final m = homeModel(c: {...home, 'mascotShape': 'fox', 'mascotEyes': 'star', 'mascotName': 'Pip', 'widgetIconBgColor': ' #0ea5e9 '})!.mascot;
+      expect([m.look.shape, m.look.eyes, m.look.name, m.accent], ['fox', 'star', 'Pip', '#0ea5e9']);
+      // Unset: the classic blob in the header's colour.
+      final d = homeModel(c: {...home, 'headerBgColor': '#123456'})!.mascot;
+      expect([d.look.shape, d.accent], ['blob', '#123456']);
     });
 
     test('{{first_name|there}} is filled before the home reads it (#78)', () {
