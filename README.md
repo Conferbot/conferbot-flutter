@@ -478,6 +478,24 @@ As on the web widget, while the visitor waits for a person (a flow's handover st
 
 Headless: `provider.waitHelpCard` (`HelpCardState`), `provider.openWaitHelpItem(item)`, `provider.solveWait()`, `provider.gamesCard` (`GamesCard`, its `state` and `subscribe`); `WaitHelpCard` and `GamesCardView` draw them.
 
+### Your requests
+
+As the web widget's "Your requests": the visitor's own conversations with your team, where each one stands in plain words ("We replied", "We're on it", "Solved"), and a reply box that reaches the team. A reply to a solved one opens it again.
+
+- **Where:** the chat menu (the header's ⋮) has **Your requests** once the visitor has one, **Your requests · New reply** when a team reply has not been read on this device. It opens over the chat: the list (new replies first, "New reply from Ada · 2 hours ago"), then one request with a banner, the conversation (links tappable) and the reply box (Sending..., Not sent with Try again, or "This conversation is closed for replies."). Back and Android's back go one step back. Team replies show up live while a request is open.
+- **Whose they are:** only the visitor's own. The device remembers, per bot, the last 30 chats the visitor wrote in and when each request was last read (shared_preferences), and the server lists a conversation only when its id is one of those and its visitor id matches. A signed-in user (`ConferBotUser` with a valid `hash`, see [Identity verification](#identity-verification)) also sees their verified conversations on this bot from any device. Only conversations a person on the team handles are requests; a chat the AI answered alone is not one. Nothing is asked for a first-time visitor.
+- **Look:** the theme's page, card and text colours, one accent (the bot's brand colour, else its header or launcher colour, else indigo), and the app's `ConferBotCustomization.fontFamily`. It slides in once (not with animations turned off).
+
+Headless: `provider.myRequests` (`List<RequestSummary>?`), `provider.requestsUnread` (for your own badge), `provider.openRequests([requestId])`, `provider.closeRequests()`, `provider.requestsOpen`; `provider.requests.portal` (`RequestsPortal`, a `ChangeNotifier` with `state` and the actions) is drawn by `RequestsPortalView`.
+
+```dart
+Badge(
+  isLabelVisible: provider.requestsUnread > 0,
+  label: Text('${provider.requestsUnread}'),
+  child: IconButton(icon: const Icon(Icons.inbox_outlined), onPressed: () => provider.openRequests()),
+)
+```
+
 ### Push token registration
 
 Register a device token (FCM, APNs, or any provider) against the current chat session:
@@ -584,6 +602,7 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 | `sendAnswerFeedback` | `void sendAnswerFeedback(String agentMessageId, AnswerFeedback feedback)` | Send a "Helpful?" vote (`AnswerFeedback(helpful, [reason, comment])`) and keep it on the answer |
 | `openEmailTranscript` / `closeEmailTranscript` | `void openEmailTranscript()` / `void closeEmailTranscript()` | Show / hide the "Email me this chat" card |
 | `emailTranscript` | `Future<TranscriptEmailResult> emailTranscript(String email)` | Email the transcript to this address; on success the address is kept as the visitor's |
+| `openRequests` / `closeRequests` | `Future<void> openRequests([String? requestId])` / `void closeRequests()` | Open "Your requests" (the list, or one request) / leave it |
 | `startNewChat` | `Future<void> startNewChat()` | A fresh conversation after a chat ended (not for a blocked visitor) |
 | `focusComposer` | `void focusComposer()` | Put the cursor in the chat's composer |
 | `sendTypingStatus` | `void sendTypingStatus(bool isTyping)` | Visitor typing indicator |
@@ -606,7 +625,7 @@ Signatures below are copied from source. Full generated docs: [docs/API.md](docs
 
 ### Key getters
 
-`record` (`List<RecordItem>`), `paginatedMessages`, `hasMoreMessages`, `isConnected`, `isInitialized`, `isOpen`, `unreadCount`, `currentAgent` (`Agent?`), `agentTyping`, `isLiveChatMode`, `currentUIState`, `isProcessing`, `isFlowComplete`, `errorMessage`, `serverCustomizations` (`Map<String, dynamic>?`), `serverTheme` (`ConferBotTheme`), `botName`, `botAvatarUrl`, `sessionRestored`, `visitorId`, `chatSessionId` / `chatId`, `sessionAnalytics`, `headerStatus` (the line under the bot name), `personInChat`, `talkToPersonAllowed`, `offerTalkToPerson`, `visitorBlocked` (the closed line when the workspace blocked this visitor, else `null`), `closedState` (`ClosedState?`: blocked, or ended with a new chat), `emailTranscriptOpen`, `emailTranscriptSentTo`, `awaitingReply`.
+`record` (`List<RecordItem>`), `paginatedMessages`, `hasMoreMessages`, `isConnected`, `isInitialized`, `isOpen`, `unreadCount`, `currentAgent` (`Agent?`), `agentTyping`, `isLiveChatMode`, `currentUIState`, `isProcessing`, `isFlowComplete`, `errorMessage`, `serverCustomizations` (`Map<String, dynamic>?`), `serverTheme` (`ConferBotTheme`), `botName`, `botAvatarUrl`, `sessionRestored`, `visitorId`, `chatSessionId` / `chatId`, `sessionAnalytics`, `headerStatus` (the line under the bot name), `personInChat`, `talkToPersonAllowed`, `offerTalkToPerson`, `visitorBlocked` (the closed line when the workspace blocked this visitor, else `null`), `closedState` (`ClosedState?`: blocked, or ended with a new chat), `emailTranscriptOpen`, `emailTranscriptSentTo`, `awaitingReply`, `myRequests` (`List<RequestSummary>?`), `requestsUnread`, `requestsOpen`.
 
 ### Theming
 
