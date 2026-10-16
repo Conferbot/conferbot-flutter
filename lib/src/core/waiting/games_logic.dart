@@ -1,14 +1,18 @@
 /// Waiting games: the rules and the words, with no UI, so they can be tested
 /// on their own. Ported from the React Native SDK (src/core/gamesLogic.ts),
 /// itself from the web widget: conferbot-widget src/ts/chat/games/logic.ts
-/// (every rule as it is) and src/ts/chat/games/content.ts (the English
-/// lists; the other languages come with i18n). The English strings of the
-/// web's i18n/en.ts "games.*" keys are inlined where logic.ts called t().
+/// (every rule as it is) and src/ts/chat/games/content.ts (the quiz and
+/// scramble per language come from core/i18n/i18n_games.dart, generated from
+/// it; the emoji riddles are English wordplay). Words are the web's "games.*"
+/// keys, read with t() as logic.ts does.
 /// Every random choice takes an [Rng] (a fresh Random by default) so tests
 /// can pin it.
 library;
 
 import 'dart:math' as math;
+
+import '../i18n/i18n.dart' show t;
+import '../i18n/i18n_games.dart' show i18nTriviaOf, i18nWordsOf;
 
 /// A number in [0, 1), as Math.random.
 typedef Rng = double Function();
@@ -30,7 +34,7 @@ List<T> shuffle<T>(List<T> items, [Rng rng = defaultRng]) {
 
 T pick<T>(List<T> items, [Rng rng = defaultRng]) => items[(rng() * items.length).floor() % items.length];
 
-// ---------------------------------------------------------------- content (web content.ts, English)
+// ---------------------------------------------------------------- content (web content.ts)
 
 class Trivia {
   const Trivia(this.q, this.a, this.wrong);
@@ -52,26 +56,8 @@ class Word {
   final String hint;
 }
 
-const List<Trivia> trivia = [
-  Trivia('Which planet is known as the Red Planet?', 'Mars', ['Venus', 'Jupiter']),
-  Trivia('How many legs does a spider have?', '8', ['6', '10']),
-  Trivia('What is the largest ocean on Earth?', 'Pacific', ['Atlantic', 'Indian']),
-  Trivia('Which animal is called the ship of the desert?', 'Camel', ['Horse', 'Elephant']),
-  Trivia('How many continents are there?', '7', ['5', '6']),
-  Trivia('What do bees make?', 'Honey', ['Silk', 'Butter']),
-  Trivia('Which instrument has 88 keys?', 'Piano', ['Guitar', 'Violin']),
-  Trivia('Mix blue and yellow paint and you get...', 'Green', ['Purple', 'Orange']),
-  Trivia('How many minutes are there in a day?', '1,440', ['1,200', '2,400']),
-  Trivia('Which is the fastest land animal?', 'Cheetah', ['Horse', 'Greyhound']),
-  Trivia('What is the hardest natural substance?', 'Diamond', ['Gold', 'Granite']),
-  Trivia('Which gas do plants take in from the air?', 'Carbon dioxide', ['Oxygen', 'Helium']),
-  Trivia('How many sides does a hexagon have?', '6', ['5', '8']),
-  Trivia('What is the tallest animal?', 'Giraffe', ['Elephant', 'Ostrich']),
-  Trivia('Where does the sun rise?', 'In the east', ['In the west', 'In the north']),
-  Trivia('Water boils at sea level at how many degrees Celsius?', '100', ['90', '120']),
-  Trivia('Which is the smallest prime number?', '2', ['1', '3']),
-  Trivia('What is a baby kangaroo called?', 'A joey', ['A kit', 'A cub']),
-];
+/// The English quiz (web content.ts TRIVIA; every language in i18n_games.dart).
+final List<Trivia> trivia = i18nTriviaOf('en');
 
 const List<Riddle> riddles = [
   Riddle('☀️🌻', 'Sunflower', ['Daisy', 'Sunrise', 'Sunscreen']),
@@ -92,23 +78,14 @@ const List<Riddle> riddles = [
   Riddle('🌊🏄', 'Surfing', ['Swimming', 'Sailing', 'Beach day']),
 ];
 
-const List<Word> words = [
-  Word('PLANET', '🪐'),
-  Word('BANANA', '🍌'),
-  Word('ROCKET', '🚀'),
-  Word('MUFFIN', '🧁'),
-  Word('TURTLE', '🐢'),
-  Word('PENCIL', '✏️'),
-  Word('PICNIC', '🧺'),
-  Word('DRAGON', '🐉'),
-  Word('COOKIE', '🍪'),
-  Word('GALAXY', '🌌'),
-  Word('JUNGLE', '🌴'),
-  Word('KITTEN', '🐱'),
-  Word('WAFFLE', '🧇'),
-  Word('BRIDGE', '🌉'),
-  Word('PUZZLE', '🧩'),
-];
+/// The English scramble words (web content.ts WORDS).
+final List<Word> words = i18nWordsOf('en');
+
+/// The quiz in a language, English for any other (web content.ts triviaFor).
+List<Trivia> triviaFor(String lang) => i18nTriviaOf(lang);
+
+/// The scramble words in a language (web content.ts wordsFor).
+List<Word> wordsFor(String lang) => i18nWordsOf(lang);
 
 const List<String> memoryFaces = ['🍕', '🚀', '🌵', '🐙', '🎈', '🍩', '🦊', '🌈', '⚽', '🎧', '🍉', '🐢', '🦄', '🍦'];
 
@@ -117,7 +94,8 @@ const List<String> memoryFaces = ['🍕', '🚀', '🌵', '🐙', '🎈', '🍩'
 /// rock, paper or scissors.
 const List<String> hands = ['rock', 'paper', 'scissors'];
 const Map<String, String> handEmoji = {'rock': '✊', 'paper': '✋', 'scissors': '✌️'};
-const Map<String, String> handName = {'rock': 'Rock', 'paper': 'Paper', 'scissors': 'Scissors'};
+/// Each hand's name in the active language (web ui.ts handName, games.rps.*).
+Map<String, String> get handName => {'rock': t('games.rps.rock'), 'paper': t('games.rps.paper'), 'scissors': t('games.rps.scissors')};
 const Map<String, String> _beats = {'rock': 'scissors', 'paper': 'rock', 'scissors': 'paper'};
 
 /// From the visitor's side: 'win', 'lose' or 'draw'.
@@ -316,10 +294,10 @@ List<QuizQuestion> quizFromArticles(dynamic categories, dynamic recent, [Rng rng
     if (out.length >= count) break;
     final others = shuffle(items.where((o) => !identical(o, it)).toList(), rng).map((o) => o.title).take(2).toList();
     if (it.desc.isNotEmpty && it.desc.toLowerCase() != it.title.toLowerCase() && others.length == 2) {
-      out.add(_asQuestion('Which of our articles helps with: "${it.desc}"', it.title, others, 'kb', rng));
+      out.add(_asQuestion(t('games.quiz.kbWhich', {'desc': it.desc}), it.title, others, 'kb', rng));
     } else if (it.cat.isNotEmpty && cats.length >= 3) {
       final wrong = shuffle(cats.where((c) => c != it.cat).toList(), rng).take(2).toList();
-      out.add(_asQuestion('Where in our help centre would you find "${it.title}"?', it.cat, wrong, 'kb', rng));
+      out.add(_asQuestion(t('games.quiz.kbWhere', {'title': it.title}), it.cat, wrong, 'kb', rng));
     }
   }
   return out;
@@ -344,13 +322,14 @@ int quizScore(List<QuizQuestion> questions, List<int?> picks) {
   return n;
 }
 
+/// The verdicts in the active language (web logic.ts, games.verdict.*).
 class Verdict {
   Verdict._();
-  static const perfect = 'Perfect score! 🏆';
-  static const tough = 'Tough round - have another go? 🙈';
-  static const close = 'So close! 🌟';
-  static const notBad = 'Not bad at all 👍';
-  static const nice = 'Nicely done 👍';
+  static String get perfect => t('games.verdict.perfect');
+  static String get tough => t('games.verdict.tough');
+  static String get close => t('games.verdict.close');
+  static String get notBad => t('games.verdict.notBad');
+  static String get nice => t('games.verdict.nice');
 }
 
 String quizVerdict(int score, int total) => score == total
@@ -370,13 +349,13 @@ int reactionDelay([Rng rng = defaultRng]) => 1200 + _jsRound(rng() * 2200);
 const reactionMinMs = 100;
 bool reactionCounts(num ms) => ms >= reactionMinMs;
 
-String reactionVerdict(num ms) => ms < 250
-    ? 'Lightning fast ⚡'
+String reactionVerdict(num ms) => t(ms < 250
+    ? 'games.reaction.fast'
     : ms < 350
-        ? 'Sharp reflexes 🎯'
+        ? 'games.reaction.sharp'
         : ms < 500
-            ? Verdict.nice
-            : 'Slow and steady 🐢';
+            ? 'games.verdict.nice'
+            : 'games.reaction.steady');
 
 /// Math.round: halves go up (-2.5 is -2), as in JS.
 int _jsRound(num x) => (x + 0.5).floor();
