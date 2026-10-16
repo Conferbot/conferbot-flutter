@@ -134,6 +134,9 @@ class SocketClient with ChangeNotifier {
   /// Error logging callback
   ErrorLogCallback? onErrorLog;
 
+  /// Each response-record about to go (its session and record).
+  void Function(String chatSessionId, dynamic record)? onResponseRecord;
+
   /// The visitor, sent in the handshake so the server can refuse one the
   /// workspace blocked (web core/socket.ts). Set before [connect].
   String? visitorId;
@@ -562,6 +565,11 @@ class SocketClient with ChangeNotifier {
     Map<String, dynamic>? visitorMeta,
     Map<String, dynamic>? extra,
   }) async {
+    // Told before it goes: a chat the visitor wrote in may become one of
+    // "Your requests" (web index.ts _sendResponse rememberSession).
+    try {
+      onResponseRecord?.call(chatSessionId, record);
+    } catch (_) {}
     final data = {
       // The rest of the payload (visitorId, version, workspaceId...) from
       // ChatState.buildResponseData; without channel the conversation was
