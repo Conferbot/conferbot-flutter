@@ -10,6 +10,8 @@
 ///                             the same end, and draws nothing
 ///   ts/chat/closedState.ts    the closed chat ("This conversation has been
 ///                             closed."), index.ts _applyVisitorBlock
+///   ts/chat/agentListeners.ts ai-agent-inactive-close: "Chat paused" or
+///                             "Chat ended", and whether the flow carries on
 ///
 /// Pure Dart.
 library;
@@ -187,4 +189,49 @@ class LiveEvents {
     if (!endedSinceLastLive(record)) return null;
     return ClosedState(kind: ClosedKind.ended, text: chatEndedLabel, newChat: true, inputOff: true);
   }
+
+  // ---- Paused or ended for inactivity (ai-agent-inactive-close) ----
+
+  /// The AI let an idle visitor go (web agentListeners.ts
+  /// ai-agent-inactive-close; server aiInactivityHandler.js
+  /// closeInactiveWebChat, which sends `action`: the agent's onCloseAction).
+  ///
+  ///   paused        the conversation is only paused: "Chat paused" with
+  ///                 "Send a message to pick up where you left off". The
+  ///                 composer stays open and the visitor's next message
+  ///                 reopens it (server resumeInactiveChat, then
+  ///                 ai-agent-resumed). Always for an agent bot (it has no
+  ///                 flow), and for any action but continue_flow.
+  ///   continueFlow  the AI moved on for good: "Chat ended", the live chat is
+  ///                 over and the flow carries on from its handover step
+  ///                 along the next edge (web _handoverProceedToNextStep: no
+  ///                 survey).
+  static ({bool paused, bool continueFlow}) inactiveClosePlan(dynamic data, bool agentBotChat) {
+    final continueFlow = data is Map && data['action'] == 'continue_flow' && !agentBotChat;
+    return (paused: !continueFlow, continueFlow: continueFlow);
+  }
+
+  /// Its record entry: its own id (a second pause must not merge into the
+  /// first), `paused` kept so a restart draws the same line.
+  static Map<String, dynamic> inactiveCloseEntry(dynamic data, bool agentBotChat, {String? time}) {
+    final id = eventId('ai-agent-inactive-close');
+    final action = data is Map ? data['action'] : null;
+    return {
+      'id': id,
+      '_id': id,
+      'type': 'ai-agent-inactive-close',
+      'shape': 'ai-agent-inactive-close',
+      'time': time ?? DateTime.now().toUtc().toIso8601String(),
+      if (action is String) 'action': action,
+      'paused': inactiveClosePlan(data, agentBotChat).paused,
+    };
+  }
+
+  /// The line it draws, in the active language (web system.chatPaused +
+  /// system.chatPausedNote, or system.chatEnded). An entry without `paused`
+  /// (older records) is a pause.
+  static ({String text, String? note, bool paused}) inactiveCloseLine(dynamic entry) =>
+      entry is Map && entry['paused'] == false
+          ? (text: t('system.chatEnded'), note: null, paused: false)
+          : (text: t('system.chatPaused'), note: t('system.chatPausedNote'), paused: true);
 }
