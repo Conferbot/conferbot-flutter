@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -48,6 +50,64 @@ Widget _sub(ConferBotTheme theme, String text) => Padding(
       padding: const EdgeInsets.only(top: 2),
       child: Text(text, style: TextStyle(color: theme.colors.textSecondary, fontSize: 13)),
     );
+
+/// The max-wait countdown on the wait card: "Max wait 1:05", once a second,
+/// stopping at 0:00 (web queueCard.ts setRemaining; RN LiveChatCards
+/// MaxWaitLine). Not a live region: it would talk every second.
+class MaxWaitLine extends StatefulWidget {
+  /// When the max wait runs out (ms since the epoch).
+  final int endsAt;
+
+  /// The clock it reads (ms since the epoch).
+  final int Function() now;
+  final ConferBotTheme theme;
+  const MaxWaitLine({super.key, required this.endsAt, required this.now, required this.theme});
+
+  @override
+  State<MaxWaitLine> createState() => _MaxWaitLineState();
+}
+
+class _MaxWaitLineState extends State<MaxWaitLine> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick();
+  }
+
+  @override
+  void didUpdateWidget(MaxWaitLine old) {
+    super.didUpdateWidget(old);
+    if (old.endsAt != widget.endsAt) _tick();
+  }
+
+  void _tick() {
+    _timer?.cancel();
+    _timer = null;
+    if (widget.now() >= widget.endsAt) return;
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      setState(() {});
+      if (widget.now() >= widget.endsAt) {
+        t.cancel();
+        _timer = null;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        liveRegion: false,
+        child: _sub(widget.theme, LiveChat.maxWaitText(LiveChat.secondsLeft(widget.endsAt, now: widget.now()))),
+      );
+}
 
 Widget _body(ConferBotTheme theme, String text) => Text(text, style: TextStyle(color: theme.colors.text, fontSize: 14));
 
@@ -323,6 +383,8 @@ class HandoverWaitCard extends StatelessWidget {
                     _title(theme, LiveChat.queueLine(queue)),
                     _sub(theme, lines.estimate),
                     if (lines.typical.isNotEmpty) KeyedSubtree(key: const ValueKey('cb-wait-typical'), child: _sub(theme, lines.typical)),
+                    if (liveChat.waitEndsAt != null)
+                      MaxWaitLine(key: const ValueKey('cb-wait-countdown'), endsAt: liveChat.waitEndsAt!, now: liveChat.now, theme: theme),
                   ],
                 ),
               ),
