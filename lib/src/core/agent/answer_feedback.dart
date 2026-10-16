@@ -18,6 +18,7 @@
 /// answer's record entry (ChatState.setAnswerFeedback) so a restore draws it.
 library;
 
+import '../i18n/i18n.dart';
 import 'agent_bot.dart';
 
 enum HelpfulView { ask, thanks, down, rated }
@@ -78,28 +79,28 @@ typedef HelpfulStep = ({HelpfulState state, AnswerFeedback? send, String? ask, b
 class Helpful {
   Helpful._();
 
-  /// The web's English strings (ts/i18n/en.ts helpful.*).
-  static const ask = 'Helpful?';
-  static const groupLabel = 'Was this answer helpful?';
-  static const yes = 'Yes, helpful';
-  static const no = 'No, not helpful';
-  static const ratedUp = 'Helpful';
-  static const ratedDown = 'Not helpful';
-  static const thanks = 'Thanks for letting us know!';
-  static const sorry = 'Sorry about that. What went wrong?';
-  static const whatWentWrong = 'What went wrong?';
-  static const comment = 'Add a comment (optional)';
-  static const sendFeedback = 'Send feedback';
-  static const retry = 'Ask another way';
-  static const thanksComment = 'Thanks, that helps us improve.';
-  static const talkToPerson = 'Talk to a person';
-  static const talkToPersonAsk = "I'd like to talk to a person, please.";
+  /// The web's strings (i18n helpful.*), in the active language.
+  static String get ask => t('helpful.ask');
+  static String get groupLabel => t('helpful.groupLabel');
+  static String get yes => t('helpful.yes');
+  static String get no => t('helpful.no');
+  static String get ratedUp => t('helpful.rated.up');
+  static String get ratedDown => t('helpful.rated.down');
+  static String get thanks => t('helpful.thanks');
+  static String get sorry => t('helpful.sorry');
+  static String get whatWentWrong => t('helpful.whatWentWrong');
+  static String get comment => t('helpful.comment');
+  static String get sendFeedback => t('helpful.sendFeedback');
+  static String get retry => t('helpful.retry');
+  static String get thanksComment => t('helpful.thanksComment');
+  static String get talkToPerson => t('chat.talkToPerson');
+  static String get talkToPersonAsk => t('chat.talkToPersonAsk');
 
   /// How long "Thanks for letting us know!" shows before the rated line (web: 1800 + 350 ms fade).
   static const thanksFor = Duration(milliseconds: 1800);
 
   /// The reasons and their words (web FEEDBACK_REASONS).
-  static const reasons = AgentBotParser.feedbackReasons;
+  static List<(String, String)> get reasons => AgentBotParser.feedbackReasons;
 
   static String reasonLabel(String? r) {
     for (final (key, label) in reasons) {
