@@ -57,6 +57,11 @@ class CalendarHandler extends BaseNodeHandler {
     return !excludedDays.contains(dayName.toLowerCase()) && !excludedDates.contains(dayKey);
   }
 
+  /// The day's taken slots ("HH:MM - HH:MM", bot's clock): the bot's
+  /// bookings and the node's own (web displayStep.ts daySlotsFor).
+  List<String> _booked(FlowNode node, String dayKey) =>
+      bookedLabels(node.ctx.calendarBookings, node.id, node.data, dayKey, _zone(node.data));
+
   CalendarUIState _ui(FlowNode node, ChatState state) {
     final data = node.data;
     final zone = _zone(data);
@@ -67,13 +72,19 @@ class CalendarHandler extends BaseNodeHandler {
         data['showTimeSelection'] != 0 &&
         data['showTimeSelection'] != '';
     final availableSlots = <String, List<String>>{};
+    final bookedSlots = <String, List<String>>{};
     if (showTime) {
       final base = noonInZone(today, zone);
       for (var i = 0; i < _calendarDays; i++) {
         final key = dayKeyInZone(base.add(Duration(days: i)), zone);
         if (!_dayOpen(data, key)) continue;
         final slots = _slotsFor(data, key, now);
-        if (slots.isNotEmpty) availableSlots[key] = slots.map((s) => s.start).toList();
+        final booked = _booked(node, key);
+        // Every slot taken: the day is not offered (web: greyed out as "fully booked").
+        if (slots.isEmpty || isDayFullyBooked(slots, booked)) continue;
+        availableSlots[key] = slots.map((s) => s.start).toList();
+        final taken = slots.where((s) => booked.contains(slotLabel(s))).map((s) => s.start).toList();
+        if (taken.isNotEmpty) bookedSlots[key] = taken;
       }
     }
     final showPast = data['showPastDates'] == true;
@@ -85,6 +96,7 @@ class CalendarHandler extends BaseNodeHandler {
       timezone: zone,
       answerKey: data['answerVariable']?.toString(),
       availableSlots: showTime ? availableSlots : null,
+      bookedSlots: showTime && bookedSlots.isNotEmpty ? bookedSlots : null,
       extra: {if (!showPast) 'minDate': today},
       nodeId: node.id,
     );
@@ -140,7 +152,8 @@ class CalendarHandler extends BaseNodeHandler {
           break;
         }
       }
-      if (slot == null) return NodeResult.displayUI(_ui(node, state));
+      // A taken slot cannot be booked again (web: its button is disabled).
+      if (slot == null || _booked(node, dateString).contains(slotLabel(slot))) return NodeResult.displayUI(_ui(node, state));
       final botDate = noonInZone(dateString, botZone);
       final visitorDate = noonInZone(dayKeyInZone(botDate, botZone), visitorZone);
       final date = longDate(botDate, botZone);
