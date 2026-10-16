@@ -52,6 +52,9 @@ import '../core/delight/delight.dart';
 import '../core/delight/delight_extras.dart';
 import '../core/live_chat/typing_preview.dart';
 import '../core/live_chat/post_chat_redirect.dart';
+import '../core/push/push.dart';
+import '../core/push/push_extras.dart';
+import 'dart:io' show Platform;
 import '../services/font_loader.dart';
 
 /// ConferBot provider configuration
@@ -156,6 +159,11 @@ class ConferBotProvider with ChangeNotifier {
   /// menu's item, the unread count and the portal's screens
   /// (core/requests/requests_extras.dart).
   late final RequestsExtras requests;
+
+  /// Push notifications, opt-in: the app's FCM / APNs token registered
+  /// with the conversation, a tapped Conferbot notification opening it
+  /// (core/push/push_extras.dart; embed-server docs/mobile-push.md).
+  late final PushExtras push;
 
   /// The home screen: which view the open chat shows (home, conversation,
   /// help centre), what the device remembers for "Welcome back", the help
@@ -451,6 +459,27 @@ class ConferBotProvider with ChangeNotifier {
     // Whatever the chat shows changed: the redirect waits for the rating,
     // and a countdown that can no longer go stops.
     addListener(postChatRedirect.update);
+    // Push: registered with each new conversation, tried again as it goes on.
+    push = PushExtras(
+      botId: () => botId,
+      register: _apiClient.registerPush,
+      unregister: _apiClient.unregisterPush,
+      chatSessionId: () => _chatSessionId,
+      recordLength: () => _record.length + ChatState.instance.record.length,
+      // Without autoConnect there is no start-up to wait for.
+      initialized: () => _isInitialized || !config.autoConnect,
+      chatOnScreen: () => _chatOnScreen,
+      openChat: openChat,
+      showChat: () => home.showChat(),
+      openRequest: (id) => requests.open(id),
+      bumpUnread: () {
+        _unreadCount++;
+        notifyListeners();
+      },
+      deviceInfo: _pushDeviceInfo,
+    );
+    push.userChanged(user?.id);
+    addListener(push.update);
     // Seen receipts count the chat as visible only on the conversation.
     home.chosen.addListener(() {
       if (_isOpen) liveChat.reportReceipts(chatVisible: _chatOnScreen);
@@ -2057,6 +2086,8 @@ class ConferBotProvider with ChangeNotifier {
   /// With no stored visitor id, the user's id is the next handshake's visitor.
   void identify(ConferBotUser? user) {
     _user = user;
+    // Signed out, or someone else: the old conversation's pushes stop.
+    push.userChanged(user?.id);
     ChatState.instance.visitorContext = user?.toVisitorContext();
     if (_visitorId == null) _socketClient.visitorId = user?.id;
     unawaited(requests.onUserChanged());
@@ -2469,6 +2500,8 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Clear all persisted session data
   Future<void> clearAllPersistedData() async {
+    // The visitor is gone: so are their pushes.
+    await push.stop();
     if (StorageService.instance.isInitialized) {
       await StorageService.instance.clearAllSessions();
     }
@@ -2478,6 +2511,7 @@ class ConferBotProvider with ChangeNotifier {
 
   /// Clear current session but keep visitor ID
   Future<void> clearCurrentSession() async {
+    await push.stop();
     if (StorageService.instance.isInitialized) {
       await StorageService.instance.clearSession(botId);
     }
@@ -2560,16 +2594,32 @@ class ConferBotProvider with ChangeNotifier {
 
   // ========== Other Methods ==========
 
-  /// Register push notification token
-  Future<void> registerPushToken(String token) async {
-    if (_chatSessionId == null) {
-      return;
-    }
+  /// Push notifications, opt-in (embed-server docs/mobile-push.md): the
+  /// device's FCM registration token or APNs device token (hex), registered
+  /// with the current conversation and again for each new one. [type] is
+  /// fcm or apns (an iOS app using firebase_messaging passes fcm); without
+  /// it a 64-character hex token is APNs. null unregisters.
+  Future<void> setPushToken(String? token, [PushTokenType? type]) => push.setToken(token, type);
 
-    await _apiClient.registerPushToken(
-      token: token,
-      chatSessionId: _chatSessionId!,
-    );
+  /// Stop this device's pushes (the visitor turned notifications off). The
+  /// token is kept for the next conversation.
+  Future<void> unregisterPush() => push.stop();
+
+  /// A notification the app received or the visitor tapped (its data map,
+  /// e.g. firebase_messaging's `RemoteMessage.data`): true when it is this
+  /// bot's Conferbot message, and its conversation is opened ([open] false:
+  /// only counted as unread). A tap before start-up is opened once ready.
+  bool handlePushNotification(Map<String, dynamic>? data, {bool open = true}) => push.handle(data, open: open);
+
+  /// The legacy name: [setPushToken] with the token's type guessed.
+  Future<void> registerPushToken(String token) => setPushToken(token);
+
+  static Map<String, String>? _pushDeviceInfo() {
+    try {
+      return {'osVersion': '${Platform.operatingSystem} ${Platform.operatingSystemVersion}'};
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Initiate handover to live agent
@@ -2697,6 +2747,8 @@ class ConferBotProvider with ChangeNotifier {
     delight.removeListener(notifyListeners);
     delight.dispose();
     removeListener(postChatRedirect.update);
+    removeListener(push.update);
+    push.dispose();
     postChatRedirect.removeListener(notifyListeners);
     postChatRedirect.dispose();
     chatFont.removeListener(notifyListeners);
