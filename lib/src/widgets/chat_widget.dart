@@ -36,7 +36,7 @@ import 'waiting/games_card_view.dart';
 import 'waiting/wait_help_card.dart';
 import 'home/home_screen_view.dart';
 import 'home/view_switch.dart';
-import '../core/home/home.dart' show HomeView;
+import '../core/home/home.dart' show HomeMascot, HomeView;
 import 'package:file_picker/file_picker.dart';
 
 /// Complete drop-in chat widget with node rendering support
@@ -88,6 +88,9 @@ class ChatWidget extends StatefulWidget {
   /// Callback when handover survey is submitted
   final ValueChanged<SurveyResult>? onHandoverSurveySubmit;
 
+  /// The home screen's mascot spot, above the greeting (HomeScreenView.mascotBuilder): given the owner's mascot. None by default, as on the web.
+  final Widget Function(BuildContext context, HomeMascot mascot)? homeMascotBuilder;
+
   const ChatWidget({
     super.key,
     this.title,
@@ -105,6 +108,7 @@ class ChatWidget extends StatefulWidget {
     this.showHandoverPostChatSurvey = true,
     this.handoverMaxWaitMinutes = 5,
     this.onHandoverSurveySubmit,
+    this.homeMascotBuilder,
   });
 
   @override
@@ -508,6 +512,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       onShowHelp: ([categoryId]) => _openKnowledgeBase(categoryId),
       onOpenRequests: ([id]) => provider.openRequests(id),
       searchArticleText: provider.home.searchArticleText,
+      mascotBuilder: widget.homeMascotBuilder,
     );
   }
 
