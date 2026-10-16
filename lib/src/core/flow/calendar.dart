@@ -135,3 +135,36 @@ String dayNameInZone(DateTime date, String timeZone) => _dayNames[partsIn(date, 
 
 /// The visitor's own time zone (UTC when unknown).
 String visitorTimeZone() => deviceTimeZone();
+
+/// A booking's instant: an ISO string ("2026-11-03T08:00:00.000Z"; a bare
+/// date is UTC midnight, as JavaScript reads it) or a time in ms.
+DateTime? _bookingDate(dynamic v) {
+  if (v is num && v.isFinite) return DateTime.fromMillisecondsSinceEpoch(v.toInt(), isUtc: true);
+  if (v is! String || v.trim().isEmpty) return null;
+  final s = v.trim();
+  final bare = RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(s);
+  return DateTime.tryParse(bare ? '${s}T00:00:00Z' : s);
+}
+
+/// The slots already taken on a day, as "HH:MM - HH:MM" on the bot's clock
+/// (web displayStep.ts daySlotsFor `booked`): the bot's bookings (the bot
+/// data's calendarBookings, populated by the server) plus any the node
+/// carries itself (data.bookings), for this node only (a booking with no
+/// nodeId counts for every calendar), on this day in the bot's zone.
+List<String> bookedLabels(dynamic calendarBookings, String? nodeId, Map<String, dynamic>? nodeData, String dayKey, String timeZone) {
+  final own = nodeData?['bookings'];
+  final nodeBookings = (own is List ? own : const []).where((b) => b is Map && jsTruthy(b['date']));
+  return [...(calendarBookings is List ? calendarBookings : const []), ...nodeBookings]
+      .whereType<Map>()
+      .where((b) => !jsTruthy(b['nodeId']) || b['nodeId'] == nodeId)
+      .where((b) => dayKeyInZone(_bookingDate(b['date']), timeZone) == dayKey)
+      .map((b) => (b['timeSlotSelected'] == null ? '' : jsString(b['timeSlotSelected'])).trim())
+      .toList();
+}
+
+/// Every slot of the day taken (web nodeLogic.ts isDayFullyBooked): the day greys out.
+bool isDayFullyBooked(List<CalendarSlot> slots, List<String> booked) {
+  if (slots.isEmpty) return false;
+  final taken = booked.map((l) => l.trim()).toSet();
+  return slots.every((s) => taken.contains(slotLabel(s)));
+}
