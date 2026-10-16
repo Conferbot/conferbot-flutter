@@ -1,30 +1,26 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+// The example's widget tree, pumped with a configuration that does not
+// connect: no socket, no stored session, no notifications, no network.
+import 'package:conferbot_example/main.dart';
+import 'package:conferbot_flutter/conferbot_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:example/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('the example home page builds without a connection', (tester) async {
+    await tester.pumpWidget(const MyApp(
+      config: ConferBotConfig(
+        autoConnect: false,
+        enablePersistence: false,
+        enableNotifications: false,
+        enableOfflineMode: false,
+      ),
+    ));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.byType(ExampleHomePage), findsOneWidget);
+    expect(find.text('Conferbot SDK Example'), findsOneWidget);
+    expect(find.text('Conferbot Flutter SDK'), findsOneWidget);
+    expect(find.byType(PopupMenuButton<String>), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
