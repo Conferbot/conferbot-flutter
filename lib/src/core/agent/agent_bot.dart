@@ -15,6 +15,8 @@
 /// confirm), cleaned the same way the web widget cleans them. Pure Dart.
 library;
 
+import '../i18n/i18n.dart';
+
 class AgentBot {
   final String agentId;
   final String displayName;
@@ -253,22 +255,25 @@ class AgentBotParser {
   static const awaitReply = Duration(seconds: 45);
 
   /// Said when that ceiling is hit, so the dots do not just vanish (web chat.replyTimeout).
-  static const replyTimeoutText = 'That took too long. Try again, or ask for a human.';
+  static String get replyTimeoutText => t('chat.replyTimeout');
 
   /// The notice's on-screen line: its id and words. Not part of the
   /// conversation's record, as on the web.
   static ({String id, String text}) replyTimeoutNotice([DateTime? now]) =>
       (id: 'reply-timeout-${(now ?? DateTime.now()).millisecondsSinceEpoch}', text: replyTimeoutText);
 
-  static const defaultAgentName = 'AI Assistant';
-  static const defaultGreeting = 'Hi! How can I help you today?';
+  /// The name and greeting when the owner set none, in the active language
+  /// (web t("agent.defaultName"), t("agent.defaultGreeting")).
+  static String get defaultAgentName => t('agent.defaultName');
+  static String get defaultGreeting => t('agent.defaultGreeting');
   static const maxSources = 3;
-  static const feedbackReasons = [
-    ('wrong', 'Wrong'),
-    ('outdated', 'Outdated'),
-    ('unanswered', "Didn't answer"),
-    ('other', 'Other'),
-  ];
+  /// The reasons and their words (web FEEDBACK_REASONS, helpful.reason.*).
+  static List<(String, String)> get feedbackReasons => [
+        ('wrong', t('helpful.reason.wrong')),
+        ('outdated', t('helpful.reason.outdated')),
+        ('unanswered', t('helpful.reason.unanswered')),
+        ('other', t('helpful.reason.other')),
+      ];
 
   static final _objectId = RegExp(r'^[a-f0-9]{24}$', caseSensitive: false);
   static final _httpUrl = RegExp(r'''^https?://[^\s"'<>]+$''', caseSensitive: false);
@@ -392,7 +397,7 @@ class AgentBotParser {
       final snippet = _nonEmpty(_clean(m['snippet'] ?? m['description'] ?? m['excerpt'], 220));
       final title = _clean(m['title'], 160);
       out.add(articleId != null
-          ? AgentSource(title: title.isEmpty ? 'Help article' : title, url: _http(url), articleId: articleId, snippet: snippet)
+          ? AgentSource(title: title.isEmpty ? t('kb.helpArticle') : title, url: _http(url), articleId: articleId, snippet: snippet)
           : AgentSource(title: title.isEmpty ? sourceHost(url) : title, url: url, snippet: snippet));
       if (out.length >= maxSources) break;
     }
@@ -442,12 +447,12 @@ class AgentBotParser {
     final url = _https(link?['url']);
     final label = _clean(link?['label'], 24);
     return ResultCard(
-      title: _nonEmpty(_clean(m['title'], 50)) ?? 'Done',
+      title: _nonEmpty(_clean(m['title'], 50)) ?? t('result.done'),
       status: status,
       tone: tone,
       rows: rows,
       linkUrl: url,
-      linkLabel: url == null ? null : (label.isEmpty ? 'Open' : label),
+      linkLabel: url == null ? null : (label.isEmpty ? t('result.open') : label),
     );
   }
 
