@@ -484,7 +484,7 @@ class _ChatWidgetState extends State<ChatWidget> {
         ),
     };
 
-    return PopScope(
+    return _withChatFont(provider, PopScope(
       // The system back: the help centre and the conversation step back
       // (to the home when there is one); the home closes the chat.
       canPop: view == HomeView.home || (view == HomeView.chat && provider.homeModel == null),
@@ -504,6 +504,22 @@ class _ChatWidgetState extends State<ChatWidget> {
           ),
         ),
       ),
+    ));
+  }
+
+  /// The chat's font (the owner's, else the theme's, else the app's) for
+  /// all of its text: plain text through DefaultTextStyle, fields and
+  /// buttons through the theme's text styles.
+  Widget _withChatFont(ConferBotProvider provider, Widget child) {
+    final family = provider.chatFontFamily;
+    if (family == null) return child;
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        textTheme: theme.textTheme.apply(fontFamily: family),
+        primaryTextTheme: theme.primaryTextTheme.apply(fontFamily: family),
+      ),
+      child: DefaultTextStyle.merge(style: TextStyle(fontFamily: family), child: child),
     );
   }
 
@@ -514,7 +530,8 @@ class _ChatWidgetState extends State<ChatWidget> {
     return HomeScreenView(
       model: model,
       palette: provider.homePalette,
-      fontFamily: provider.customization?.fontFamily,
+      // The bot's font, loaded, else the app's.
+      fontFamily: provider.chatFontFamily,
       rawArticles: provider.home.knowledgeBase.rawArticles,
       hasAgent: provider.agentBot != null,
       onClose: () => _close(provider),
@@ -540,7 +557,7 @@ class _ChatWidgetState extends State<ChatWidget> {
               portal: provider.requests.portal,
               theme: theme,
               accent: requestsColorOf(requestsAccent(provider.serverCustomizations)),
-              fontFamily: provider.customization?.fontFamily,
+              fontFamily: provider.chatFontFamily,
             ),
           ),
       ],
@@ -553,6 +570,8 @@ class _ChatWidgetState extends State<ChatWidget> {
     // a person is in the chat (core/live_chat/reply_time.dart).
     return ChatHeaderWithKB(
       title: provider.botName ?? widget.title ?? t('sdk.header.supportChat'),
+      // The header's title in the display font (the owner's, or the theme's).
+      titleFontFamily: provider.chatDisplayFontFamily,
       look: provider.serverCustomizations != null ? provider.customizations : null,
       subtitle: _getSubtitle(provider),
       statusText: provider.headerStatus,
@@ -1121,6 +1140,9 @@ class ChatHeaderWithKB extends StatelessWidget {
   /// Requests with a new reply: the item says "Your requests · New reply".
   final int requestsUnread;
 
+  /// The title's font (the chat's display font); null keeps the theme's.
+  final String? titleFontFamily;
+
   const ChatHeaderWithKB({
     super.key,
     this.title,
@@ -1141,6 +1163,7 @@ class ChatHeaderWithKB extends StatelessWidget {
     this.requestsUnread = 0,
     this.onToggleSound,
     this.soundOn = true,
+    this.titleFontFamily,
   });
 
   // The stock "Online" in the active language; any other status as given.
@@ -1201,6 +1224,7 @@ class ChatHeaderWithKB extends StatelessWidget {
                   Text(
                     displayTitle,
                     style: TextStyle(
+                      fontFamily: titleFontFamily,
                       fontSize: 16,
                       fontWeight: t.typography.fontWeightSemiBold,
                       color: t.colors.headerText,
