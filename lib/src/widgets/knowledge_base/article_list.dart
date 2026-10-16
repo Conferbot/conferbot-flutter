@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../models/knowledge_base.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
@@ -121,7 +122,7 @@ class ArticleList extends StatelessWidget {
             ),
             SizedBox(height: theme.spacing.md),
             Text(
-              emptyMessage ?? 'No articles found',
+              emptyMessage ?? t('sdk.kb.noArticlesFound'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeLg,
                 fontWeight: theme.typography.fontWeightMedium,
@@ -131,7 +132,7 @@ class ArticleList extends StatelessWidget {
             ),
             SizedBox(height: theme.spacing.sm),
             Text(
-              'Try adjusting your search or filters',
+              t('sdk.kb.tryAdjusting'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeSm,
                 color: theme.colors.textDisabled,
@@ -160,7 +161,7 @@ class ArticleList extends StatelessWidget {
             : TextButton(
                 onPressed: onLoadMore,
                 child: Text(
-                  'Load more',
+                  t('sdk.kb.loadMore'),
                   style: TextStyle(
                     color: theme.colors.primary,
                     fontWeight: theme.typography.fontWeightMedium,
