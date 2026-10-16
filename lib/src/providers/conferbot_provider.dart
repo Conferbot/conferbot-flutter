@@ -407,6 +407,12 @@ class ConferBotProvider with ChangeNotifier {
   /// Current UI state from flow engine
   dynamic get currentUIState => _flowEngine.currentUIState;
 
+  /// The waiting step's visit (a card keeps its draft through a refusal of it).
+  int get stepVisit => _flowEngine.stepVisit;
+
+  /// Why the visitor's last answer to the waiting step was refused, for its card.
+  String? get stepError => _flowEngine.validationMessage;
+
   /// Whether the engine is processing a node
   bool get isProcessing => _flowEngine.isProcessing;
 
