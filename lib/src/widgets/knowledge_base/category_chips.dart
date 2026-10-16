@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../models/knowledge_base.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
@@ -55,7 +56,7 @@ class CategoryChips extends StatelessWidget {
         itemBuilder: (context, index) {
           if (showAllChip && index == 0) {
             return _CategoryChip(
-              label: 'All',
+              label: t('sdk.kb.all'),
               count: null,
               isSelected: selectedCategoryId == null,
               onTap: () => onCategorySelected(null),
@@ -401,7 +402,7 @@ class _CategoryCard extends StatelessWidget {
               ),
               SizedBox(height: theme.spacing.xs),
               Text(
-                '${category.articleCount} article${category.articleCount == 1 ? '' : 's'}',
+                tPlural('kb.articles', category.articleCount),
                 style: TextStyle(
                   fontSize: theme.typography.fontSizeSm,
                   color: theme.colors.textSecondary,
