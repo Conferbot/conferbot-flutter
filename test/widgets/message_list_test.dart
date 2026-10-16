@@ -129,7 +129,14 @@ void main() {
         );
 
         expect(find.byType(TypingIndicator), findsOneWidget);
-        expect(find.text('Agent is typing...'), findsOneWidget);
+        // No "Agent is typing..." line since b75c445: the web's bubble, the
+        // bot's avatar beside the dots.
+        expect(
+            find.descendant(
+                of: find.ancestor(of: find.byType(TypingIndicator), matching: find.byType(Row)).first,
+                matching: find.byType(ConferBotAvatar)),
+            findsOneWidget);
+        await _runOutTypingStagger(tester);
       });
 
       testWidgets('hides typing indicator when showTypingIndicator is false',
@@ -164,6 +171,7 @@ void main() {
         );
 
         expect(find.byType(TypingIndicator), findsOneWidget);
+        await _runOutTypingStagger(tester);
       });
     });
 
@@ -422,6 +430,7 @@ void main() {
         );
 
         expect(find.byType(TypingIndicator), findsOneWidget);
+        await _runOutTypingStagger(tester);
       });
     });
 
@@ -473,3 +482,7 @@ void main() {
     });
   });
 }
+
+/// TypingIndicator staggers its dots with two delays (200 / 400 ms at the
+/// default speed); runs them so no timer is left when the test ends.
+Future<void> _runOutTypingStagger(WidgetTester tester) => tester.pump(const Duration(milliseconds: 700));
