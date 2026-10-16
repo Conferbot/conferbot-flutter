@@ -73,6 +73,10 @@ class MessageList extends StatefulWidget {
   /// Optional widget rendered inline at the bottom of the list (e.g. choice buttons)
   final Widget? trailingWidget;
 
+  /// Screen-only cards drawn right after a message, by its id (the cards
+  /// shown while waiting for a person, core/waiting). Never in the record.
+  final Map<String, List<Widget>> inlineAfter;
+
   const MessageList({
     super.key,
     required this.messages,
@@ -89,6 +93,7 @@ class MessageList extends StatefulWidget {
     this.onRetryMessage,
     this.paginationConfig = const MessageListPaginationConfig(),
     this.trailingWidget,
+    this.inlineAfter = const {},
   });
 
   @override
@@ -138,6 +143,11 @@ class _MessageListState extends State<MessageList> {
     if (oldWidget.isLoadingMore && !widget.isLoadingMore) {
       _isLoadingTriggered = false;
     }
+
+    // A screen-only card just drawn (core/waiting) stays in view, as a new message does.
+    final cards = widget.inlineAfter.values.fold<int>(0, (n, l) => n + l.length);
+    final cardsBefore = oldWidget.inlineAfter.values.fold<int>(0, (n, l) => n + l.length);
+    if (cards > cardsBefore && _isNearBottom && widget.messages.length == oldWidget.messages.length) _scrollToBottom();
 
     // Handle new messages being added at the bottom
     if (widget.messages.length > oldWidget.messages.length) {
@@ -369,7 +379,7 @@ class _MessageListState extends State<MessageList> {
         deliveryStatus = _chatState.getDeliveryStatus(message.id);
       }
 
-      return buildMessageWithChoices(
+      final item = buildMessageWithChoices(
         message: message,
         bubble: MessageBubble(
           message: message,
@@ -383,6 +393,22 @@ class _MessageListState extends State<MessageList> {
           theme: theme,
         ),
         theme: theme,
+      );
+      final after = widget.inlineAfter[message.id] ?? const <Widget>[];
+      if (after.isEmpty) return item;
+      // A card that grows (a game's next state) stays in view.
+      return NotificationListener<SizeChangedLayoutNotification>(
+        onNotification: (_) {
+          if (_isNearBottom) _scrollToBottom();
+          return true;
+        },
+        child: SizeChangedLayoutNotifier(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [item, ...after],
+          ),
+        ),
       );
     }
 
