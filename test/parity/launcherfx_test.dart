@@ -1,8 +1,11 @@
-// The launcher entrance, attention and idle call against Chrome: the React
-// Native SDK's golden (scripts/parity/launcherfx/golden.json, copied by
+// The launcher entrance, attention and idle call, and the mascot (its moods,
+// the typing mascot and pencil, the greeting card's moves and its figure's
+// gestures) against Chrome: the React Native SDK's golden
+// (scripts/parity/launcherfx/golden.json, copied by
 // tool/sync_launcherfx_golden.sh) holds Chrome's own values of every track,
 // paused at each sample. Each sample keeps only the channels away from rest;
-// iterations -1 is infinity.
+// iterations -1 is infinity. A transform list (`matrix`) is read back as its
+// CSS matrix (ma..mf) and compared as one, with the opacity and the dash.
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -11,6 +14,8 @@ import 'package:conferbot_flutter/src/core/customization/keyframes.dart';
 import 'package:conferbot_flutter/src/core/customization/launcher_attention.dart';
 import 'package:conferbot_flutter/src/core/customization/launcher_entrance.dart';
 import 'package:conferbot_flutter/src/core/customization/launcher_idle_call.dart';
+import 'package:conferbot_flutter/src/core/customization/mascot_moods.dart';
+import 'package:conferbot_flutter/src/core/customization/mascot_motion.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final _golden = jsonDecode(File('test/fixtures/launcherfx_golden.json').readAsStringSync()) as Map<String, dynamic>;
@@ -34,6 +39,8 @@ Object? _norm(Object? tracks) => (tracks as List).map((t) {
         },
       };
     }).toList();
+
+const _m = ['ma', 'mb', 'mc', 'md', 'me', 'mf'];
 
 final _number = RegExp(r'-?\d+(?:\.\d+)?(?:e[-+]?\d+)?');
 
@@ -60,10 +67,29 @@ void main() {
       final tracks = (c['tracks'] as List).map((t) => Track.fromJson(t as Map<String, dynamic>)).toList();
       final base = _map(c['base']);
       final box = c['box'] as Map<String, dynamic>;
+      final matrix = c['matrix'] == true;
+      final order = transformOrder(tracks.first);
       for (final s in (c['samples'] as List).cast<Map<String, dynamic>>()) {
-        final want = FxValues.rest(_map(s['v'])..removeWhere((k, _) => k == 'px' || k == 'py'));
+        final raw = _map(s['v']);
         final t = (s['t'] as num).toDouble();
         final got = evaluate(tracks, t, base);
+        if (matrix) {
+          // Chrome's matrix against the list's own, in its order.
+          final m = transformMatrix(got, order);
+          for (var i = 0; i < 6; i++) {
+            final ch = _m[i];
+            final want = raw[ch] ?? (i == 0 || i == 3 ? 1.0 : 0.0);
+            final k = i < 4 ? 'matrix' : 'matrix px';
+            max[k] = math.max(max[k] ?? 0, (m[i] - want).abs());
+          }
+          for (final ch in ['o', 'dash']) {
+            final want = raw[ch] ?? (ch == 'o' ? 1.0 : 0.0);
+            max[ch] = math.max(max[ch] ?? 0, (got[ch] - want).abs());
+          }
+          samples += 1;
+          continue;
+        }
+        final want = FxValues.rest(raw..removeWhere((k, _) => k == 'px' || k == 'py'));
         for (final ch in fxChannels) {
           max[ch] = math.max(max[ch] ?? 0, (got[ch] - want[ch]).abs());
         }
@@ -80,12 +106,13 @@ void main() {
     }
     // ignore: avoid_print
     print('launcherfx golden: ${_cases.length} cases, $samples samples; max error ${max.map((k, v) => MapEntry(k, double.parse(v.toStringAsFixed(5))))}');
-    expect(_cases.length, 447);
-    expect(samples, 19275);
-    for (final ch in ['tx', 'ty', 'txp', 'typ', 'r', 'rx', 'ry', 'od', 'dash', 'clip']) {
+    expect(_cases.length, 499);
+    expect(_cases.where((c) => (c['src'] as String).startsWith('mascot:')).length, 52);
+    expect(samples, 22123);
+    for (final ch in ['tx', 'ty', 'txp', 'typ', 'r', 'rx', 'ry', 'od', 'dash', 'clip', 'matrix px']) {
       expect(max[ch], lessThan(0.01), reason: ch);
     }
-    for (final ch in ['sx', 'sy', 'o']) {
+    for (final ch in ['sx', 'sy', 'o', 'matrix']) {
       expect(max[ch], lessThan(0.001), reason: ch);
     }
     // Chrome lays `left` out on a 1/64 px grid; the motion path is flattened.
@@ -166,6 +193,38 @@ void main() {
       }
     }
     check('entrance:settle', [settleReveal]);
+    // The mascot: its moods, the typing mascot and pencil, the card's moves, the figure's gestures.
+    for (final (mood, arm, waveCount) in [('wave', 'wave', 2.0), ('wave', 'down', double.infinity), ('think', null, double.infinity), ('happy', 'down', double.infinity)]) {
+      final plan = moodPlan(mood, arm: arm, waveCount: waveCount);
+      plan.parts.forEach((part, tracks) {
+        if (part == 'lid' && mood != 'wave') return;
+        check('mascot:mood-$mood${arm != null ? '@$arm' : ''}:$part', tracks);
+      });
+    }
+    check('mascot:typing:sway', [TypingMascotSpec.sway]);
+    check('mascot:typing:blink', [TypingMascotSpec.blink]);
+    check('mascot:typing:glance', [TypingMascotSpec.glance]);
+    for (var i = 0; i < TypingMascotSpec.dots.length; i++) {
+      check('mascot:typing:dot$i', [TypingMascotSpec.dots[i].track]);
+    }
+    check('mascot:pencil:line', [TypingPencilSpec.write]);
+    check('mascot:pencil:pencil', [TypingPencilSpec.pencil]);
+    check('mascot:card:spring', [cardEnterTrack('lively', 'card')!]);
+    check('mascot:card:in', [cardEnterTrack('subtle', 'card')!]);
+    check('mascot:card:collapse', [cardLeaveTrack('lively', 'open')!]);
+    check('mascot:card:out', [cardLeaveTrack('off', 'close')!]);
+    check('mascot:card:ping-dot', [Ping.dot]);
+    check('mascot:card:ping-ring', [Ping.ring]);
+    check('mascot:card:word3', [wordFade('Hi there, how can we help you today?')!.tracks[3]]);
+    for (final amp in [1.0, 0.75, 0.55]) {
+      final a = jsNum(amp);
+      for (final g in ['pop', 'rise', 'fadeIn', 'wave', 'tilt', 'nod', 'hop', 'handoff', 'bow']) {
+        if (amp != 1 && (g == 'rise' || g == 'fadeIn')) continue;
+        check('mascot:gesture:$g@$a', [gestureTrack(g, g == 'fadeIn' ? 0 : amp, g == 'pop' ? 140 : g == 'rise' ? 80 : 0, g == 'handoff' ? (-40, 60) : null)]);
+      }
+      check('mascot:gesture:talk@$a', [talkTrack(amp)]);
+    }
+    check('mascot:gesture:breath', [breathTrack]);
     // Every case in the golden is one this SDK builds.
     expect(checked, _cases.length);
   });
