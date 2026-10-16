@@ -25,6 +25,7 @@ library;
 
 import 'dart:async';
 
+import '../i18n/i18n.dart' show t;
 import '../live_chat/handover_waiting.dart' show SetTimer, ClearTimer;
 
 /// The articles card comes this long into a wait for a person.
@@ -33,22 +34,23 @@ const waitBefore = Duration(milliseconds: 6000);
 /// "That solved it" waits this long for the server's answer.
 const solveTimeout = Duration(milliseconds: 8000);
 
+/// The card's words (web wait.*, handover.articlesTitle, queue.leftHelped), in the active language.
 class WaitText {
   WaitText._();
 
-  static const label = 'While you wait';
-  static const title = 'While you wait, this might help';
+  static String get label => t('wait.label');
+  static String get title => t('wait.title');
 
   /// Once nobody is waiting any more (web handover.articlesTitle).
-  static const settledTitle = 'Articles that might help';
-  static const read = 'Read';
-  static const solved = 'That solved it';
-  static const done = 'Glad that helped. You have left the queue.';
+  static String get settledTitle => t('handover.articlesTitle');
+  static String get read => t('common.read');
+  static String get solved => t('wait.solved');
+  static String get done => t('wait.done');
 
   /// The line drawn for a queue left this way (web queue.leftHelped).
-  static const leftHelped = 'You left the queue. Glad that helped.';
+  static String get leftHelped => t('queue.leftHelped');
 
-  /// What the record keeps (web special.ts leave()).
+  /// What the record keeps (web special.ts leave()): English, for the team.
   static const recordText = 'Resolved while waiting';
 }
 
