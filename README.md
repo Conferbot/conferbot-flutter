@@ -357,7 +357,7 @@ ChatWidget(theme: brandTheme);
 
 `ConferBotTheme` is composed of `ConferBotColors`, `ConferBotTypography`, `ConferBotSpacing`, `ConferBotBorderRadius`, `ConferBotShadows`, `ConferBotAnimations`, and `ConferBotLayout`, all with `copyWith`-friendly construction (colors have a full `copyWith`; the others are const-constructible with named defaults).
 
-Note: the provider also accepts a `ConferBotCustomization` object (`primaryColor`, `fontFamily`, `bubbleRadius`, `headerTitle`, `enableAvatar`, `avatarUrl`, `botBubbleColor`, `userBubbleColor`). It is currently stored but not applied to rendering in this version - use `ConferBotTheme` for local styling instead.
+Note: the provider also accepts a `ConferBotCustomization` object (`primaryColor`, `fontFamily`, `bubbleRadius`, `headerTitle`, `enableAvatar`, `avatarUrl`, `botBubbleColor`, `userBubbleColor`). Only `fontFamily` is applied (the chat's font when the bot sets none, see Fonts below); the rest is stored - use `ConferBotTheme` for local styling instead.
 
 ### Widget languages
 
@@ -369,6 +369,19 @@ The SDK draws its own words in English, Dutch, French, German or Spanish, with t
 4. Otherwise English.
 
 What the owner wrote (greetings, questions, buttons, articles) is shown as written; the stock English texts a new bot starts with ("We're here to help", "Hi there 👋") are shown in the visitor's language. Dates, times, day and month names and "5 min ago" follow the language too, keeping the phone's region when it speaks the same language ("nl-BE"). `I18n.language` says which one is in force (`I18n.languageListenable` to listen), and the provider tells its listeners when it changes. The words come from the table all Conferbot SDKs share: `sh tool/sync_i18n.sh` rebuilds `lib/src/core/i18n/` from the React Native SDK's `scripts/parity/i18n/strings.json` (`--check` says whether it is up to date).
+
+### Fonts, sounds and the owner's other settings
+
+These dashboard settings apply on their own; nothing needs to be added to the app (the SDK already depends on `audioplayers`, `http`, `path_provider` and `shared_preferences`).
+
+- **Font**: the owner's font (any of the dashboard's Google fonts) wins, for all text; else the widget theme's font, for all text ("body" themes) or only the header title ("display" themes). It is fetched from Google Fonts on first use, kept on the device and registered at run time under a "CB Font <family>" name your app's own text never picks up. A system font the owner picked (Georgia, Verdana...) is used by name, so a family your app bundles is picked up. Offline, or before it has loaded, the chat uses `ConferBotCustomization.fontFamily`, else the platform font. Applied to the whole chat: the header, the bubbles, the composer, the home screen and the step cards.
+- **Sounds** (`messageSound` pop / chime / bubble; a `soundPack` soft / playful / retro / bubbly / premium for opening, a message, sending and closing; the launcher sound file): the web's own tones, rendered on the phone as a small WAV, at most one message sound every 0.8s. The chat menu has Sound on / off when the bot has a sound; the choice is kept on the device (`conferbot-sound-enabled`). They play as interface sounds: iOS's silent switch mutes them and other audio keeps playing; on Android they follow the ringer and Do Not Disturb.
+- **Human touches** (`botReactions`, `celebrations`, `stallNudges`, `allowChangeAnswer`; all on unless turned off): the bot's tapback on an answer that deserves one (a wave for a name, a party for a booking or payment, a heart, thumbs up or thank-you for a score), a second of confetti for a booking, a payment or a perfect score, sparks and the pick's word on a star rating, "No rush - ..." under a question that has waited 40s with the chat on screen and nothing typed, and "Edit" under the visitor's latest answer, which takes the conversation back to that question (only while nothing irreversible, such as a booking, a payment, a file or a person joining, happened since). No confetti or sparks with reduced motion (`MediaQuery.disableAnimations`); no haptics.
+- **Auto-open** (`botAutoOpen`, `botAutoOpenDelay` seconds): the floating bubble opens the chat on its own once per app launch, only before the visitor has a conversation and not within 2 minutes of them closing it.
+- **Typing preview** (`visitorDraftPreview`, on unless turned off): while a person is chatting with the visitor, the agent sees what is being typed (`visitor-draft`, at most every 300ms, never for a secret field).
+- **Calendar**: slots already booked (the bot's bookings) show greyed out and cannot be picked; a day with every slot taken is not offered.
+- **Waiting for a person**: the wait card says the live estimate in the visitor's language, else the team's usual wait ("Typical wait: a few minutes"), unless the owner chose a fixed text or hid the reply time.
+- Not yet: "Redirect after chat" (`redirectUrl`, #85), which the website widget does not follow either.
 
 ## Advanced
 
