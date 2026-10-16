@@ -30,6 +30,27 @@ export 'src/core/requests/requests.dart'
 export 'src/core/requests/requests_portal.dart' show RequestsPortal, RequestsPortalState, RequestsScreen, PendingReply, PendingStatus;
 export 'src/core/requests/requests_extras.dart' show RequestsExtras, RequestsStore, SharedPreferencesRequestsStore;
 export 'src/widgets/requests/requests_portal_view.dart' show RequestsPortalView, requestsColorOf;
+// The home screen (ConferBotProvider.home, homeModel; ChatWidget opens on it
+// when the owner has one) and "Greet by name".
+export 'src/core/home/home.dart'
+    show
+        HomeView,
+        HomeModel,
+        HomeSection,
+        HomeText,
+        HomeAgent,
+        HomePalette,
+        VisitorMemory,
+        homeModel,
+        homeOn,
+        safeHomeView,
+        homePalette,
+        classicHomePalette;
+export 'src/core/home/home_extras.dart' show HomeExtras, HomeKnowledgeBase;
+export 'src/core/home/view_transition.dart' show viewMotion, ViewMotion, NoMotion, ReducedMotion, FadeMotion, SlideMotion;
+export 'src/core/customization/personalize.dart' show personalize, personalizeCustomizations, visitorVars;
+export 'src/widgets/home/home_screen_view.dart' show HomeScreenView;
+export 'src/widgets/home/view_switch.dart' show ViewSwitch;
 export 'src/core/node_flow_engine.dart';
 export 'src/core/nodes/node_types.dart';
 export 'src/core/nodes/node_result.dart';
