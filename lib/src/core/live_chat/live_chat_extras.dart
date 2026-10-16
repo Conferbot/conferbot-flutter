@@ -15,7 +15,9 @@ import 'package:flutter/foundation.dart';
 import '../../models/message.dart';
 import '../../services/socket_client.dart';
 import '../state/chat_state.dart';
+import 'email_transcript.dart';
 import 'live_chat.dart';
+import 'live_events.dart';
 
 class LiveChatExtras extends ChangeNotifier {
   LiveChatExtras({
@@ -24,17 +26,21 @@ class LiveChatExtras extends ChangeNotifier {
     required void Function(RecordItem item) addMessage,
     required void Function() sendRecord,
     void Function()? continueFlow,
+    Future<TranscriptEmailResult> Function(String chatSessionId, String email)? postTranscriptEmail,
   })  : _socket = socket,
         _sessionId = sessionId,
         _addMessage = addMessage,
         _sendRecord = sendRecord,
-        _continueFlow = continueFlow ?? (() {});
+        _continueFlow = continueFlow ?? (() {}),
+        _postTranscriptEmail = postTranscriptEmail;
 
   final SocketClient? Function() _socket;
   final String? Function() _sessionId;
   final void Function(RecordItem item) _addMessage;
   final void Function() _sendRecord;
   final void Function() _continueFlow;
+  final Future<TranscriptEmailResult> Function(String chatSessionId, String email)? _postTranscriptEmail;
+  ChatState get _state => ChatState.instance;
 
   QueueStatus? queue;
   HandoverWaiting? handoverWaiting;
@@ -52,6 +58,13 @@ class LiveChatExtras extends ChangeNotifier {
   String? leftMessageTo;
   String? leadEmail;
   bool csatSent = false;
+
+  /// The workspace blocked this visitor: the closed line's words (core/live_chat/live_events.dart), else null.
+  String? blocked;
+
+  /// "Email me this chat": the card is up, and where it went once sent.
+  bool mailOpen = false;
+  String? mailSentTo;
 
   Timer? _queueTimer;
   Timer? _waitTimer;
@@ -146,13 +159,23 @@ class LiveChatExtras extends ChangeNotifier {
       receiptMarks = LiveChat.receiptMarksOf(d);
       notifyListeners();
     });
-    on('chat-ended', (_) {
+    on('chat-ended', (d) {
+      if (!_own(d)) return;
+      // The same end again: one survey, not two (core/live_chat/live_events.dart).
+      if (LiveEvents.endedSinceLastLive(_state.getRecordForServer())) return;
       queue = null;
       stopQueuePoll();
       lockedBy = null;
       fileRequestedBy = null;
       csatOpen = true;
       notifyListeners();
+    });
+    // Blocked by the workspace, mid-chat or at the handshake (web
+    // _applyVisitorBlock): the chat closes with a neutral line, whatever was
+    // waiting goes, and nothing more is taken.
+    on(LiveEventNames.blocked, (d) {
+      if (!_own(d)) return;
+      onBlocked(d);
     });
     on('agent-message', (d) {
       // Buying intent and no email yet: the one-field follow-up card.
@@ -163,6 +186,55 @@ class LiveChatExtras extends ChangeNotifier {
         notifyListeners();
       }
     });
+  }
+
+  /// visitor-blocked: the closed line, and every card and wait gone.
+  void onBlocked(dynamic data) {
+    blocked = LiveEvents.blockedText(data);
+    queue = null;
+    stopQueuePoll();
+    stopWaitTimer();
+    handoverWaiting = null;
+    noAgentsAvailable = false;
+    leadCardOpen = false;
+    fileRequestedBy = null;
+    csatOpen = false;
+    mailOpen = false;
+    notifyListeners();
+  }
+
+  /// The email to fill "Email me this chat" in with: the visitor's, else the last one they gave.
+  String knownEmail() =>
+      LiveChat.knownEmail(_state.userMetadata.email, _state.answerVariables.map((v) => v.value).toList());
+
+  /// "Email me this chat" from the menu: the card, once at a time (web mountEmailTranscript).
+  void openEmailTranscript() {
+    mailSentTo = null;
+    mailOpen = true;
+    notifyListeners();
+  }
+
+  void closeEmailTranscript() {
+    mailOpen = false;
+    notifyListeners();
+  }
+
+  /// Send the transcript to this address. Sent: the address is kept as the
+  /// visitor's (user metadata, the email answer) and the record goes, as the
+  /// web's rememberEmail does.
+  Future<TranscriptEmailResult> emailTranscript(String email) async {
+    final id = _sessionId();
+    final post = _postTranscriptEmail;
+    final to = email.trim();
+    if (id == null || id.isEmpty || post == null) return TranscriptEmailResult.notSent;
+    final r = await post(id, to);
+    if (!r.ok) return r;
+    _state.setUserMetadata('email', to);
+    _state.saveVariableByName('email', to, 'email-transcript');
+    _sendRecord();
+    mailSentTo = to;
+    notifyListeners();
+    return r;
   }
 
   /// Where the visitor stands: asked every 20s while a handover waits for a person.
@@ -373,6 +445,9 @@ class LiveChatExtras extends ChangeNotifier {
     leftMessageTo = null;
     leadEmail = null;
     csatSent = false;
+    blocked = null;
+    mailOpen = false;
+    mailSentTo = null;
     _reportedDelivered = '';
     _reportedSeen = '';
     notifyListeners();
