@@ -406,4 +406,52 @@ void main() {
       expect(() => apiClient.dispose(), returnsNormally);
     });
   });
+
+  group('ApiClient.sendTranscriptEmail (#42, stubbed: no email is sent)', () {
+    test('posts the session and address to the mobile path, the bot in X-Bot-ID', () async {
+      late http.Request sent;
+      final client = ApiClient(
+        apiKey: 'k',
+        botId: 'bot-1',
+        baseUrl: 'https://api.test/api/v1/mobile',
+        client: MockClient((request) async {
+          sent = request;
+          return http.Response(jsonEncode({'success': true}), 200);
+        }),
+      );
+      final r = await client.sendTranscriptEmail('s-1', ' ada@example.com ');
+      expect(r.ok, isTrue);
+      expect(sent.method, 'POST');
+      expect(sent.url.toString(), 'https://api.test/api/v1/mobile/chat/transcript-email');
+      expect(sent.headers[ConferBotConstants.headerBotId], 'bot-1');
+      expect(sent.headers[ConferBotConstants.headerApiKey], 'k');
+      expect(sent.headers[ConferBotConstants.headerPlatform], ConferBotConstants.platformIdentifier);
+      expect(jsonDecode(sent.body), {'chatSessionId': 's-1', 'email': 'ada@example.com'});
+    });
+
+    test("the server's reason when it does not go, once, never retried", () async {
+      var calls = 0;
+      final client = ApiClient(
+        apiKey: 'k',
+        botId: 'b',
+        client: MockClient((_) async {
+          calls++;
+          return http.Response(jsonEncode({'error': true, 'message': 'Too many requests. Please try again later.'}), 429);
+        }),
+      );
+      final r = await client.sendTranscriptEmail('s-1', 'ada@example.com');
+      expect(r.ok, isFalse);
+      expect(r.message, 'Too many requests. Please try again later.');
+      expect(calls, 1);
+    });
+
+    test('a network failure or a body that is not JSON reads as not sent', () async {
+      final down = ApiClient(apiKey: 'k', botId: 'b', client: MockClient((_) async => throw http.ClientException('offline')));
+      expect((await down.sendTranscriptEmail('s', 'a@b.co')).ok, isFalse);
+      final html = ApiClient(apiKey: 'k', botId: 'b', client: MockClient((_) async => http.Response('<html>', 502)));
+      final r = await html.sendTranscriptEmail('s', 'a@b.co');
+      expect(r.ok, isFalse);
+      expect(r.message, isNull);
+    });
+  });
 }
