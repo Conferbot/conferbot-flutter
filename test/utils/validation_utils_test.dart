@@ -157,7 +157,7 @@ void main() {
 
       final invalidResult = ValidationUtils.validateUrl('not-a-url');
       expect(invalidResult.isValid, false);
-      expect(invalidResult.errorMessage, 'Please enter a valid URL');
+      expect(invalidResult.errorMessage, 'Please enter a valid url');
     });
   });
 
