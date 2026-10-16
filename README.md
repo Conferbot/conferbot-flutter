@@ -359,6 +359,17 @@ ChatWidget(theme: brandTheme);
 
 Note: the provider also accepts a `ConferBotCustomization` object (`primaryColor`, `fontFamily`, `bubbleRadius`, `headerTitle`, `enableAvatar`, `avatarUrl`, `botBubbleColor`, `userBubbleColor`). It is currently stored but not applied to rendering in this version - use `ConferBotTheme` for local styling instead.
 
+### Widget languages
+
+The SDK draws its own words in English, Dutch, French, German or Spanish, with the web widget's wording:
+
+1. `ConferBotConfig(widgetLanguage: 'de')`, when the app sets it ("en", "nl", "fr", "de", "es" or "auto").
+2. Otherwise the language the owner picked in the dashboard (`widgetLanguage`).
+3. "Auto" (and every bot that never chose): the first of the phone's languages the widget speaks (`PlatformDispatcher.locales`, most preferred first).
+4. Otherwise English.
+
+What the owner wrote (greetings, questions, buttons, articles) is shown as written; the stock English texts a new bot starts with ("We're here to help", "Hi there 👋") are shown in the visitor's language. Dates, times, day and month names and "5 min ago" follow the language too, keeping the phone's region when it speaks the same language ("nl-BE"). `I18n.language` says which one is in force (`I18n.languageListenable` to listen), and the provider tells its listeners when it changes. The words come from the table all Conferbot SDKs share: `sh tool/sync_i18n.sh` rebuilds `lib/src/core/i18n/` from the React Native SDK's `scripts/parity/i18n/strings.json` (`--check` says whether it is up to date).
+
 ## Advanced
 
 ### Headless usage (custom UI)
@@ -477,7 +488,7 @@ As on the web widget:
 
 ### Email me this chat
 
-The chat menu (the header's ⋮) has **Email me this chat**. One card asks for the address (filled in when the visitor gave one), the server sends the whole conversation there (`POST {apiBaseUrl}/chat/transcript-email` with `{chatSessionId, email}`; the bot is the `X-Bot-ID` header's), and the card says "Sent! Check your inbox at ...". The server's own reason shows when it does not go (for example its limit of 5 per 15 minutes). Once sent, the address is kept as the visitor's. Headless: `provider.openEmailTranscript()`, `provider.emailTranscript(email)` (`TranscriptEmailResult {ok, message}`).
+The chat menu (the header's ⋮) has **Email me this chat**. One card asks for the address (filled in when the visitor gave one), the server sends the whole conversation there (`POST {apiBaseUrl}/chat/transcript-email` with `{chatSessionId, email}`; the bot is the `X-Bot-ID` header's), and the card says "Sent! Check your inbox at ...". When it does not go, the server's own reason shows in English (for example its limit of 5 per 15 minutes); in the other languages the card says it could not be sent. Once sent, the address is kept as the visitor's. Headless: `provider.openEmailTranscript()`, `provider.emailTranscript(email)` (`TranscriptEmailResult {ok, message}`).
 
 The web's waiting signals, for your own UI (for example a "we'll email you" prompt):
 
