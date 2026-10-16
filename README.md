@@ -380,7 +380,7 @@ These dashboard settings apply on their own; nothing needs to be added to the ap
 - **Auto-open** (`botAutoOpen`, `botAutoOpenDelay` seconds): the floating bubble opens the chat on its own once per app launch, only before the visitor has a conversation and not within 2 minutes of them closing it.
 - **Typing preview** (`visitorDraftPreview`, on unless turned off): while a person is chatting with the visitor, the agent sees what is being typed (`visitor-draft`, at most every 300ms, never for a secret field).
 - **Calendar**: slots already booked (the bot's bookings) show greyed out and cannot be picked; a day with every slot taken is not offered.
-- **Waiting for a person**: the wait card says the live estimate in the visitor's language, else the team's usual wait ("Typical wait: a few minutes"), unless the owner chose a fixed text or hid the reply time.
+- **Waiting for a person**: the wait card says the live estimate in the visitor's language, else the team's usual wait ("Typical wait: a few minutes"), unless the owner chose a fixed text or hid the reply time. Under it the handover step's max wait counts down once a second ("Max wait 1:05"), stopping at 0:00; after a restart it counts from the time the server says is left.
 - Not yet: "Redirect after chat" (`redirectUrl`, #85), which the website widget does not follow either.
 
 ## Advanced
@@ -480,6 +480,8 @@ A restored session resumes at the step it was on; the flow is not run again from
 As on the web widget:
 
 - When an AI agent hands the visitor to the team, the conversation shows "Connecting you with the team…" with typing dots. The line settles to how the wait ended: "Connected with the team", "The team couldn't join just now", "You left the queue" or "Chat ended before the team joined". An AI pausing an idle visitor draws nothing.
+- When the handover step's max wait runs out with nobody there, the server is asked to decide (`handover-timeout`). After an AI escalates, the server owns the wait; only if nothing has happened by the step's max wait plus 30 seconds is it nudged with `handover-timeout` (an agent bot's own silent handover step gives the max wait). Nothing is drawn, and anything that ends the wait (a person or the AI accepting, `handover-waiting`, nobody available, leaving the queue, the chat ending or closing for inactivity, a blocked visitor) clears it.
+- When the AI closes an idle conversation (`ai-agent-inactive-close`), the conversation shows "Chat paused" with "Send a message to pick up where you left off": the composer stays on and the visitor's next message brings the AI back. When the agent's close action is `continue_flow` on a flow bot, it shows "Chat ended" instead, the live chat is over and the flow carries on from its handover step's next edge (no survey). An agent bot is only ever paused. The line is recorded once, so a restart shows the same one.
 - A person joining draws "<name> joined the chat" (with "They can see your conversation so far" after an AI handover), once per person.
 - The header keeps the bot's name. Under it: the team's reply time ("Typically replies in a few minutes", "Online · team back Monday 9 AM", "Online · team replies by email"), or plain "Online" once a person is in the chat. `provider.headerStatus` gives the same words.
 - The handover step's wait card has **Leave queue** (`provider.leaveQueue()`). It sends `queue-self-resolve`, so the team stops seeing the visitor waiting, and the flow carries on. It returns `false` when a person has already picked the chat up; the visitor then stays.
@@ -595,7 +597,8 @@ The help centre follows the owner's dashboard settings, as on the web widget:
 - The help button shows in the `ChatWidget` header while **Help articles** (`enableKnowledgeBase`) is on and at least one article is published. With it off, or with no published article, there is no button.
 - **Recent articles** shows above the full list unless the owner hides it (`hideRecentArticles`).
 - Article bodies are HTML and are drawn as such. The list comes with the bot's settings on connect (titles and descriptions only); an article's body is fetched when it is opened.
-- When an AI answer cites a help centre article (a source or an article card with an `articleId`), tapping it opens that article in the help centre. Without a help centre on screen, a source with a public link opens the link.
+- When an AI answer cites a help centre article (a source with an `articleId`), it says "Help article ›" and opens that article in the help centre, while the help centre is on (the owner's switch, or `showKnowledgeBase`). Otherwise a source with a public link shows its site and opens the link; one without is drawn but not tappable.
+- An AI article card opens its public page when it has one, else the article in the help centre while it is on.
 
 `ChatWidget(showKnowledgeBase:)` overrides the owner's switch. The app's value wins:
 
