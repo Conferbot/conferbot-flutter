@@ -28,6 +28,7 @@ library;
 
 import 'dart:math' as math;
 
+import '../i18n/i18n.dart';
 import 'keyframes.dart';
 
 const launcherIdleCalls = ['off', 'psst', 'peek', 'wave', 'knock', 'tap'];
@@ -40,13 +41,14 @@ const idleCallRetryMs = 4000;
 /// A greeting on screen gets this long alone before the mascot may call.
 const greetingFirstMs = 15000;
 
-/// The bubble's line per style (i18n en idle.*).
-const idleCallLines = {
-  'psst': 'Psst!',
-  'peek': 'Hey, over here!',
-  'wave': 'Hi there!',
-  'knock': 'Knock knock!',
-  'tap': 'Got a question?',
+/// The bubble's line key per style (i18n idle.*), read in the active
+/// language when drawn.
+const idleCallLineKeys = {
+  'psst': 'idle.psst',
+  'peek': 'idle.peek',
+  'wave': 'idle.wave',
+  'knock': 'idle.knock',
+  'tap': 'idle.tap',
 };
 
 String normalizeLauncherIdleCall(Object? value) => launcherIdleCalls.contains(value) ? value as String : 'off';
@@ -63,7 +65,9 @@ String idleCallLine(String mode, Object? text) {
   if (mode == 'off') return '';
   var own = text is String ? text.replaceAll(RegExp(r'\s+'), ' ').trim() : '';
   if (own.length > idleCallTextMax) own = own.substring(0, idleCallTextMax);
-  return own.isNotEmpty ? own : (idleCallLines[mode] ?? '');
+  if (own.isNotEmpty) return own;
+  final key = idleCallLineKeys[mode];
+  return key != null ? t(key) : '';
 }
 
 // ---- Pacing (idlePacing.ts): calling without nagging ----
