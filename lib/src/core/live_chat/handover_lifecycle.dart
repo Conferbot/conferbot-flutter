@@ -20,6 +20,7 @@ import '../state/chat_state.dart';
 import '../waiting/wait_articles.dart' show WaitText;
 import 'handover_state.dart';
 import 'handover_waiting.dart';
+import 'live_chat.dart';
 import 'live_events.dart';
 
 /// The flow, as the lifecycle needs it (NodeFlowEngine in the provider).
@@ -60,6 +61,9 @@ class HandoverLifecycle {
     ClearTimer? clearTimer,
     void Function()? waitStart,
     void Function()? waitEnd,
+    bool Function()? isAgentBot,
+    String? Function()? workspaceId,
+    void Function(int? remainingSeconds)? onRestoredWait,
   })  : _socket = socket,
         _sessionId = sessionId,
         _isOpen = isOpen,
@@ -71,10 +75,25 @@ class HandoverLifecycle {
         _clearAgent = clearAgent ?? (() {}),
         _waitStart = waitStart ?? (() {}),
         _waitEnd = waitEnd ?? (() {}),
+        _isAgentBot = isAgentBot ?? (() => false),
+        _workspaceId = workspaceId ?? (() => null),
+        _onRestoredWait = onRestoredWait ?? ((_) {}),
         _state = state {
     connecting = ConnectingSignal(
       () => bus.emit(WidgetSignals.waitingForHuman, WidgetSignals.waitingDetail({'offline': false, 'reason': 'busy'})),
       canFire: () => _isOpen(),
+      setTimer: setTimer,
+      clearTimer: clearTimer,
+    );
+    // After an AI escalates: its step's max wait plus 30s, then the server is
+    // nudged to decide (handover-timeout). Nothing is drawn (web special.ts
+    // _handleAIEscalationWait, handoverWaiting.ts armAIEscalationNudge).
+    nudge = EscalationNudge(
+      () {
+        final id = _sessionId();
+        if (id == null || id.isEmpty) return;
+        _socket()?.emit('handover-timeout', LiveChat.handoverTimeoutPayload(id, _escalationStep(), _workspaceId() ?? ''));
+      },
       setTimer: setTimer,
       clearTimer: clearTimer,
     );
@@ -95,6 +114,23 @@ class HandoverLifecycle {
   final void Function() _waitStart;
   final void Function() _waitEnd;
   final ChatState? _state;
+
+  /// The chat is an AI agent bot's (no flow): an inactivity close only pauses it.
+  final bool Function() _isAgentBot;
+
+  /// The bot's workspace, for the escalation's handover-timeout.
+  final String? Function() _workspaceId;
+
+  /// A restored wait for a person: the server's seconds left of its max
+  /// wait (LiveChatExtras' countdown and max-wait timer).
+  final void Function(int? remainingSeconds) _onRestoredWait;
+
+  /// The AI escalation's max wait (core/live_chat/handover_waiting.dart).
+  late final EscalationNudge nudge;
+
+  // The handover step an AI escalation waits on: the flow's, else the agent
+  // bot's silent one in the record.
+  Map<String, dynamic>? _escalationStep() => escalationHandoverData(_flow.handoverNodeData, record);
 
   // Back in the queue: the step waits again, but that is not a new wait for
   // the help card (web waitForPerson.start() is not called on a requeue).
@@ -150,6 +186,7 @@ class HandoverLifecycle {
   /// The wait ended without a person: no waiting signal, and cb:wait-over.
   void _waitOver(String reason) {
     connecting.end();
+    nudge.clear();
     _waitEnd();
     bus.emit(WidgetSignals.waitOver, {'reason': reason});
   }
@@ -183,6 +220,8 @@ class HandoverLifecycle {
     final name = (details['name']?.toString() ?? '').isNotEmpty ? details['name'].toString() : (fallbackName ?? '');
     final handover = kind == AgentLeftKind.handover;
     if (handover) {
+      // The AI passed the visitor on: the wait for a person starts again.
+      if (startsEscalationWait(data)) nudge.arm(_escalationStep()?['maxWaitTime']);
       connecting.start();
       // Passed on to a person: what may help while they wait (web special.ts agent-left).
       _waitStart();
@@ -212,6 +251,7 @@ class HandoverLifecycle {
   AcceptedPlan onAccepted(dynamic data) {
     final plan = HandoverRecord.acceptedPlan(record, data);
     connecting.end();
+    nudge.clear();
     _waitEnd();
     settle(plan.outcome);
     if (plan.humanJoined) {
@@ -313,6 +353,7 @@ class HandoverLifecycle {
     s.on('handover-waiting', (data) {
       if (!_own(data)) return;
       connecting.end();
+      nudge.clear();
       _waitEnd();
       settle(HandoverOutcome.unavailable);
       bus.emit(WidgetSignals.waitingForHuman, WidgetSignals.waitingDetail(data));
@@ -323,6 +364,7 @@ class HandoverLifecycle {
     });
     void ended(dynamic data) {
       if (!_own(data)) return;
+      nudge.clear();
       _waitEnd();
       final waiting = _inWait();
       settle(HandoverOutcome.ended);
@@ -330,7 +372,16 @@ class HandoverLifecycle {
     }
 
     s.on('chat-ended', ended);
-    s.on('ai-agent-inactive-close', ended);
+    // The AI let an idle visitor go (web agentListeners.ts, server
+    // aiInactivityHandler.js): "Chat paused" (a message picks it back up)
+    // or, for continue_flow on a flow bot, "Chat ended" and the flow carries
+    // on from its handover step (core/live_chat/live_events.dart
+    // inactiveClosePlan).
+    s.on('ai-agent-inactive-close', (data) {
+      if (!_own(data)) return;
+      ended(data);
+      onInactiveClose(data);
+    });
     // The agent left and nobody else owns the chat: back in the queue (web
     // liveTakeover.ts). "Connecting you to another agent..." (or the team it
     // went to), and a flow at its handover step waits again.
@@ -382,9 +433,31 @@ class HandoverLifecycle {
     connecting.start();
   }
 
+  /// ai-agent-inactive-close: the paused or ended line (on screen and in
+  /// the record, once), and for continue_flow nobody in the chat any more,
+  /// live mode off and the flow on from its handover step (the step's next
+  /// edge, no post-chat survey). A pause leaves live mode on: the visitor's
+  /// next message goes the live way and the server answers ai-agent-resumed.
+  void onInactiveClose(dynamic data) {
+    final agentBot = _isAgentBot();
+    final entry = LiveEvents.inactiveCloseEntry(data, agentBot);
+    final line = LiveEvents.inactiveCloseLine(entry);
+    final id = entry['id'] as String;
+    state.addRecord({
+      for (final e in entry.entries)
+        if (e.key != '_id' && e.key != 'shape') e.key: e.value,
+    });
+    _addLine(SystemMessageRecord(id: id, time: DateTime.now(), text: line.text, kind: 'ai-agent-inactive-close', note: line.note));
+    if (!LiveEvents.inactiveClosePlan(data, agentBot).continueFlow) return;
+    _clearAgent();
+    _setLive(false);
+    if (_flow.atHandover) _flow.continueFlow();
+  }
+
   /// visitor-blocked: the wait and the flow are over, nobody is coming.
   void onBlocked() {
     connecting.end();
+    nudge.clear();
     _waitEnd();
     settle(HandoverOutcome.ended);
     _waitingForPerson = false;
@@ -469,6 +542,8 @@ class HandoverLifecycle {
         // On the handover step with no card: the chat ending moves the flow on.
         if (id != null) _flow.waitAt(id, waiting: false);
       case RestoreStep.wait:
+        // The countdown and the max wait go on from where the server is.
+        _onRestoredWait(r.remainingSeconds);
         final before = _waitingForPerson;
         if (id != null && _flow.waitAt(id, waiting: true)) {
           // Still in the queue: what may help meanwhile, unless an AI agent
@@ -506,9 +581,13 @@ class HandoverLifecycle {
 
   void reset() {
     connecting.end();
+    nudge.clear();
     _waitingForPerson = false;
     _left = false;
   }
 
-  void dispose() => connecting.end();
+  void dispose() {
+    connecting.end();
+    nudge.clear();
+  }
 }
