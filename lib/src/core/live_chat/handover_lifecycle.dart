@@ -17,6 +17,7 @@ import 'dart:math';
 import '../../models/message.dart';
 import '../../services/socket_client.dart';
 import '../state/chat_state.dart';
+import '../waiting/wait_articles.dart' show WaitText;
 import 'handover_state.dart';
 import 'handover_waiting.dart';
 import 'live_events.dart';
@@ -57,6 +58,8 @@ class HandoverLifecycle {
     ChatState? state,
     SetTimer? setTimer,
     ClearTimer? clearTimer,
+    void Function()? waitStart,
+    void Function()? waitEnd,
   })  : _socket = socket,
         _sessionId = sessionId,
         _isOpen = isOpen,
@@ -66,6 +69,8 @@ class HandoverLifecycle {
         _setLive = setLive ?? ((_) {}),
         _setAgent = setAgent ?? ((_) {}),
         _clearAgent = clearAgent ?? (() {}),
+        _waitStart = waitStart ?? (() {}),
+        _waitEnd = waitEnd ?? (() {}),
         _state = state {
     connecting = ConnectingSignal(
       () => bus.emit(WidgetSignals.waitingForHuman, WidgetSignals.waitingDetail({'offline': false, 'reason': 'busy'})),
@@ -84,7 +89,20 @@ class HandoverLifecycle {
   final void Function(bool live) _setLive;
   final void Function(RestoredAgent agent) _setAgent;
   final void Function() _clearAgent;
+
+  /// Where a wait for a person begins and ends, for what may help meanwhile
+  /// (core/waiting/waiting_extras.dart, RN useHandoverLifecycle waitHooks).
+  final void Function() _waitStart;
+  final void Function() _waitEnd;
   final ChatState? _state;
+
+  // Back in the queue: the step waits again, but that is not a new wait for
+  // the help card (web waitForPerson.start() is not called on a requeue).
+  bool _requeueing = false;
+
+  // Left this wait already: the server answers queue-self-resolve and also
+  // sends queue-left, so one leave can arrive twice. A new wait clears it.
+  bool _left = false;
 
   final WidgetSignalBus bus = WidgetSignalBus();
   late final ConnectingSignal connecting;
@@ -132,6 +150,7 @@ class HandoverLifecycle {
   /// The wait ended without a person: no waiting signal, and cb:wait-over.
   void _waitOver(String reason) {
     connecting.end();
+    _waitEnd();
     bus.emit(WidgetSignals.waitOver, {'reason': reason});
   }
 
@@ -143,7 +162,13 @@ class HandoverLifecycle {
   void setWaitingForPerson(bool waiting, [Map<String, dynamic>? nodeData]) {
     if (waiting && !_waitingForPerson) {
       final ai = nodeData?['assignedAIAgents'];
-      if (!(ai is List && ai.isNotEmpty)) connecting.start();
+      if (!(ai is List && ai.isNotEmpty)) {
+        connecting.start();
+        if (!_requeueing) {
+          _left = false;
+          _waitStart();
+        }
+      }
     }
     _waitingForPerson = waiting;
   }
@@ -159,6 +184,10 @@ class HandoverLifecycle {
     final handover = kind == AgentLeftKind.handover;
     if (handover) {
       connecting.start();
+      // Passed on to a person: what may help while they wait (web special.ts agent-left).
+      _waitStart();
+      // A new wait: it can be left again.
+      _left = false;
       // The same escalation again: one line is enough.
       if (HandoverRecord.hasPendingLine(record)) return kind;
     }
@@ -183,6 +212,7 @@ class HandoverLifecycle {
   AcceptedPlan onAccepted(dynamic data) {
     final plan = HandoverRecord.acceptedPlan(record, data);
     connecting.end();
+    _waitEnd();
     settle(plan.outcome);
     if (plan.humanJoined) {
       final details = data is Map && data['agentDetails'] is Map ? data['agentDetails'] as Map : const {};
@@ -220,16 +250,26 @@ class HandoverLifecycle {
     state.addToTranscript('bot', text);
   }
 
-  /// Out of the queue: the line, the record, the signal, the flow moves on.
-  void _leftQueue() {
+  /// Out of the queue: the line, the record, the signal, the flow moves on
+  /// (once per wait). [helped]: a help article solved it ("That solved it",
+  /// web special.ts _wireQueue leave()): "You left the queue. Glad that
+  /// helped.", recorded as "Resolved while waiting".
+  void _leftQueue({bool helped = false}) {
+    if (_left) return;
+    _left = true;
     _waitOver('cancelled');
     settle(HandoverOutcome.cancelled);
     _waitingForPerson = false;
     final id = _entryId('queue-self-resolved');
-    final text = HandoverRecord.lineText(HandoverOutcome.cancelled);
+    final text = helped ? WaitText.leftHelped : HandoverRecord.lineText(HandoverOutcome.cancelled);
     _add(
       SystemMessageRecord(id: id, time: DateTime.now(), text: text, kind: 'queue-self-resolved'),
-      RecordEntry(id: id, shape: 'queue-self-resolved', type: 'queue-self-resolved', text: text),
+      RecordEntry(
+        id: id,
+        shape: 'queue-self-resolved',
+        type: 'queue-self-resolved',
+        text: helped ? WaitText.recordText : text,
+      ),
     );
     state.addToTranscript('bot', '{The visitor left the queue}');
     if (_flow.atHandover) _flow.continueFlow();
@@ -261,6 +301,10 @@ class HandoverLifecycle {
     return true;
   }
 
+  /// The server let them go because an article helped (queue-self-resolve
+  /// with the article answered ok).
+  void leftQueueHelped() => _leftQueue(helped: true);
+
   void setupListeners() {
     final s = _socket();
     if (s == null) return;
@@ -269,6 +313,7 @@ class HandoverLifecycle {
     s.on('handover-waiting', (data) {
       if (!_own(data)) return;
       connecting.end();
+      _waitEnd();
       settle(HandoverOutcome.unavailable);
       bus.emit(WidgetSignals.waitingForHuman, WidgetSignals.waitingDetail(data));
     });
@@ -278,6 +323,7 @@ class HandoverLifecycle {
     });
     void ended(dynamic data) {
       if (!_own(data)) return;
+      _waitEnd();
       final waiting = _inWait();
       settle(HandoverOutcome.ended);
       if (waiting) _waitOver('ended');
@@ -326,7 +372,12 @@ class HandoverLifecycle {
     final nodeId = state.currentNodeId;
     if (_flow.atHandover && nodeId != null) {
       _setLive(false);
-      if (_flow.waitAt(nodeId, waiting: true)) _waitingForPerson = true;
+      _requeueing = true;
+      try {
+        if (_flow.waitAt(nodeId, waiting: true)) _waitingForPerson = true;
+      } finally {
+        _requeueing = false;
+      }
     }
     connecting.start();
   }
@@ -334,6 +385,7 @@ class HandoverLifecycle {
   /// visitor-blocked: the wait and the flow are over, nobody is coming.
   void onBlocked() {
     connecting.end();
+    _waitEnd();
     settle(HandoverOutcome.ended);
     _waitingForPerson = false;
     _flow.stop();
@@ -417,7 +469,15 @@ class HandoverLifecycle {
         // On the handover step with no card: the chat ending moves the flow on.
         if (id != null) _flow.waitAt(id, waiting: false);
       case RestoreStep.wait:
+        final before = _waitingForPerson;
         if (id != null && _flow.waitAt(id, waiting: true)) {
+          // Still in the queue: what may help meanwhile, unless an AI agent
+          // takes the step (the engine's own change may have started it).
+          final ai = handoverNode?['data'] is Map ? (handoverNode!['data'] as Map)['assignedAIAgents'] : null;
+          if (!before && !_waitingForPerson && !(ai is List && ai.isNotEmpty)) {
+            _left = false;
+            _waitStart();
+          }
           _waitingForPerson = true;
           connecting.start();
         }
@@ -447,6 +507,7 @@ class HandoverLifecycle {
   void reset() {
     connecting.end();
     _waitingForPerson = false;
+    _left = false;
   }
 
   void dispose() => connecting.end();
