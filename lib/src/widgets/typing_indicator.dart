@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/customization/mascot_art.dart';
 import '../core/customization/mascot_moods.dart';
+import '../core/i18n/i18n.dart';
 import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
 import 'mascot/typing_mascot.dart';
@@ -41,7 +42,7 @@ class TypingIndicator extends StatefulWidget {
   });
 
   /// "Pip is typing" when the owner named their mascot (chatChrome.ts typingBubbleHtml), else "Agent is typing".
-  String get label => style == 'mascot' && (mascot?.name.isNotEmpty ?? false) ? typingLabel('mascot', mascot!.name) : 'Agent is typing';
+  String get label => style == 'mascot' && (mascot?.name.isNotEmpty ?? false) ? typingLabel('mascot', mascot!.name) : t('typing.named', {'name': t('agent.agent')});
 
   @override
   State<TypingIndicator> createState() => _TypingIndicatorState();
@@ -123,7 +124,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
     if (widget.style == 'shimmer') {
       return FadeTransition(
         opacity: _animation1,
-        child: Text('Typing...', style: TextStyle(color: effectiveColor, fontSize: 13, fontWeight: FontWeight.w600)),
+        child: Text('${t('typing.typing')}...', style: TextStyle(color: effectiveColor, fontSize: 13, fontWeight: FontWeight.w600)),
       );
     }
     if (widget.style == 'wave') {
