@@ -203,7 +203,7 @@ class ConsentHandler extends _RichHandler {
       nodeId: node.id,
       questionText: prompt(node, state),
       choices: [
-        ChoiceOption(id: 'agree', text: text.isNotEmpty ? '✓ $text' : 'I agree', value: true),
+        ChoiceOption(id: 'agree', text: text.isNotEmpty ? '✓ $text' : t('sdk.consent.agree'), value: true),
         ChoiceOption(id: 'continue', text: consentContinueLabel(node.data), value: false),
       ],
       // The card draws the text with its links (markdown-lite) and a box to tick.
@@ -549,7 +549,7 @@ class OtpNodeHandler extends _RichHandler {
 
   TextInputUIState _ui(FlowNode node, ChatState state, String stage, [String sentTo = '', num resendIn = otpResendSeconds]) {
     final p = prompt(node, state);
-    final question = stage == 'email' ? (p.isNotEmpty ? p : 'Email address') : 'Enter the $otpLength-digit code we sent you';
+    final question = stage == 'email' ? (p.isNotEmpty ? p : t('otp.emailLabel')) : t('sdk.flow.otpEnterCode', {'n': otpLength});
     final skip = jsString(node.data['skipLabel'] ?? '').trim();
     return TextInputUIState(
       nodeId: node.id,
@@ -561,7 +561,7 @@ class OtpNodeHandler extends _RichHandler {
         'step': 'otp',
         'stage': stage,
         'allowSkip': jsTruthy(node.data['allowSkip']),
-        'skipLabel': skip.isNotEmpty ? skip : 'Skip',
+        'skipLabel': skip.isNotEmpty ? skip : t('common.skip'),
         // The code card: where the code went and when it may be sent again.
         if (sentTo.isNotEmpty) 'sentTo': sentTo,
         if (stage == 'code') 'resendIn': resendIn,
@@ -603,7 +603,7 @@ class OtpNodeHandler extends _RichHandler {
     if (r.ok || r.code == 'resend_wait') {
       state.setVariable(_key(node), {'stage': 'code', 'email': target});
       final sentTo = _f(r.data, 'sentTo');
-      botSay(state, 'We sent a $otpLength-digit code to ${jsTruthy(sentTo) ? jsString(sentTo) : target}', node.id, nodeType);
+      botSay(state, t('otp.sentTo', {'n': otpLength, 'email': jsTruthy(sentTo) ? jsString(sentTo) : target}), node.id, nodeType);
       final shownTo = jsTruthy(sentTo) ? jsString(sentTo) : maskEmail(target);
       if (r.code == 'resend_wait') {
         final wait = jsNumber(_f(r.data, 'retryAfter'));
@@ -740,7 +740,7 @@ class AddressNodeHandler extends _RichHandler {
         ? Map<String, dynamic>.from(response as Map)
         : {'line1': response is String ? response : (_f(response, 'address') ?? '')};
     final value = node.data['allowManual'] == false ? null : manualAddress(fields);
-    if (value == null) return NodeResult.invalid('Enter the street address.', uiState: _ui(node, state), inCard: true);
+    if (value == null) return NodeResult.invalid(t('sdk.flow.streetRequired'), uiState: _ui(node, state), inCard: true);
     return _finish(node, state, value, 'manual');
   }
 }
@@ -768,7 +768,7 @@ class MatrixNodeHandler extends _RichHandler {
       columns: matrixColumns(data).map((c) => ChoiceOption(id: c.id, text: c.text, value: c.id)).toList(),
       mode: matrixMode(data),
       requireAll: matrixRequireAll(data),
-      submitLabel: label.isNotEmpty ? label : 'Submit',
+      submitLabel: label.isNotEmpty ? label : t('common.submit'),
     );
   }
 
@@ -858,7 +858,7 @@ class AiExtractNodeHandler extends _RichHandler {
   @override
   String get nodeType => 'ai-extract-node';
 
-  TextInputUIState _ui(FlowNode node, ChatState state) => _askUi(node, state, prompt(node, state, '<p>How can we help?</p>'));
+  TextInputUIState _ui(FlowNode node, ChatState state) => _askUi(node, state, prompt(node, state, '<p>${t('sdk.flow.aiExtractPrompt')}</p>'));
 
   Future<NodeResult> _run(FlowNode node, ChatState state, String text, bool asked) async {
     final data = node.data;
@@ -912,7 +912,7 @@ class AiRouteNodeHandler extends _RichHandler {
   @override
   String get nodeType => 'ai-route-node';
 
-  TextInputUIState _ui(FlowNode node, ChatState state) => _askUi(node, state, prompt(node, state, '<p>How can we help?</p>'));
+  TextInputUIState _ui(FlowNode node, ChatState state) => _askUi(node, state, prompt(node, state, '<p>${t('sdk.flow.aiExtractPrompt')}</p>'));
 
   Future<NodeResult> _run(FlowNode node, ChatState state, String text, bool asked) async {
     final data = node.data;
@@ -1062,9 +1062,9 @@ class SignatureNodeHandler extends _RichHandler {
     final p = prompt(node, state);
     return TextInputUIState(
       nodeId: node.id,
-      questionText: p.isNotEmpty ? p : 'Type your full name to sign',
+      questionText: p.isNotEmpty ? p : t('signature.typeToSign'),
       inputType: TextInputType.text,
-      placeholder: 'Your full name',
+      placeholder: t('signature.namePlaceholder'),
       answerKey: node.data['answerVariable']?.toString() ?? '',
       // The signature card: a pad to draw on, typing when allowed, the full name when asked.
       extra: {'step': 'signature', ...signatureConfig(node.data)},
@@ -1088,17 +1088,17 @@ class SignatureNodeHandler extends _RichHandler {
     final name = typed ? cleanSignatureName(response is String ? response : _f(response, 'name')) : '';
     final fullName = cleanSignatureName(_f(response, 'fullName') ?? (requireName ? name : ''));
     if (requireName && !isSignatureName(fullName)) {
-      return NodeResult.invalid('Enter your full name.', uiState: _ui(node, state), inCard: true);
+      return NodeResult.invalid(t('sdk.flow.signatureName'), uiState: _ui(node, state), inCard: true);
     }
     if (method == 'drawn' && !jsTruthy(_f(response, 'dataUrl'))) {
       return NodeResult.invalid(
-        allowTyped ? 'Draw your signature in the box - or type your name instead.' : 'Draw your signature in the box.',
+        allowTyped ? t('sdk.flow.signatureDrawOrType') : t('sdk.flow.signatureDraw'),
         uiState: _ui(node, state),
         inCard: true,
       );
     }
     if (method == 'typed' && (!allowTyped || !isSignatureName(name))) {
-      return NodeResult.invalid('Type your full name to sign.', uiState: _ui(node, state), inCard: true);
+      return NodeResult.invalid(t('sdk.flow.signatureType'), uiState: _ui(node, state), inCard: true);
     }
     final String dataUrl;
     final num width;
@@ -1122,7 +1122,7 @@ class SignatureNodeHandler extends _RichHandler {
     ));
     final url = up.url;
     if (!up.ok || url == null || url.isEmpty) {
-      return NodeResult.invalid("We couldn't save your signature. Please try again.", uiState: _ui(node, state), inCard: true);
+      return NodeResult.invalid(t('sdk.flow.signatureSaveFailed'), uiState: _ui(node, state), inCard: true);
     }
     final at = _iso(node);
     final shownName = fullName.isNotEmpty ? fullName : name;
