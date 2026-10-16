@@ -13,6 +13,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/i18n.dart' show t;
 import '../../core/waiting/games_card.dart';
 import '../../core/waiting/waiting_games.dart';
 import '../../theme/conferbot_theme.dart';
@@ -268,8 +269,15 @@ class _RpsViewState extends State<_RpsView> with SingleTickerProviderStateMixin 
 }
 
 Widget _tttView(TttBoard b, GamesLook look, void Function(GameInput a) act) {
-  String label(int i) =>
-      'Row ${i ~/ 3 + 1}, column ${i % 3 + 1}, ${b.cells[i] == 'X' ? 'yours' : b.cells[i] == 'O' ? "the bot's" : 'empty'}';
+  String label(int i) => t('games.ttt.cell', {
+        'row': i ~/ 3 + 1,
+        'col': i % 3 + 1,
+        'state': t(b.cells[i] == 'X'
+            ? 'games.ttt.yours'
+            : b.cells[i] == 'O'
+                ? 'games.ttt.bots'
+                : 'games.ttt.empty'),
+      });
   return Center(
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 210),
@@ -322,7 +330,8 @@ Widget _memoryView(MemoryBoard b, GamesLook look, void Function(GameInput a) act
               look: look,
               tileKey: ValueKey('cb-games-mem-$i'),
               disabled: c.matched,
-              label: 'Card ${i + 1}, ${c.up ? c.face : 'face down'}${c.matched ? ', matched' : ''}',
+              label: t(c.matched ? 'games.memory.cardMatched' : 'games.memory.card',
+                  {'n': i + 1, 'face': c.up ? c.face : t('games.memory.faceDown')}),
               color: c.up ? (c.matched ? look.soft : look.fill) : look.accent,
               border: c.matched ? Border.all(color: _mix(look.card, look.accent, 0.45), width: 1.5) : null,
               onTap: () => act(MemoryInput(i)),
@@ -390,7 +399,7 @@ Widget _choiceView(ChoiceBoard b, GamesLook look, void Function(GameInput a) act
       ],
       if (b.big != null) ...[
         Semantics(
-          label: 'Emoji: ${b.big}',
+          label: t('games.emoji.label', {'emoji': b.big}),
           excludeSemantics: true,
           child: Text(b.big!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 40, height: 1.15, letterSpacing: 3)),
         ),
@@ -505,7 +514,9 @@ class _ScrambleViewState extends State<_ScrambleView> with SingleTickerProviderS
                   final letter = filled ? b.letters[b.placed[i]] : '';
                   return Semantics(
                     button: true,
-                    label: filled ? 'Space ${i + 1}, $letter' : 'Space ${i + 1}, empty',
+                    label: filled
+                        ? t('games.scramble.space', {'n': i + 1, 'letter': letter})
+                        : t('games.scramble.spaceEmpty', {'n': i + 1}),
                     excludeSemantics: true,
                     child: GestureDetector(
                       key: ValueKey('cb-games-slot-$i'),
@@ -551,7 +562,7 @@ class _ScrambleViewState extends State<_ScrambleView> with SingleTickerProviderS
                 final used = b.placed.contains(i);
                 return Semantics(
                   button: true,
-                  label: 'Letter ${b.letters[i]}',
+                  label: t('games.scramble.letter', {'letter': b.letters[i]}),
                   excludeSemantics: true,
                   child: GestureDetector(
                     key: ValueKey('cb-games-tile-$i'),
