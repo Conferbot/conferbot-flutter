@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show WidgetsBinding;
+import 'package:url_launcher/url_launcher.dart';
 import '../core/state/chat_state.dart';
 import '../theme/conferbot_theme.dart';
 import '../theme/default_theme.dart';
@@ -49,6 +51,7 @@ import '../services/chat_sounds.dart';
 import '../core/delight/delight.dart';
 import '../core/delight/delight_extras.dart';
 import '../core/live_chat/typing_preview.dart';
+import '../core/live_chat/post_chat_redirect.dart';
 import '../services/font_loader.dart';
 
 /// ConferBot provider configuration
@@ -85,6 +88,16 @@ class ConferBotConfig {
   /// owner's choice.
   final String? widgetLanguage;
 
+  /// The owner's post-chat redirect (Customize > Conversations), before the
+  /// countdown starts: return true when the app handled the URL itself (or
+  /// wants no redirect), and the SDK shows no countdown. Anything else: the
+  /// SDK counts down 10 seconds with Cancel, then opens the URL in the
+  /// system browser. Only http(s) URLs reach it.
+  final bool Function(String url)? onPostChatRedirect;
+
+  /// Never follow the owner's post-chat redirect (default false).
+  final bool disablePostChatRedirect;
+
   const ConferBotConfig({
     this.enableNotifications = true,
     this.enableOfflineMode = true,
@@ -98,6 +111,8 @@ class ConferBotConfig {
     this.enablePersistence = true,
     this.sessionTimeout = const Duration(minutes: 30),
     this.widgetLanguage,
+    this.onPostChatRedirect,
+    this.disablePostChatRedirect = false,
   });
 }
 
@@ -156,6 +171,15 @@ class ConferBotProvider with ChangeNotifier {
   /// the waiting nudge, "Edit" under the latest answer
   /// (core/delight/delight_extras.dart).
   late final DelightExtras delight;
+
+  /// The owner's post-chat redirect: after the conversation ends and the
+  /// rating is done, the app's onPostChatRedirect, else "Taking you to
+  /// example.com in 10s" with Cancel, then the system browser
+  /// (core/live_chat/post_chat_redirect.dart).
+  late final PostChatRedirect postChatRedirect;
+
+  /// The bot's redirectUrl (fetched-chatbot-data).
+  Object? _redirectUrl;
 
   /// The visitor's draft to the person in the chat (core/live_chat/typing_preview.dart).
   late final DraftSender _drafts = DraftSender((draft) {
@@ -407,6 +431,26 @@ class ConferBotProvider with ChangeNotifier {
       cut: _cutRecordFrom,
     );
     delight.addListener(notifyListeners);
+
+    postChatRedirect = PostChatRedirect(
+      redirectUrl: () => _redirectUrl,
+      sessionId: () => _chatSessionId,
+      chatVisible: () => _chatOnScreen,
+      blocked: () => liveChat.blocked != null,
+      // A person in the chat, or one on their way.
+      live: () => _isLiveChatMode || !handover.talkToPersonAllowed,
+      ratingPending: () => liveChat.csatConfig != null && liveChat.csatOpen && !liveChat.csatSent,
+      disabled: () => config.disablePostChatRedirect,
+      onPostChatRedirect: () => config.onPostChatRedirect,
+      store: () => config.enablePersistence ? const SharedPreferencesRequestsStore() : null,
+      appInForeground: _appInForeground,
+      // The system browser, as the SDK opens every link.
+      open: (href) => launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication),
+    );
+    postChatRedirect.addListener(notifyListeners);
+    // Whatever the chat shows changed: the redirect waits for the rating,
+    // and a countdown that can no longer go stops.
+    addListener(postChatRedirect.update);
     // Seen receipts count the chat as visible only on the conversation.
     home.chosen.addListener(() {
       if (_isOpen) liveChat.reportReceipts(chatVisible: _chatOnScreen);
@@ -448,6 +492,16 @@ class ConferBotProvider with ChangeNotifier {
 
   /// The open chat shows the conversation (not the home screen or help centre).
   bool get _chatOnScreen => _isOpen && home.view == HomeView.chat;
+
+  /// The app is in the foreground (true before the binding runs, in tests).
+  static bool _appInForeground() {
+    try {
+      final s = WidgetsBinding.instance.lifecycleState;
+      return s == null || s == AppLifecycleState.resumed || s == AppLifecycleState.inactive;
+    } catch (_) {
+      return true;
+    }
+  }
 
   /// What the home screen shows (core/home/home.dart), or null when the
   /// owner has none (`enableInitialPage` off) or the settings have not come.
@@ -1209,7 +1263,11 @@ class ConferBotProvider with ChangeNotifier {
       _agentTyping = false;
       ChatState.instance.setLiveChatMode(false);
 
+      // A flow at its handover step goes on from it; otherwise the
+      // conversation is over (the post-chat redirect may follow).
+      final flowGoesOn = _flowEngine.isAtHandover;
       _flowEngine.handleChatEnded();
+      if (!flowGoesOn) postChatRedirect.conversationEnded();
       notifyListeners();
     });
 
@@ -1587,6 +1645,9 @@ class ConferBotProvider with ChangeNotifier {
   void _setupFlowEngineListeners() {
     _flowEngine.addListener(_onFlowEngineChange);
 
+    // The flow's end is the conversation's end (the post-chat redirect).
+    _flowEngine.isFlowCompleteStream.listen((_) => postChatRedirect.conversationEnded());
+
     // The lines the flow's steps say (questions, answers, media, links),
     // as the web widget draws them.
     _flowEngine.botMessageStream.listen((messageData) {
@@ -1741,6 +1802,8 @@ class ConferBotProvider with ChangeNotifier {
     home.setKnowledgeBase(kb);
     if (chatbotData != null) {
       liveChat.setChatbotData(chatbotData);
+      // The owner's post-chat redirect (checked when it is followed).
+      _redirectUrl = chatbotData['redirectUrl'];
       // Server sends: { elements: [{ nodes: [...], edges: [...] }], customizations: {...}, ... }
       final elements = chatbotData['elements'] as List<dynamic>?;
       if (elements != null && elements.isNotEmpty) {
@@ -2560,6 +2623,7 @@ class ConferBotProvider with ChangeNotifier {
     _analyticsProvider?.endSession();
 
     _flowEngine.reset();
+    postChatRedirect.reset();
     liveChat.reset();
     requests.reset();
     home.reset();
@@ -2632,6 +2696,9 @@ class ConferBotProvider with ChangeNotifier {
     sounds.dispose();
     delight.removeListener(notifyListeners);
     delight.dispose();
+    removeListener(postChatRedirect.update);
+    postChatRedirect.removeListener(notifyListeners);
+    postChatRedirect.dispose();
     chatFont.removeListener(notifyListeners);
     chatFont.dispose();
     _drafts.clear();
