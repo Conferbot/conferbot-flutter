@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../models/agent.dart';
 import '../../theme/conferbot_theme.dart';
 import '../../theme/default_theme.dart';
@@ -204,7 +205,7 @@ class AgentInfoWidget extends StatelessWidget {
     if (agent.status != null && agent.status!.isNotEmpty) {
       return agent.status!;
     }
-    return 'Support Agent';
+    return t('sdk.agent.supportAgent');
   }
 
   double _getAvatarSize() {
@@ -285,8 +286,9 @@ class _AgentTypingIndicatorState extends State<_AgentTypingIndicator>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // "typing" after the name, lower case as it always was (typing.typing is "Typing").
         Text(
-          'typing',
+          t('typing.typing').toLowerCase(),
           style: TextStyle(
             fontSize: widget.theme.typography.fontSizeSm,
             color: widget.primaryColor,
@@ -402,7 +404,7 @@ class AgentInfoHeader extends StatelessWidget {
                         ),
                         SizedBox(width: effectiveTheme.spacing.xs),
                         Text(
-                          'Online',
+                          t('status.online'),
                           style: TextStyle(
                             fontSize: effectiveTheme.typography.fontSizeXs,
                             color: effectiveTheme.colors.textSecondary,
@@ -616,7 +618,7 @@ class _AgentConnectedBannerState extends State<AgentConnectedBanner>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Agent Connected',
+                    t('sdk.agent.connected'),
                     style: TextStyle(
                       fontSize: effectiveTheme.typography.fontSizeMd,
                       fontWeight: effectiveTheme.typography.fontWeightSemiBold,
@@ -625,7 +627,7 @@ class _AgentConnectedBannerState extends State<AgentConnectedBanner>
                   ),
                   SizedBox(height: effectiveTheme.spacing.xs / 2),
                   Text(
-                    '${widget.agent.name} has joined the chat',
+                    t('system.hasJoined', {'name': widget.agent.name}),
                     style: TextStyle(
                       fontSize: effectiveTheme.typography.fontSizeSm,
                       color: effectiveTheme.colors.textSecondary,
