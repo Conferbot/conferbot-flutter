@@ -8,6 +8,9 @@ library;
 import 'dart:math' as math;
 
 import 'customizations.dart';
+import 'launcher_attention.dart';
+import 'launcher_entrance.dart';
+import 'launcher_idle_call.dart';
 import 'widget_theme.dart';
 
 class ResolvedLauncher {
@@ -54,6 +57,17 @@ class ResolvedLauncher {
   /// The greeting next to the button, when the owner turned it on.
   final String? ctaText;
 
+  /// How it arrives (launcher_entrance.dart), its "look here" loop
+  /// (launcher_attention.dart) and the mascot's idle call
+  /// (launcher_idle_call.dart): classic / off unless the owner chose one.
+  final String entrance;
+  final String attention;
+  final String idleCall;
+
+  /// Seconds before the idle call (5-120), and its bubble's line.
+  final int idleCallDelay;
+  final String idleCallText;
+
   const ResolvedLauncher({
     required this.position,
     required this.size,
@@ -75,6 +89,11 @@ class ResolvedLauncher {
     required this.glyph,
     required this.animation,
     required this.ctaText,
+    this.entrance = 'classic',
+    this.attention = 'off',
+    this.idleCall = 'off',
+    this.idleCallDelay = defaultIdleCallDelay,
+    this.idleCallText = '',
   });
 }
 
@@ -197,6 +216,11 @@ class Launcher {
       animation: c['launcherAnimation'] == 'lively' || c['launcherAnimation'] == 'off' ? c['launcherAnimation'] as String : 'subtle',
       // Only when the owner turned the greeting on (templates/shared.ts: no chatIconCta, no bubble).
       ctaText: c['chatIconCta'] == true && _str(c['chatIconCtaText']).isNotEmpty ? _str(c['chatIconCtaText']) : null,
+      entrance: normalizeLauncherEntrance(c['launcherEntrance']),
+      attention: normalizeLauncherAttention(c['launcherAttention']),
+      idleCall: normalizeLauncherIdleCall(c['launcherIdleCall']),
+      idleCallDelay: normalizeIdleCallDelay(c['launcherIdleCallDelay']),
+      idleCallText: idleCallLine(normalizeLauncherIdleCall(c['launcherIdleCall']), c['launcherIdleCallText']),
     );
   }
 }
