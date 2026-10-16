@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/i18n/i18n.dart';
 import '../../models/knowledge_base.dart';
 import '../../providers/knowledge_base_provider.dart';
 import '../../theme/conferbot_theme.dart';
@@ -145,7 +146,7 @@ class _KnowledgeBaseScreenState extends State<KnowledgeBaseScreen> {
                     TextButton(
                       onPressed: () => provider.clearSearch(),
                       child: Text(
-                        'Clear',
+                        t('signature.clear'),
                         style: TextStyle(
                           color: theme.colors.primary,
                           fontSize: theme.typography.fontSizeSm,
@@ -165,7 +166,7 @@ class _KnowledgeBaseScreenState extends State<KnowledgeBaseScreen> {
                   theme.spacing.sm,
                 ),
                 child: KBSearchBar(
-                  placeholder: widget.searchPlaceholder ?? 'Search articles...',
+                  placeholder: widget.searchPlaceholder ?? t('sdk.kb.searchArticles'),
                   initialValue: provider.searchQuery,
                   onSearch: (query) => provider.search(query),
                   onClear: () => provider.clearSearch(),
@@ -229,16 +230,16 @@ class _KnowledgeBaseScreenState extends State<KnowledgeBaseScreen> {
       hasMore: provider.hasMoreArticles,
       onLoadMore: () => provider.loadMoreArticles(),
       emptyMessage: provider.hasSearchQuery
-          ? 'No articles found for "${provider.searchQuery}"'
+          ? t('sdk.kb.noArticlesFor', {'query': provider.searchQuery})
           : provider.selectedCategoryId != null
-              ? 'No articles in this category'
-              : 'No articles available',
+              ? t('sdk.kb.noArticlesInCategory')
+              : t('kb.noArticlesAvailable'),
       theme: theme,
     );
   }
 
   Widget _buildErrorState(ConferBotTheme theme, KnowledgeBaseProvider provider) {
-    final error = provider.articlesError ?? provider.categoriesError ?? 'An error occurred';
+    final error = provider.articlesError ?? provider.categoriesError ?? t('sdk.kb.errorOccurred');
 
     return Center(
       child: Padding(
@@ -253,7 +254,7 @@ class _KnowledgeBaseScreenState extends State<KnowledgeBaseScreen> {
             ),
             SizedBox(height: theme.spacing.md),
             Text(
-              'Something went wrong',
+              t('sdk.kb.somethingWrong'),
               style: TextStyle(
                 fontSize: theme.typography.fontSizeLg,
                 fontWeight: theme.typography.fontWeightMedium,
@@ -274,7 +275,7 @@ class _KnowledgeBaseScreenState extends State<KnowledgeBaseScreen> {
             ElevatedButton.icon(
               onPressed: () => provider.refresh(),
               icon: const Icon(Icons.refresh),
-              label: const Text('Try Again'),
+              label: Text(t('sdk.handover.tryAgain')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colors.primary,
                 foregroundColor: theme.colors.surface,
@@ -288,12 +289,12 @@ class _KnowledgeBaseScreenState extends State<KnowledgeBaseScreen> {
 
   String _getTitle(KnowledgeBaseProvider provider) {
     if (provider.hasSearchQuery) {
-      return 'Search Results';
+      return t('sdk.kb.searchResults');
     }
     if (provider.selectedCategory != null) {
       return provider.selectedCategory!.name;
     }
-    return widget.title ?? 'Help Center';
+    return widget.title ?? t('home.helpCentre');
   }
 }
 
@@ -437,7 +438,7 @@ class KnowledgeBaseFloatingButton extends StatelessWidget {
 
     return FloatingActionButton(
       onPressed: onPressed,
-      tooltip: tooltip ?? 'Help Center',
+      tooltip: tooltip ?? t('home.helpCentre'),
       backgroundColor: effectiveTheme.colors.primary,
       foregroundColor: effectiveTheme.colors.surface,
       child: const Icon(Icons.help_outline),
@@ -475,7 +476,7 @@ class _RecentArticles extends StatelessWidget {
       key: const ValueKey('kb-recent-articles'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('Recent articles'),
+        _label(t('home.recentArticles')),
         for (final article in articles)
           ArticleListItem(
             article: article,
@@ -484,7 +485,7 @@ class _RecentArticles extends StatelessWidget {
             showRating: false,
             theme: theme,
           ),
-        _label('All articles'),
+        _label(t('sdk.kb.allArticles')),
       ],
     );
   }
