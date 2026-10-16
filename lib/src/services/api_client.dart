@@ -7,6 +7,7 @@ import '../models/chat_session.dart';
 import '../core/errors/conferbot_exceptions.dart';
 import '../core/errors/error_handler.dart';
 import '../core/live_chat/email_transcript.dart';
+import '../core/push/push.dart';
 
 // ============================================
 // API RESPONSE WRAPPER
@@ -231,21 +232,59 @@ class ApiClient {
     }
   }
 
-  /// Register push notification token
+  /// Register push notification token (older shape: retried, an
+  /// ApiResponse). Prefer [registerPush].
+  @Deprecated('Use registerPush, or ConferBotProvider.setPushToken')
   Future<ApiResponse<void>> registerPushToken({
     required String token,
     required String chatSessionId,
+    PushTokenType? tokenType,
   }) async {
     return _executeWithRetry<void>(
-      endpoint: '/push/register',
+      endpoint: pushRegisterPath,
       method: 'POST',
       body: {
-        'token': token,
-        'chatSessionId': chatSessionId,
+        ...pushRegisterBody(token, chatSessionId, pushTokenTypeOf(token, tokenType)),
         'platform': ConferBotConstants.platformIdentifier,
       },
       parser: (_) {},
     );
+  }
+
+  /// Register the device's push token with a conversation (embed-server
+  /// POST /api/v1/mobile/push/register, docs/mobile-push.md): chatSessionId
+  /// is required, tokenType says FCM or APNs. Not retried here (the
+  /// registrar tries again) and never throws: a failure reads as the
+  /// server's error code.
+  Future<PushRegisterResult> registerPush(Map<String, dynamic> body) async {
+    try {
+      final response = await _client
+          .post(Uri.parse('$baseUrl$pushRegisterPath'), headers: _headers, body: jsonEncode(body))
+          .timeout(Duration(milliseconds: config.connectionTimeout));
+      dynamic data;
+      try {
+        data = response.body.isEmpty ? null : jsonDecode(response.body);
+      } catch (_) {
+        data = null;
+      }
+      return PushRegisterResult.of(response.statusCode, data);
+    } catch (_) {
+      return const PushRegisterResult.failed(PushRegisterError.network);
+    }
+  }
+
+  /// Unregister the token (logout, the visitor cleared). Never throws.
+  Future<bool> unregisterPush(String token) async {
+    try {
+      final response = await _client
+          .post(Uri.parse('$baseUrl$pushUnregisterPath'), headers: _headers, body: jsonEncode(pushUnregisterBody(token)))
+          .timeout(Duration(milliseconds: config.connectionTimeout));
+      if (response.statusCode < 200 || response.statusCode >= 300) return false;
+      final data = response.body.isEmpty ? null : jsonDecode(response.body);
+      return data is Map && data['success'] == true;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Upload file
