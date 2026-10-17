@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The example app builds for Android with the current Flutter stable (3.38): Gradle 8.13, Android Gradle Plugin 8.11.1, Kotlin 2.1.0 and `compileSdk` 36. The package itself is unchanged (#95).
+
 ## [2.0.0] - 2026-10-16
 
 Everything since 1.0.0: the SDK now does what the web widget does, from the
