@@ -9,10 +9,13 @@ Add your Conferbot chatbot, live chat and help centre to an iOS or Android Flutt
 
 ## Quickstart video
 
-<!-- TODO(video): record the quickstart (install, bot id, ConferBotFAB, run), export docs/media/quickstart.gif and replace VIDEO_ID with the YouTube id. -->
 <p align="center">
-  <a href="https://youtu.be/VIDEO_ID"><img src="docs/media/quickstart.gif" width="300" alt="Add Conferbot to a Flutter app in five minutes (video)" /></a>
+  <a href="https://github.com/Conferbot/conferbot-flutter/releases/download/2.0.0/sdk-flutter.mp4">
+    <img src="docs/media/quickstart.gif" width="400" alt="Adding Conferbot to a Flutter app: the package, the bot ID, then the chat opening and answering" />
+  </a>
 </p>
+
+<p align="center"><a href="https://github.com/Conferbot/conferbot-flutter/releases/download/2.0.0/sdk-flutter.mp4">Watch the full walkthrough</a> (MP4, 1080p, about 1.5 minutes): install, the bot ID, then the example app on an Android emulator with the launcher, the bot's flow, the AI agent answering from the knowledge base and the handover to a person.</p>
 
 The complete flow, recorded on an Android emulator against production: open the widget, the bot loads with the flow builder's theme, a name question, a choice, and the next step.
 
