@@ -194,96 +194,89 @@ void main() {
     });
   });
 
-  group('ApiClient.sendMessage', () {
-    test('should successfully send message', () async {
+  group('ApiClient.sendMessage (store-only record, #98)', () {
+    test('posts the record and answer variables, not a message, and reads storeOnly', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, contains('/session/session_123/message'));
-
-        final body = jsonDecode(request.body);
-        expect(body['message'], 'Hello bot');
-
+        expect(request.url.path, endsWith('/session/session_123/message'));
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['record'][0]['text'], 'hi');
+        expect(body['answerVariables'][0]['key'], 'name');
+        expect(body['visitorId'], 'v1');
+        expect(body.containsKey('message'), false);
+        expect(body.containsKey('metadata'), false);
         return http.Response(
           jsonEncode({
             'success': true,
-            'data': {
-              'id': 'msg_123',
-              'status': 'sent',
-            },
+            'data': {'success': true, 'responseId': 'r1', 'storeOnly': true},
           }),
           200,
         );
       });
 
-      apiClient = ApiClient(
-        apiKey: 'test_api_key',
-        botId: 'test_bot_id',
-        client: mockClient,
-      );
+      apiClient = ApiClient(apiKey: 'test_api_key', botId: 'test_bot_id', client: mockClient);
 
       final response = await apiClient.sendMessage(
         chatSessionId: 'session_123',
-        message: 'Hello bot',
+        record: [
+          {'_id': 'm1', 'type': 'user-input-response', 'text': 'hi'},
+        ],
+        answerVariables: [
+          {'key': 'name', 'value': 'Ada'},
+        ],
+        visitorId: 'v1',
       );
 
       expect(response.success, true);
-      expect(response.data, isNotNull);
+      expect(response.data['storeOnly'], true);
+      expect(response.data['responseId'], 'r1');
     });
 
-    test('should send message with metadata', () async {
+    test('leaves visitorId out when not given', () async {
       final mockClient = MockClient((request) async {
-        final body = jsonDecode(request.body);
-        expect(body['message'], 'Hello');
-        expect(body['metadata']['source'], 'flutter');
-
-        return http.Response(
-          jsonEncode({
-            'success': true,
-            'data': {},
-          }),
-          200,
-        );
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body.containsKey('visitorId'), false);
+        expect(body['answerVariables'], isEmpty);
+        return http.Response(jsonEncode({'success': true, 'data': {'storeOnly': true}}), 200);
       });
 
-      apiClient = ApiClient(
-        apiKey: 'test_api_key',
-        botId: 'test_bot_id',
-        client: mockClient,
-      );
+      apiClient = ApiClient(apiKey: 'test_api_key', botId: 'test_bot_id', client: mockClient);
+
+      final response = await apiClient.sendMessage(chatSessionId: 'session_123', record: const []);
+      expect(response.success, true);
+    });
+
+    test('reports a locked conversation', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(jsonEncode({'success': false, 'error': 'CONVERSATION_LOCKED'}), 423);
+      });
+
+      apiClient = ApiClient(apiKey: 'test_api_key', botId: 'test_bot_id', client: mockClient);
+
+      final response = await apiClient.sendMessage(chatSessionId: 'session_123', record: const []);
+      expect(response.success, false);
+    });
+
+    test('the old message form sends nothing the route would ignore', () async {
+      var requests = 0;
+      final mockClient = MockClient((request) async {
+        requests++;
+        return http.Response(jsonEncode({'success': true}), 200);
+      });
+
+      apiClient = ApiClient(apiKey: 'test_api_key', botId: 'test_bot_id', client: mockClient);
 
       final response = await apiClient.sendMessage(
         chatSessionId: 'session_123',
+        // ignore: deprecated_member_use_from_same_package
         message: 'Hello',
+        // ignore: deprecated_member_use_from_same_package
         metadata: {'source': 'flutter'},
       );
 
-      expect(response.success, true);
-    });
-
-    test('should handle send message failure', () async {
-      final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({
-            'success': false,
-            'error': 'Rate limit exceeded',
-          }),
-          429,
-        );
-      });
-
-      apiClient = ApiClient(
-        apiKey: 'test_api_key',
-        botId: 'test_bot_id',
-        client: mockClient,
-      );
-
-      final response = await apiClient.sendMessage(
-        chatSessionId: 'session_123',
-        message: 'Hello',
-      );
-
       expect(response.success, false);
-      expect(response.error, 'Rate limit exceeded');
+      expect(response.error, startsWith('STORE_ONLY_ROUTE'));
+      expect(requests, 0);
     });
   });
 
