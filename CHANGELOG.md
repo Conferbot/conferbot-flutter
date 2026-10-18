@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The post-chat rating is asked unless the owner switched Post-chat feedback off, as on the web; bots that never set it get the stock stars and wording instead of no rating (#100).
+- "Talk to a person" shows under AI answers on any bot whose owner turned it on, including a flow handed to an AI agent, as on the web; it needed an agent-only bot (#101).
+
 ### Changed
 
 - The widget's words shared by all SDKs include its signature and street-address error messages in all five languages, matching the web widget (#103).
