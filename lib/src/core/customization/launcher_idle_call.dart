@@ -182,13 +182,17 @@ const _pop = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
 String _px(num x, num y) => '${jsNum(x)}px ${jsNum(y)}px';
 
 /// Slide out past the facing edge, hold, slide back - fading in from behind.
-Track _slide(num dx, num dy, num total, [String rotate = '0deg']) {
+Track _slide(int inward, num dx, num dy, num total, [String rotate = '0deg']) {
   final inAt = 380 / total;
+  // The animated scale replaces the mirror (base sx -1) a left-hand
+  // launcher's mascot is drawn with, so the mirror rides along in it.
+  final Object small = inward == 1 ? '-0.7 0.7' : 0.7;
+  final Object full = inward == 1 ? '-1 1' : 1;
   return Track.of([
-    {'translate': '0 0', 'rotate': '0deg', 'opacity': 0, 'scale': 0.7, 'easing': _pop},
-    {'translate': _px(dx, dy), 'rotate': rotate, 'opacity': 1, 'scale': 1, 'offset': inAt},
-    {'translate': _px(dx, dy), 'rotate': rotate, 'opacity': 1, 'scale': 1, 'offset': 1 - inAt, 'easing': 'ease-in'},
-    {'translate': '0 0', 'rotate': '0deg', 'opacity': 0, 'scale': 0.7},
+    {'translate': '0 0', 'rotate': '0deg', 'opacity': 0, 'scale': small, 'easing': _pop},
+    {'translate': _px(dx, dy), 'rotate': rotate, 'opacity': 1, 'scale': full, 'offset': inAt},
+    {'translate': _px(dx, dy), 'rotate': rotate, 'opacity': 1, 'scale': full, 'offset': 1 - inAt, 'easing': 'ease-in'},
+    {'translate': '0 0', 'rotate': '0deg', 'opacity': 0, 'scale': small},
   ], duration: total, easing: 'linear', fill: 'forwards');
 }
 
@@ -285,7 +289,7 @@ IdleCallPerformance idleCallPerformance(String mode, IdleCallGeometry g) {
       sayX: g.edgeX + dx,
       sayY: g.height / 2 - g.unit * 0.1 - w * 0.42,
       mascot: place(-g.unit * 0.1, 'whisper'),
-      self: [_slide(dx, -g.unit * 0.06, total, '${jsNum(g.inward * -6)}deg')],
+      self: [_slide(g.inward, dx, -g.unit * 0.06, total, '${jsNum(g.inward * -6)}deg')],
       parts: {
         ..._mouth(total, 'o', 0.14, 0.82),
         'brow': [_brows(total, 0.14, 0.8)],
@@ -350,7 +354,7 @@ IdleCallPerformance idleCallPerformance(String mode, IdleCallGeometry g) {
       sayX: g.edgeX + dx,
       sayY: g.height / 2 - g.unit * 0.1 - w * 0.46,
       mascot: place(-g.unit * 0.08, 'wave'),
-      self: [_slide(dx, -g.unit * 0.1, total)],
+      self: [_slide(g.inward, dx, -g.unit * 0.1, total)],
       parts: {
         'body': [
           Track.of([
@@ -394,7 +398,7 @@ IdleCallPerformance idleCallPerformance(String mode, IdleCallGeometry g) {
       sayX: g.edgeX + dx,
       sayY: g.height / 2 - g.unit * 0.08 - w * 0.42,
       mascot: place(-g.unit * 0.04, 'knock'),
-      self: [_slide(dx, -g.unit * 0.08, total)],
+      self: [_slide(g.inward, dx, -g.unit * 0.08, total)],
       parts: {
         'arm': [
           Track.of([
@@ -456,7 +460,7 @@ IdleCallPerformance idleCallPerformance(String mode, IdleCallGeometry g) {
     sayX: g.edgeX + dx,
     sayY: g.height / 2 - w * 0.42,
     mascot: place(-g.unit * 0.02, 'reach'),
-    self: [_slide(dx, 0, total)],
+    self: [_slide(g.inward, dx, 0, total)],
     parts: {
       'arm': [
         Track.of([
