@@ -10,7 +10,7 @@ import 'strings_fr.dart';
 import 'strings_de.dart';
 import 'strings_es.dart';
 
-/// Every key, the web's first (828), then the SDK's own (sdk.*, 578).
+/// Every key, the web's first (835), then the SDK's own (sdk.*, 578).
 const List<String> i18nKeys = <String>[
   "helpful.groupLabel",
   "helpful.ask",
@@ -513,6 +513,13 @@ const List<String> i18nKeys = <String>[
   "signature.strokeRemoved",
   "signature.cleared",
   "signature.uploadFailed",
+  "signature.needName",
+  "signature.needInk",
+  "signature.needInkOrType",
+  "signature.needTyped",
+  "signature.readFailed",
+  "signature.saveFailed",
+  "address.needStreet",
   "pay.payment",
   "pay.amountNotCharged",
   "pay.notCharged",
