@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The widget's words shared by all SDKs include its signature and street-address error messages in all five languages, matching the web widget (#103).
+
 ## [2.0.1] - 2026-10-18
 
 ### Fixed
