@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The coin entrance's glint waits off the button's left edge through its delay instead of showing as a white streak at its left side before the sweep (#97).
+- An idle call's mascot (psst, wave, knock, tap) keeps facing the screen on a left-side launcher; the slide's scale dropped its mirror, so it faced the edge (#97).
+
+### Fixed
+
 - The example app builds for Android with the current Flutter stable (3.38): Gradle 8.13, Android Gradle Plugin 8.11.1, Kotlin 2.1.0 and `compileSdk` 36. The package itself is unchanged (#95).
 
 ## [2.0.0] - 2026-10-16
