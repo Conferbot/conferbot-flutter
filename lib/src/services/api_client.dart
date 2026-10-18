@@ -188,18 +188,43 @@ class ApiClient {
     );
   }
 
-  /// Send a message
+  /// Store the conversation record over REST - STORE ONLY.
+  ///
+  /// POST {mobile base}/session/{chatSessionId}/message with
+  /// `{ record, answerVariables, visitorId? }`: the whole record, as the
+  /// socket's response-record sends it. The server creates or updates the
+  /// conversation and merges the answer variables, but never runs the bot:
+  /// no AI agent or bot reply, no live-chat relay (embed-server #194). The
+  /// answer's data carries `storeOnly: true`; a locked conversation (an agent
+  /// froze it) stores nothing and fails with CONVERSATION_LOCKED (423).
+  ///
+  /// The SDK does not call this: messages go over the socket
+  /// (ConferBotProvider.sendMessage), which is where replies arrive.
+  ///
+  /// [message] and [metadata] are the old single-message form, which the
+  /// route never took: a call with no [record] sends nothing and fails with
+  /// STORE_ONLY_ROUTE.
   Future<ApiResponse<dynamic>> sendMessage({
     required String chatSessionId,
-    required String message,
-    Map<String, dynamic>? metadata,
+    List<Map<String, dynamic>>? record,
+    List<Map<String, dynamic>> answerVariables = const [],
+    String? visitorId,
+    @Deprecated('The REST route is store-only and takes the whole record; send messages with ConferBotProvider.sendMessage (the socket)') String? message,
+    @Deprecated('The REST route is store-only and takes the whole record') Map<String, dynamic>? metadata,
   }) async {
+    if (record == null) {
+      return const ApiResponse<dynamic>(
+        success: false,
+        error: 'STORE_ONLY_ROUTE: POST session/{id}/message stores { record, answerVariables } and never sends a message; use ConferBotProvider.sendMessage',
+      );
+    }
     return _executeWithRetry<dynamic>(
       endpoint: '/session/$chatSessionId/message',
       method: 'POST',
       body: {
-        'message': message,
-        if (metadata != null) 'metadata': metadata,
+        'record': record,
+        'answerVariables': answerVariables,
+        if (visitorId != null) 'visitorId': visitorId,
       },
       parser: (data) => data,
     );
