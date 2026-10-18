@@ -144,6 +144,18 @@ void main() {
       expect(agentBotProvider(talkToHuman: false).offerTalkToPerson, isFalse);
     });
 
+    test('offered on a flow bot handed to an AI agent too, as on the web', () {
+      final provider = ConferBotProvider(apiKey: 'k', botId: 'b1', config: const ConferBotConfig(autoConnect: false, enablePersistence: false));
+      provider.debugHandleChatbotData({
+        'chatbotData': {
+          'workspaceId': 'w1',
+          'customizations': {'chatTalkToHuman': true, 'botName': 'Help'},
+        },
+      });
+      expect(provider.offerTalkToPerson, isTrue);
+      provider.dispose();
+    });
+
     test('gone once tapped, and not back', () async {
       final provider = agentBotProvider();
       await provider.talkToPerson();
