@@ -308,8 +308,13 @@ class LiveChat {
   /// Visitor uploads in a live chat: on unless the owner turned them off.
   static bool visitorUploadsOn(Map<String, dynamic>? customizations) => customizations?['enableVisitorFileUpload'] != false;
 
-  static CsatConfig? csatConfigOf(dynamic raw) {
-    if (raw is! Map || raw['enabled'] != true) return null;
+  /// Post-chat rating, as the web widget decides it (index.ts
+  /// postChatFeedbackOff): asked unless the owner turned it off
+  /// (enabled: false). Bots that never set it get the stock stars and
+  /// wording; the owner's type and words apply only once switched on.
+  static CsatConfig? csatConfigOf(dynamic input) {
+    if (input is Map && input['enabled'] == false) return null;
+    final Map raw = input is Map && input['enabled'] == true ? input : const {};
     const types = {'stars', 'thumbs', 'emoji', 'nps'};
     final type = types.contains(raw['ratingType']) ? raw['ratingType'] as String : 'stars';
     // The owner's words, else the web's (postChatRating.ts csat.*) in the visitor's language.
