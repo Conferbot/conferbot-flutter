@@ -1,6 +1,6 @@
 name: conferbot_flutter
 description: Official Flutter SDK for Conferbot - Beautiful native chat widget for iOS and Android
-version: 2.0.0
+version: 2.0.1
 homepage: https://docs.conferbot.com/mobile/flutter
 repository: https://github.com/Conferbot/conferbot-flutter
 issue_tracker: https://github.com/Conferbot/conferbot-flutter/issues
