@@ -803,10 +803,12 @@ class ConferBotProvider with ChangeNotifier {
   // arriving mid-handover cannot bring it back (web quickActions.ts).
   bool _talkToPersonRetired = false;
 
-  /// "Talk to a person" on the quick actions: an AI agent bot whose owner
-  /// turned it on, only while no handover is under way and nobody is here.
+  /// "Talk to a person" on the quick actions (shown from the first AI
+  /// answer on, QuickActionsStrip): the owner turned it on, only while no
+  /// handover is under way and nobody is here. Any bot an AI answers -
+  /// an agent bot or a flow handed to an AI agent - as on the web.
   bool get offerTalkToPerson =>
-      _agentBot != null && _serverCustomizations?['chatTalkToHuman'] == true && !_talkToPersonRetired && talkToPersonAllowed;
+      _serverCustomizations?['chatTalkToHuman'] == true && !_talkToPersonRetired && talkToPersonAllowed;
 
   /// The visitor taps "Talk to a person": it goes, and the AI is asked.
   Future<void> talkToPerson() async {
