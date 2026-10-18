@@ -7,19 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-18
+
 ### Fixed
 
 - The coin entrance's glint waits off the button's left edge through its delay instead of showing as a white streak at its left side before the sweep (#97).
 - An idle call's mascot (psst, wave, knock, tap) keeps facing the screen on a left-side launcher; the slide's scale dropped its mirror, so it faced the edge (#97).
 - `ApiClient.sendMessage` matches the store-only REST route `POST session/{id}/message`: it takes `record`, `answerVariables` and `visitorId`, posts `{ record, answerVariables, visitorId? }` and returns the server's data (`storeOnly: true`; a failure when an agent locked the chat). The route never runs the bot; messages still go over the socket (#98).
+- The example app builds for Android with the current Flutter stable (3.38): Gradle 8.13, Android Gradle Plugin 8.11.1, Kotlin 2.1.0 and `compileSdk` 36. The package itself is unchanged (#95).
 
 ### Deprecated
 
 - `ApiClient.sendMessage`'s `message` and `metadata` (now optional): the route never took `{ message, metadata }`, so a call without `record` sends nothing and fails with `STORE_ONLY_ROUTE`. Use `ConferBotProvider.sendMessage` (#98).
-
-### Fixed
-
-- The example app builds for Android with the current Flutter stable (3.38): Gradle 8.13, Android Gradle Plugin 8.11.1, Kotlin 2.1.0 and `compileSdk` 36. The package itself is unchanged (#95).
 
 ## [2.0.0] - 2026-10-16
 
