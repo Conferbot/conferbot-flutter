@@ -1060,11 +1060,13 @@ final Map<String, _Effect> _effects = {
           h: s.h * 1.4,
           leftOf: s.w,
           svg: linearBox(bandW, s.h * 1.4, 100, stops(['transparent', 'rgba(255,255,255,0.75)', 'transparent'])),
+          // fill 'both': the band waits off the left edge through the delay,
+          // not at left 0 (its static place), where it showed as a white streak.
           tracks: [
             _play([
               {'left': '-40%'},
               {'left': '115%'},
-            ], duration: 520, delay: 1050, easing: 'ease-in-out', fill: 'forwards'),
+            ], duration: 520, delay: 1050, easing: 'ease-in-out', fill: 'both'),
           ],
         ),
       ],
