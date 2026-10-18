@@ -91,8 +91,16 @@ void main() {
   });
 
   test('reads rating settings and builds the payload', () {
-    expect(LiveChat.csatConfigOf(null), isNull);
-    expect(LiveChat.csatConfigOf({'ratingType': 'stars'}), isNull);
+    // On unless the owner turned it off, as on the web; never set = stock stars and wording.
+    expect(LiveChat.csatConfigOf({'enabled': false, 'ratingType': 'stars'}), isNull);
+    expect(LiveChat.csatConfigOf(null)?.ratingType, 'stars');
+    expect(LiveChat.csatConfigOf(<String, dynamic>{})?.titleText, 'How was your experience?');
+    final draft = LiveChat.csatConfigOf({'ratingType': 'nps', 'titleText': 'Draft'})!;
+    expect(draft.ratingType, 'stars');
+    expect(draft.titleText, 'How was your experience?');
+    final own = LiveChat.csatConfigOf({'enabled': true, 'ratingType': 'nps', 'titleText': 'How did we do?'})!;
+    expect(own.ratingType, 'nps');
+    expect(own.titleText, 'How did we do?');
     final c = LiveChat.csatConfigOf({'enabled': true, 'ratingType': 'bogus'})!;
     expect(c.ratingType, 'stars');
     expect(c.titleText, 'How was your experience?');
