@@ -70,7 +70,7 @@ The package has no native code of its own. The minimum OS versions are those of 
 ```yaml
 # pubspec.yaml
 dependencies:
-  conferbot_flutter: ^2.0.0
+  conferbot_flutter: ^2.0.1
   provider: ^6.1.1 # the SDK's state is a ChangeNotifier; you provide it with package:provider
 ```
 
