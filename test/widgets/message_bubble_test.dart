@@ -92,6 +92,25 @@ void main() {
         expect(find.text('Hello from agent!'), findsOneWidget);
         expect(find.text('John Agent'), findsOneWidget);
       });
+
+      testWidgets('an AI answer drops a placeholder "[n]", a person\'s text stays (#104)', (WidgetTester tester) async {
+        Future<void> show(bool isAIAgent) => tester.pumpWidget(MaterialApp(
+              home: Scaffold(
+                body: MessageBubble(
+                  message: AgentMessageRecord(
+                    id: 'agent-2',
+                    time: DateTime.now(),
+                    text: 'Wie Sie zit. [n] Als Kunde',
+                    agentDetails: AgentDetails(id: 'a2', name: 'Ava', email: '', isAIAgent: isAIAgent),
+                  ),
+                ),
+              ),
+            ));
+        await show(true);
+        expect(find.text('Wie Sie zit. Als Kunde'), findsOneWidget);
+        await show(false);
+        expect(find.text('Wie Sie zit. [n] Als Kunde'), findsOneWidget);
+      });
     });
 
     group('Message alignment', () {
