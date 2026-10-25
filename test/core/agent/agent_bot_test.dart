@@ -137,6 +137,11 @@ void main() {
       expect(actions.map((a) => a.label).toList(), ['Book a demo', 'Mail']);
       expect(AgentBotParser.answerFeedbackOn({'hideAnswerFeedback': true}), isFalse);
       expect(AgentBotParser.answerFeedbackOn(null), isTrue);
+      // Source cards (#104): on unless the owner sent showAnswerSources: false.
+      expect(AgentBotParser.answerSourcesOn(null), isTrue);
+      expect(AgentBotParser.answerSourcesOn({}), isTrue);
+      expect(AgentBotParser.answerSourcesOn({'showAnswerSources': true}), isTrue);
+      expect(AgentBotParser.answerSourcesOn({'showAnswerSources': false}), isFalse);
       expect(AgentBotParser.canRate('0123456789abcdef01234567'), isTrue);
       expect(AgentBotParser.canRate('agent-greeting-s1'), isFalse);
       expect(AgentBotParser.conversionEventOf('Book a demo'), 'demo_booked');
