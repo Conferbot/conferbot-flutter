@@ -175,7 +175,11 @@ class AgentReplyExtras extends StatelessWidget {
         provider != null &&
         // Rated answers keep their line; only the newest unrated one asks.
         (message.feedback != null || provider.newestRateableAnswerId == message.id);
-    if ((extras == null || extras.isEmpty) && !showHelpful) return const SizedBox.shrink();
+    // No source cards when the owner turned them off (live and restored answers alike).
+    final sources = AgentBotParser.answerSourcesOn(provider?.serverCustomizations) ? extras?.sources ?? const <AgentSource>[] : const <AgentSource>[];
+    final nothingElse = extras == null ||
+        (extras.actions.isEmpty && extras.card == null && extras.resultCard == null && extras.actionRequest == null);
+    if (sources.isEmpty && nothingElse && !showHelpful) return const SizedBox.shrink();
     final accent = theme.colors.primary;
 
     return Padding(
@@ -185,7 +189,7 @@ class AgentReplyExtras extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final source in extras?.sources ?? const <AgentSource>[])
+            for (final source in sources)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: InkWell(
