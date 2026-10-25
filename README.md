@@ -684,6 +684,8 @@ As on the web widget:
 
 - Replies draw tables (they scroll sideways), headings (`#` and `##` as level 4, `###` a little larger), quotes, code blocks and strikethrough, from an AI's markdown or a person's HTML.
 - **Helpful?** under the newest AI answer: a No is sent at once (`ai-answer-feedback`), then the reasons, an optional comment, "Talk to a person" (only while nobody is coming or here) and "Ask another way" (the cursor goes to the composer). The rated line's thumbs change the vote; the vote is kept on the answer's record entry. The owner's `hideAnswerFeedback` turns it off.
+- Source cards (pages and help articles) under AI answers, live and restored; the owner's `showAnswerSources: false` turns them off (absent or `true` keeps them).
+- A placeholder citation marker left in an older stored AI answer ("[n]", "[source]", "[1, n]") is not drawn; numbered markers ("[2]"), links and checkboxes stay.
 - When the AI has not answered after 45 seconds, the dots give way to "That took too long. Try again, or ask for a human." A reply the server sent because the AI failed (`isFallback`) is italic at 85%.
 - Every response record carries the phone's preferred language as `visitorInsights.language.browser` (BCP 47, e.g. "de-DE"), so the AI answers short messages in it.
 
