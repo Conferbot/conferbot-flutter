@@ -18,10 +18,10 @@ const bot = '6ab686f8d47ff029b76892f7';
 const id = '64b7f0c2a1b2c3d4e5f60718';
 final fixtures = jsonDecode(File('test/fixtures/kb_payloads.json').readAsStringSync()) as Map<String, dynamic>;
 
-ConferBotProvider chatProvider({required bool enableKnowledgeBase}) {
+ConferBotProvider chatProvider({required bool enableKnowledgeBase, Map<String, dynamic> customizations = const {}}) {
   final provider = ConferBotProvider(apiKey: 'k', botId: bot, config: const ConferBotConfig(autoConnect: false, enablePersistence: false));
   final payload = jsonDecode(jsonEncode(fixtures['socket_fetched_chatbot_data'])) as Map<String, dynamic>;
-  (payload['chatbotData'] as Map)['customizations'] = {'enableKnowledgeBase': enableKnowledgeBase};
+  (payload['chatbotData'] as Map)['customizations'] = {'enableKnowledgeBase': enableKnowledgeBase, ...customizations};
   if (!enableKnowledgeBase) payload['knowledgeBaseData'] = {'recentArticles': [], 'categories': []};
   provider.debugHandleChatbotData(payload);
   return provider;
@@ -118,5 +118,28 @@ void main() {
     await tester.pumpWidget(host(off, RichAgentMessage(message: card(), theme: defaultTheme, avatar: const SizedBox.shrink())));
     expect(find.byKey(const ValueKey('agent-rich-article-open')), findsNothing);
     expect(find.text('Read article'), findsNothing);
+  });
+
+  testWidgets('source cards turned off (showAnswerSources: false): no page or help-article source, live or restored (#104)', (tester) async {
+    final provider = chatProvider(enableKnowledgeBase: true, customizations: {'showAnswerSources': false});
+    provider.articleOpener = (_) {};
+    final live = reply([
+      {'title': 'Refunds', 'articleId': id},
+      {'title': 'Pricing', 'url': 'https://example.com/pricing'},
+    ]);
+    // A restored answer comes back through its stored record.
+    final restored = AgentMessageRecord.fromJson(live.toJson());
+    for (final message in [live, restored]) {
+      await tester.pumpWidget(host(provider, AgentReplyExtras(message: message, theme: defaultTheme)));
+      expect(find.text('Refunds'), findsNothing);
+      expect(find.text('Pricing'), findsNothing);
+      expect(find.text('Help article'), findsNothing);
+      expect(find.text('example.com'), findsNothing);
+    }
+
+    final on = chatProvider(enableKnowledgeBase: true, customizations: {'showAnswerSources': true})..articleOpener = (_) {};
+    await tester.pumpWidget(host(on, AgentReplyExtras(message: live, theme: defaultTheme)));
+    expect(find.text('Refunds'), findsOneWidget);
+    expect(find.text('Pricing'), findsOneWidget);
   });
 }
