@@ -7,6 +7,7 @@ import 'media/audio_player_widget.dart';
 import 'media/video_player_widget.dart';
 import 'package:flutter_html/flutter_html.dart';
 import '../core/live_chat/handover_state.dart' show HandoverRecord;
+import '../core/agent/citation_markers.dart';
 import '../core/live_chat/live_chat.dart';
 import '../core/customization/customizations.dart';
 import '../core/i18n/i18n.dart';
@@ -650,7 +651,8 @@ class MessageBubble extends StatelessWidget {
               : Text(t, style: TextStyle(fontSize: theme.typography.messageSize, color: _getTextColor(theme), height: theme.typography.lineHeightNormal)),
         );
       }
-      text = agentMessage.text;
+      // An AI answer saved before the server stripped them can carry a "[n]" (live and restored).
+      text = agentMessage.agentDetails.isAIAgent ? stripPlaceholderMarkers(agentMessage.text) : agentMessage.text;
     } else if (message is SystemMessageRecord) {
       text = (message as SystemMessageRecord).text;
     }
