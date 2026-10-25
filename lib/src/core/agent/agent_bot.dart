@@ -564,6 +564,9 @@ class AgentBotParser {
   /// "Helpful?" under AI answers unless the owner turned it off.
   static bool answerFeedbackOn(Map<String, dynamic>? customizations) => customizations?['hideAnswerFeedback'] != true;
 
+  /// Source cards (pages and help articles) under AI answers unless the owner turned them off.
+  static bool answerSourcesOn(Map<String, dynamic>? customizations) => customizations?['showAnswerSources'] != false;
+
   /// Only an AI answer stored under its server id can be rated.
   static bool canRate(String? messageId) => messageId != null && _objectId.hasMatch(messageId);
 
