@@ -947,8 +947,8 @@ Voice recording and playback (`VoiceInputWidget`, `VoiceRecorder`, `VoicePlayer`
 A complete example is in [example/](example/): the drop-in widget, headless use, and SDK widgets mixed with your own, plus session persistence tools (storage stats, clear session). It ships with the public demo bot, so it runs with no account. [example/README.md](example/README.md) explains how to run it against Conferbot's cloud or a local server.
 
 ```bash
-git clone https://github.com/conferbot/flutter-sdk.git
-cd flutter-sdk/example
+git clone https://github.com/Conferbot/conferbot-flutter.git
+cd conferbot-flutter/example
 flutter pub get
 flutter run
 ```
@@ -983,6 +983,6 @@ Apache 2.0 - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- GitHub Issues: [https://github.com/conferbot/flutter-sdk/issues](https://github.com/conferbot/flutter-sdk/issues)
+- GitHub Issues: [https://github.com/Conferbot/conferbot-flutter/issues](https://github.com/Conferbot/conferbot-flutter/issues)
 - Email: support@conferbot.com
 - Documentation: [https://docs.conferbot.com](https://docs.conferbot.com)

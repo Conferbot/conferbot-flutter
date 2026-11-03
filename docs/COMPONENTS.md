@@ -523,5 +523,5 @@ Settings > Accessibility > TalkBack
 
 - **Documentation**: [docs.conferbot.com](https://docs.conferbot.com)
 - **Examples**: See `/example` directory
-- **Issues**: [GitHub Issues](https://github.com/conferbot/flutter-sdk/issues)
+- **Issues**: [GitHub Issues](https://github.com/Conferbot/conferbot-flutter/issues)
 - **Email**: support@conferbot.com
