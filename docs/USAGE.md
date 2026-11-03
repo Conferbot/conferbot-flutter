@@ -401,8 +401,8 @@ Call before creating the provider, or pass `baseUrl:` / `socketUrl:` per provide
 ## Running the example app
 
 ```bash
-git clone https://github.com/conferbot/flutter-sdk.git
-cd flutter-sdk
+git clone https://github.com/Conferbot/conferbot-flutter.git
+cd conferbot-flutter
 flutter pub get
 
 cd example
